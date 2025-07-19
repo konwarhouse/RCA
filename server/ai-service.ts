@@ -8,20 +8,33 @@ export class AIService {
   // Encrypt API key for storage
   private static encryptApiKey(apiKey: string): string {
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
-    let encrypted = cipher.update(apiKey, "utf8", "hex");
-    encrypted += cipher.final("hex");
-    return iv.toString("hex") + ":" + encrypted;
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const cipher = crypto.createCipherGCM('aes-256-gcm', key, iv);
+    
+    let encrypted = cipher.update(apiKey, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const tag = cipher.getAuthTag();
+    
+    return iv.toString('hex') + ':' + tag.toString('hex') + ':' + encrypted;
   }
 
   // Decrypt API key for use
   private static decryptApiKey(encryptedKey: string): string {
-    const parts = encryptedKey.split(":");
-    const iv = Buffer.from(parts[0], "hex");
-    const encryptedData = parts[1];
-    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
-    let decrypted = decipher.update(encryptedData, "hex", "utf8");
-    decrypted += decipher.final("utf8");
+    const parts = encryptedKey.split(':');
+    if (parts.length !== 3) {
+      throw new Error('Invalid encrypted key format');
+    }
+    
+    const iv = Buffer.from(parts[0], 'hex');
+    const tag = Buffer.from(parts[1], 'hex');
+    const encryptedData = parts[2];
+    
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const decipher = crypto.createDecipherGCM('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    
+    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
     return decrypted;
   }
 

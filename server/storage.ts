@@ -112,7 +112,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // AI Settings methods
-  async createAiSettings(settings: Omit<InsertAiSettings, 'apiKey'> & { encryptedApiKey: string; testStatus: string }): Promise<AiSettings> {
+  async createAiSettings(settings: {
+    provider: string;
+    encryptedApiKey: string;
+    isActive: boolean;
+    createdBy: number;
+    testStatus: string;
+  }): Promise<AiSettings> {
     const [aiSetting] = await db
       .insert(aiSettings)
       .values(settings)
