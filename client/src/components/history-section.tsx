@@ -24,16 +24,16 @@ import type { Analysis } from "@shared/schema";
 
 export default function HistorySection() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<string>("");
-  const [dateFilter, setDateFilter] = useState<string>("");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Build query parameters
   const queryParams = new URLSearchParams();
   if (searchQuery) queryParams.set("search", searchQuery);
-  if (priorityFilter) queryParams.set("priority", priorityFilter);
-  if (dateFilter) queryParams.set("dateRange", dateFilter);
+  if (priorityFilter && priorityFilter !== "all") queryParams.set("priority", priorityFilter);
+  if (dateFilter && dateFilter !== "all") queryParams.set("dateRange", dateFilter);
 
   const { data: analyses = [], isLoading, refetch } = useQuery<Analysis[]>({
     queryKey: ["/api/analyses", queryParams.toString()],
@@ -104,7 +104,7 @@ export default function HistorySection() {
                   <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Priorities</SelectItem>
+                  <SelectItem value="all">All Priorities</SelectItem>
                   <SelectItem value="high">High Priority</SelectItem>
                   <SelectItem value="medium">Medium Priority</SelectItem>
                   <SelectItem value="low">Low Priority</SelectItem>
@@ -116,7 +116,7 @@ export default function HistorySection() {
                   <SelectValue placeholder="All Time" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Time</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="week">This Week</SelectItem>
                   <SelectItem value="month">This Month</SelectItem>
@@ -161,6 +161,7 @@ export default function HistorySection() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Analysis ID</TableHead>
+                      <TableHead>Equipment</TableHead>
                       <TableHead>Issue Description</TableHead>
                       <TableHead>Root Cause</TableHead>
                       <TableHead>Confidence</TableHead>
@@ -173,6 +174,19 @@ export default function HistorySection() {
                     {paginatedAnalyses.map((analysis) => (
                       <TableRow key={analysis.id} className="hover:bg-muted/50">
                         <TableCell className="font-medium">{analysis.analysisId}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {analysis.equipmentType?.charAt(0).toUpperCase() + analysis.equipmentType?.slice(1).replace('_', ' ')}
+                            </span>
+                            {analysis.equipmentId && (
+                              <span className="text-xs text-muted-foreground">{analysis.equipmentId}</span>
+                            )}
+                            {analysis.location && (
+                              <span className="text-xs text-muted-foreground">{analysis.location}</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="max-w-xs truncate">{analysis.issueDescription}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {analysis.rootCause || "Processing..."}

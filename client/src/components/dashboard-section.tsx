@@ -239,9 +239,16 @@ export default function DashboardSection() {
                     )}
                   </div>
                   <div className="ml-4 flex flex-col items-end space-y-2">
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(analysis.createdAt)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground">
+                        {formatTimeAgo(analysis.createdAt)}
+                      </div>
+                      {analysis.equipmentType && (
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {analysis.equipmentType.charAt(0).toUpperCase() + analysis.equipmentType.slice(1).replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </div>
                     <Button variant="ghost" size="sm">
                       View Details
                     </Button>

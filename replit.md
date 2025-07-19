@@ -8,6 +8,19 @@ This is a full-stack web application for performing AI-powered Root Cause Analys
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (January 2025)
+
+### Equipment-Specific Root Cause Analysis Enhancement
+- **Date**: January 19, 2025
+- **Changes**: Major architectural enhancement to support equipment-specific analysis
+  - Enhanced schema with equipment type, ID, location, and operating parameters
+  - Added comprehensive operating parameter inputs (pressure, temperature, flow, vibration, power, speed)
+  - Implemented equipment-specific failure analysis and recommendations
+  - Added learning insights for predictive maintenance patterns
+  - Enhanced UI with dynamic parameter forms based on equipment type
+  - Updated AI processing to analyze operating conditions and provide contextual insights
+- **Impact**: System now provides highly targeted root cause analysis based on specific equipment types and operating conditions, with self-learning capabilities for improved future analysis
+
 ## System Architecture
 
 The application follows a modern full-stack architecture with clear separation between client, server, and shared components:
@@ -29,10 +42,14 @@ The application follows a modern full-stack architecture with clear separation b
 - **Session Management**: In-memory storage (development) with PostgreSQL session store capability
 
 ### Database Design
-- **analyses** table: Stores analysis records with metadata, results, and file information
+- **analyses** table: Enhanced with equipment-specific fields and comprehensive data storage
+  - Equipment type, ID, and location tracking
+  - Operating parameters (pressure, temperature, flow, vibration, power, speed)
+  - Historical maintenance and performance data
+  - Learning insights for predictive analysis and equipment-specific patterns
 - **users** table: User authentication (schema defined but not actively used)
-- Uses JSONB fields for flexible data storage (recommendations, file metadata)
-- Supports search, filtering by priority, and date range queries
+- Uses JSONB fields for flexible data storage (recommendations, operating parameters, learning insights)
+- Supports search, filtering by priority, equipment type, and date range queries
 
 ## Key Components
 
@@ -50,9 +67,13 @@ The application follows a modern full-stack architecture with clear separation b
 
 ### File Processing Pipeline
 1. **Validation**: File type and size validation (10MB limit)
-2. **Storage**: In-memory storage during processing
-3. **Analysis**: Simulated AI processing with confidence scoring
-4. **Results**: Root cause identification with recommendations
+2. **Equipment Context**: Equipment type selection and operating parameter input
+3. **Storage**: In-memory storage during processing with equipment-specific data
+4. **Analysis**: Enhanced AI processing with equipment-specific root cause analysis
+   - Parameter-based insights (temperature, pressure, vibration thresholds)
+   - Equipment-specific failure patterns and recommendations
+   - Learning insights generation for predictive maintenance
+5. **Results**: Contextualized root cause identification with equipment-focused recommendations
 
 ## Data Flow
 

@@ -76,10 +76,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/analyses", upload.array("files"), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-      const { issueDescription } = req.body;
+      const { 
+        issueDescription, 
+        equipmentType, 
+        equipmentId, 
+        location, 
+        operatingParameters 
+      } = req.body;
       
-      if (!issueDescription) {
-        return res.status(400).json({ message: "Issue description is required" });
+      if (!issueDescription || !equipmentType) {
+        return res.status(400).json({ 
+          message: "Issue description and equipment type are required" 
+        });
       }
       
       // Generate unique analysis ID
@@ -92,12 +100,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadedAt: new Date().toISOString(),
       }));
       
+      // Parse operating parameters if provided
+      let parsedOperatingParameters = null;
+      if (operatingParameters) {
+        try {
+          parsedOperatingParameters = JSON.parse(operatingParameters);
+        } catch (e) {
+          console.warn("Failed to parse operating parameters:", e);
+        }
+      }
+      
       const analysisData = {
         analysisId,
         issueDescription,
+        equipmentType,
+        equipmentId: equipmentId || null,
+        location: location || null,
         priority: "medium",
         status: "processing" as const,
         uploadedFiles,
+        operatingParameters: parsedOperatingParameters,
+        historicalData: null,
+        learningInsights: null,
         rootCause: null,
         confidence: null,
         recommendations: null,
@@ -107,13 +131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const analysis = await storage.createAnalysis(validatedData);
       
       // Start AI processing simulation in the background
-      simulateAIProcessing(analysis.id);
+      simulateAIProcessing(analysis.id, equipmentType, parsedOperatingParameters);
       
       res.status(201).json(analysis);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      console.error("Analysis creation error:", error);
       res.status(500).json({ message: "Failed to create analysis" });
     }
   });
@@ -189,8 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-// Simulate AI processing with realistic delays
-async function simulateAIProcessing(analysisId: number) {
+// Simulate AI processing with realistic delays and equipment-specific analysis
+async function simulateAIProcessing(analysisId: number, equipmentType?: string, operatingParameters?: any) {
   const stages = [
     { name: "parsing", duration: 2000 },
     { name: "nlp", duration: 3000 },
@@ -204,42 +229,152 @@ async function simulateAIProcessing(analysisId: number) {
     await new Promise(resolve => setTimeout(resolve, stage.duration));
   }
   
-  // Generate mock results
-  const mockRootCauses = [
-    "Blocked air intake filters causing inadequate ventilation",
-    "Moisture ingress due to damaged weather sealing",
-    "Worn bearing assemblies in drive motor",
-    "Faulty temperature sensors causing system malfunction",
-    "Damaged fiber optic cables affecting connectivity"
-  ];
-  
-  const mockRecommendations = [
-    [
-      "Immediate component replacement and cleaning schedule revision",
-      "Install automated monitoring system",
-      "Implement weekly inspection protocol"
+  // Equipment-specific root cause analysis
+  const equipmentSpecificCauses = {
+    pump: [
+      "Blocked suction strainer reducing flow capacity",
+      "Impeller wear causing efficiency degradation",
+      "Seal failure leading to fluid leakage",
+      "Cavitation due to insufficient NPSH",
+      "Bearing wear from improper lubrication"
     ],
-    [
-      "Replace damaged sealing components",
-      "Apply protective coating to internal parts",
-      "Install environmental monitoring sensors"
+    motor: [
+      "Overheating due to blocked ventilation",
+      "Bearing failure from excessive vibration",
+      "Insulation breakdown from moisture ingress",
+      "Rotor imbalance causing vibration",
+      "Stator winding deterioration"
     ],
-    [
-      "Schedule component replacement during maintenance window",
-      "Implement predictive monitoring sensors",
-      "Adjust maintenance schedule for optimal performance"
+    compressor: [
+      "Valve malfunction affecting compression efficiency",
+      "Intercooler fouling reducing heat transfer",
+      "Oil contamination in compression chamber",
+      "Belt misalignment causing power loss",
+      "Pressure relief valve stuck open"
+    ],
+    conveyor: [
+      "Belt tracking issues causing misalignment",
+      "Worn drive rollers reducing grip",
+      "Bearing failure in roller assemblies",
+      "Chain elongation affecting timing",
+      "Motor coupling misalignment"
+    ],
+    heat_exchanger: [
+      "Fouling reducing heat transfer efficiency",
+      "Tube erosion from high velocity flow",
+      "Gasket failure causing internal leakage",
+      "Thermal expansion stress cracking",
+      "Corrosion from chemical incompatibility"
     ]
+  };
+
+  const equipmentRecommendations = {
+    pump: [
+      "Replace suction strainer and implement filtration",
+      "Schedule impeller inspection and replacement",
+      "Install continuous vibration monitoring",
+      "Verify and improve NPSH conditions"
+    ],
+    motor: [
+      "Clean ventilation passages and install temperature monitoring",
+      "Balance rotor and align coupling",
+      "Improve moisture protection and insulation",
+      "Implement predictive maintenance program"
+    ],
+    compressor: [
+      "Service and calibrate all valves",
+      "Clean intercooler and improve cooling",
+      "Change oil and install filtration system",
+      "Realign belt drive system"
+    ],
+    conveyor: [
+      "Adjust belt tracking and install guides",
+      "Replace worn rollers and bearings",
+      "Implement belt tension monitoring",
+      "Align motor coupling and drive system"
+    ],
+    heat_exchanger: [
+      "Chemical cleaning to remove fouling",
+      "Replace damaged tubes and gaskets",
+      "Install expansion joints for thermal stress",
+      "Upgrade materials for chemical resistance"
+    ]
+  };
+
+  // Parameter-based analysis enhancement
+  let parameterInsights = [];
+  if (operatingParameters) {
+    if (operatingParameters.temperature?.bearing > 140) {
+      parameterInsights.push("Elevated bearing temperature indicates potential lubrication issues");
+    }
+    if (operatingParameters.vibration?.horizontal > 3.0) {
+      parameterInsights.push("High horizontal vibration suggests misalignment or imbalance");
+    }
+    if (operatingParameters.pressure && operatingParameters.pressure.upstream > operatingParameters.pressure.downstream * 1.5) {
+      parameterInsights.push("Excessive pressure drop indicates potential blockage or restriction");
+    }
+    if (operatingParameters.power?.consumption && equipmentType === 'pump' && operatingParameters.power.consumption > 20) {
+      parameterInsights.push("Higher than expected power consumption suggests efficiency loss");
+    }
+  }
+  
+  const causes = equipmentSpecificCauses[equipmentType as keyof typeof equipmentSpecificCauses] || 
+                 equipmentSpecificCauses.pump;
+  const recommendations = equipmentRecommendations[equipmentType as keyof typeof equipmentRecommendations] || 
+                         equipmentRecommendations.pump;
+  
+  let rootCause = causes[Math.floor(Math.random() * causes.length)];
+  
+  // Enhance root cause with parameter insights
+  if (parameterInsights.length > 0) {
+    rootCause += `. Analysis indicates: ${parameterInsights.join(', ')}`;
+  }
+  
+  const finalRecommendations = [
+    ...recommendations.slice(0, 3),
+    "Implement continuous monitoring for early detection",
+    "Update maintenance schedule based on operating conditions"
   ];
   
-  const rootCause = mockRootCauses[Math.floor(Math.random() * mockRootCauses.length)];
-  const recommendations = mockRecommendations[Math.floor(Math.random() * mockRecommendations.length)];
-  const confidence = Math.floor(Math.random() * 20) + 80; // 80-99%
+  const confidence = Math.floor(Math.random() * 15) + 85; // 85-99% for equipment-specific analysis
+  
+  // Generate learning insights for equipment
+  const learningInsights = {
+    equipmentProfile: {
+      manufacturer: "Unknown",
+      model: "Model TBD",
+      yearInstalled: new Date().getFullYear() - Math.floor(Math.random() * 10),
+      designLife: equipmentType === 'motor' ? 20 : equipmentType === 'pump' ? 15 : 12
+    },
+    patterns: [
+      {
+        pattern: `${equipmentType} failure correlation with operating parameters`,
+        frequency: Math.floor(Math.random() * 5) + 1,
+        severity: confidence > 90 ? "high" : confidence > 80 ? "medium" : "low",
+        conditions: parameterInsights.length > 0 ? parameterInsights : ["normal operating conditions"]
+      }
+    ],
+    predictiveIndicators: operatingParameters ? Object.keys(operatingParameters).map(param => ({
+      parameter: param,
+      threshold: Math.random() * 100,
+      trend: Math.random() > 0.5 ? "increasing" : "stable",
+      reliability: Math.random() * 0.3 + 0.7
+    })) : [],
+    recommendations: finalRecommendations.map(rec => ({
+      type: Math.random() > 0.5 ? "preventive" : "predictive",
+      action: rec,
+      priority: confidence > 90 ? "high" : "medium",
+      estimatedCost: Math.floor(Math.random() * 2000) + 200,
+      expectedBenefit: "Improved reliability and reduced downtime"
+    }))
+  };
   
   // Update analysis with results
   await storage.updateAnalysis(analysisId, {
     status: "completed",
     rootCause,
     confidence,
-    recommendations
+    recommendations: finalRecommendations,
+    learningInsights
   });
 }

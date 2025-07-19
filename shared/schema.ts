@@ -12,12 +12,18 @@ export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
   analysisId: text("analysis_id").notNull().unique(),
   issueDescription: text("issue_description").notNull(),
+  equipmentType: text("equipment_type").notNull(), // pump, motor, compressor, heat_exchanger, etc
+  equipmentId: text("equipment_id"), // unique equipment identifier
+  location: text("location"), // physical location of equipment
   rootCause: text("root_cause"),
   confidence: integer("confidence"), // percentage 0-100
   priority: text("priority").notNull(), // high, medium, low
   status: text("status").notNull().default("processing"), // processing, completed, failed
   recommendations: jsonb("recommendations"), // array of recommendation strings
   uploadedFiles: jsonb("uploaded_files"), // array of file info
+  operatingParameters: jsonb("operating_parameters"), // pressure, temperature, flow, etc
+  historicalData: jsonb("historical_data"), // past performance and maintenance data
+  learningInsights: jsonb("learning_insights"), // ML insights for equipment-specific learning
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });
@@ -53,3 +59,102 @@ export interface ProcessingStage {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
 }
+
+export interface OperatingParameters {
+  pressure?: {
+    upstream: number;
+    downstream: number;
+    unit: string;
+  };
+  temperature?: {
+    inlet: number;
+    outlet: number;
+    bearing?: number;
+    unit: string;
+  };
+  flow?: {
+    rate: number;
+    unit: string;
+  };
+  vibration?: {
+    horizontal: number;
+    vertical: number;
+    axial: number;
+    unit: string;
+  };
+  power?: {
+    consumption: number;
+    unit: string;
+  };
+  speed?: {
+    rpm: number;
+  };
+  efficiency?: {
+    percentage: number;
+  };
+}
+
+export interface HistoricalData {
+  maintenanceRecords: Array<{
+    date: string;
+    type: string;
+    description: string;
+    cost?: number;
+  }>;
+  performanceMetrics: Array<{
+    date: string;
+    parameters: OperatingParameters;
+    efficiency?: number;
+  }>;
+  previousFailures: Array<{
+    date: string;
+    rootCause: string;
+    resolution: string;
+    downtime: number;
+  }>;
+}
+
+export interface LearningInsights {
+  equipmentProfile: {
+    manufacturer: string;
+    model: string;
+    yearInstalled: number;
+    designLife: number;
+  };
+  patterns: Array<{
+    pattern: string;
+    frequency: number;
+    severity: 'low' | 'medium' | 'high';
+    conditions: string[];
+  }>;
+  predictiveIndicators: Array<{
+    parameter: string;
+    threshold: number;
+    trend: 'increasing' | 'decreasing' | 'stable';
+    reliability: number;
+  }>;
+  recommendations: Array<{
+    type: 'preventive' | 'corrective' | 'predictive';
+    action: string;
+    priority: 'low' | 'medium' | 'high';
+    estimatedCost?: number;
+    expectedBenefit: string;
+  }>;
+}
+
+export const EQUIPMENT_TYPES = [
+  'pump',
+  'motor', 
+  'compressor',
+  'heat_exchanger',
+  'valve',
+  'turbine',
+  'gearbox',
+  'bearing',
+  'conveyor',
+  'reactor',
+  'vessel',
+  'other'
+] as const;
+
+export type EquipmentType = typeof EQUIPMENT_TYPES[number];
