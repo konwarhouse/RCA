@@ -72,6 +72,87 @@ export default function EvidenceGathering({ analysis, onComplete }: EvidenceGath
       });
     }
 
+    // Enhanced lubrication questions for rotating equipment
+    if (['pump', 'motor', 'compressor', 'turbine', 'gearbox'].includes(equipmentType) && !operatingParams?.lubrication) {
+      questions.push({
+        id: 'lubrication_condition',
+        question: 'What was the condition of the lubrication system at the time of failure?',
+        type: 'multiselect',
+        options: ['Normal oil level', 'Low oil level', 'High oil level', 'High oil temperature', 'Contaminated oil', 'Wrong oil type', 'Over-greased', 'Under-greased', 'No issues observed'],
+        required: false,
+        context: 'Lubrication issues are the leading cause of rotating equipment failures'
+      });
+    }
+
+    // Electrical parameters for motor/electrical equipment
+    if (['motor', 'generator', 'transformer'].includes(equipmentType) && !operatingParams?.electrical) {
+      questions.push({
+        id: 'electrical_conditions',
+        question: 'Were there any electrical abnormalities observed?',
+        type: 'multiselect',
+        options: ['High current draw', 'Low current draw', 'Voltage fluctuations', 'Poor power factor', 'Insulation breakdown', 'Ground faults', 'Phase imbalance', 'No electrical issues'],
+        required: false,
+        context: 'Electrical parameters are crucial for motor and electrical equipment failure analysis'
+      });
+    }
+
+    // Runtime and duty cycle questions
+    if (!operatingParams?.runtime) {
+      questions.push({
+        id: 'runtime_hours',
+        question: 'How long has the equipment been running since last maintenance?',
+        type: 'select',
+        options: ['< 1 week', '1-4 weeks', '1-3 months', '3-6 months', '6-12 months', '> 1 year', 'Unknown'],
+        required: false,
+        context: 'Runtime hours help establish wear patterns and maintenance intervals'
+      });
+
+      questions.push({
+        id: 'duty_cycle',
+        question: 'What is the typical duty cycle of this equipment?',
+        type: 'select',
+        options: ['Continuous (24/7)', 'Heavy duty (16-20 hrs/day)', 'Normal duty (8-12 hrs/day)', 'Light duty (< 8 hrs/day)', 'Intermittent/on-demand', 'Unknown'],
+        required: false,
+        context: 'Duty cycle affects equipment stress and expected life'
+      });
+    }
+
+    // Environmental conditions
+    if (!operatingParams?.environmental) {
+      questions.push({
+        id: 'environmental_factors',
+        question: 'What environmental conditions might have contributed to the failure?',
+        type: 'multiselect',
+        options: ['High temperature', 'High humidity', 'Corrosive atmosphere', 'Dusty environment', 'Vibration from nearby equipment', 'Frequent temperature cycling', 'Chemical exposure', 'No environmental issues'],
+        required: false,
+        context: 'Environmental factors significantly impact equipment reliability and failure modes'
+      });
+    }
+
+    // Process-specific questions for pumps and process equipment
+    if (['pump', 'heat_exchanger', 'valve'].includes(equipmentType) && !operatingParams?.process) {
+      questions.push({
+        id: 'process_conditions',
+        question: 'What process conditions were present during the failure?',
+        type: 'multiselect',
+        options: ['Normal fluid properties', 'High viscosity fluid', 'Abrasive particles', 'Corrosive fluid', 'High temperature fluid', 'Two-phase flow', 'Cavitation', 'Process upsets'],
+        required: false,
+        context: 'Process conditions directly affect equipment performance and failure modes'
+      });
+    }
+
+    // Alarm and setpoint questions
+    if (!histData?.eventMetadata?.active_alarms) {
+      questions.push({
+        id: 'alarms_before_failure',
+        question: 'Were there any alarms or warnings before the failure occurred?',
+        type: 'multiselect',
+        options: ['High temperature alarm', 'High vibration alarm', 'Low pressure alarm', 'High pressure alarm', 'Flow deviation alarm', 'Power consumption alarm', 'No alarms', 'Unknown'],
+        required: false,
+        context: 'Alarm history provides critical sequence of events leading to failure'
+      });
+    }
+
     // Check for missing environmental factors
     if (!analysis.location || analysis.location.length < 10) {
       questions.push({

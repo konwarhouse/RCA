@@ -302,12 +302,28 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
     const aiProvider = await AIService.getActiveAiProvider();
     
     if (aiProvider) {
-      // Use real AI for analysis
-      const prompt = `Analyze this ${equipmentType || 'equipment'} failure:
-        Operating Parameters: ${JSON.stringify(operatingParameters || {})}
-        Provide a detailed root cause analysis with specific technical insights.
-        Include confidence level (85-99%) and 3-5 specific recommendations.
-        Format: Root Cause: [cause] | Confidence: [number]% | Recommendations: [list]`;
+      // Use real AI for comprehensive analysis
+      const prompt = `Perform comprehensive root cause analysis for ${equipmentType || 'equipment'} failure:
+        
+        EQUIPMENT DATA:
+        - Type: ${equipmentType}
+        - Operating Parameters: ${JSON.stringify(operatingParameters || {})}
+        
+        ANALYSIS FRAMEWORK:
+        1. Data Validation: Check for missing critical parameters (lubrication, electrical, runtime, environmental)
+        2. Feature Extraction: Identify parameter trends, correlations, and excursions from baseline
+        3. Failure Mode Mapping: Map symptoms to likely causes using reliability engineering principles
+        4. Evidence Correlation: Link parameter history to support conclusions
+        
+        REQUIRED OUTPUT FORMAT:
+        Root Cause: [Primary technical cause with confidence reasoning]
+        Confidence: [85-99]%
+        Contributing Factors: [Secondary factors that enabled the failure]
+        Evidence: [Specific parameter data supporting the conclusion]
+        Missing Data: [Critical parameters needed for higher confidence]
+        Recommendations: [5 specific, actionable recommendations]
+        
+        Use engineering principles for ${equipmentType} reliability analysis. Consider lubrication, electrical, environmental, process, and maintenance factors.`;
       
       const aiResponse = await AIService.makeAIRequest(prompt, equipmentType);
       
@@ -352,27 +368,31 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
       await new Promise(resolve => setTimeout(resolve, stage.duration));
     }
     
-    // Equipment-specific root cause analysis
+    // Comprehensive equipment-specific root cause analysis with parameter correlation
     const equipmentSpecificCauses = {
       pump: [
-        "Blocked suction strainer reducing flow capacity",
-        "Impeller wear causing efficiency degradation",
-        "Seal failure leading to fluid leakage",
-        "Cavitation due to insufficient NPSH",
-        "Bearing wear from improper lubrication"
+        "Bearing failure due to inadequate lubrication (oil level, temperature, contamination)",
+        "Impeller wear from abrasive particles in process fluid",
+        "Mechanical seal failure from dry running or misalignment",
+        "Cavitation damage from insufficient NPSH or suction blockage",
+        "Coupling misalignment causing excessive vibration and shaft stress",
+        "Suction strainer blockage reducing flow and causing cavitation",
+        "Discharge valve throttling causing recirculation and heating"
       ],
       motor: [
-        "Overheating due to blocked ventilation",
-        "Bearing failure from excessive vibration",
-        "Insulation breakdown from moisture ingress",
-        "Rotor imbalance causing vibration",
-        "Stator winding deterioration"
+        "Bearing failure from inadequate lubrication (over-greasing, contamination, wrong type)",
+        "Stator winding failure from electrical overload or insulation breakdown",
+        "Rotor bar failure from frequent starts, thermal cycling, or mechanical stress",
+        "Cooling system blockage causing overheating and insulation degradation",
+        "Phase imbalance or voltage fluctuation causing electrical stress",
+        "Moisture ingress degrading insulation resistance",
+        "Excessive vibration from misalignment, imbalance, or foundation issues"
       ],
       compressor: [
-        "Valve malfunction affecting compression efficiency",
-        "Intercooler fouling reducing heat transfer",
-        "Oil contamination in compression chamber",
-        "Belt misalignment causing power loss",
+        "Valve failure from contamination, wear, or improper timing",
+        "Intercooler fouling reducing heat transfer efficiency",
+        "Lubrication system failure causing bearing or cylinder wear",
+        "Belt/coupling wear from misalignment or tension issues",
         "Pressure relief valve stuck open"
       ],
       conveyor: [

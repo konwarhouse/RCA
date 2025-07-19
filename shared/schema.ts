@@ -84,19 +84,24 @@ export interface ProcessingStage {
 }
 
 export interface OperatingParameters {
+  // Basic Parameters
   pressure?: {
     upstream: number;
     downstream: number;
+    suction?: number;
+    discharge?: number;
     unit: string;
   };
   temperature?: {
     inlet: number;
     outlet: number;
     bearing?: number;
+    ambient?: number;
     unit: string;
   };
   flow?: {
     rate: number;
+    design_rate?: number;
     unit: string;
   };
   vibration?: {
@@ -107,33 +112,144 @@ export interface OperatingParameters {
   };
   power?: {
     consumption: number;
+    voltage?: number;
+    current?: number;
+    power_factor?: number;
     unit: string;
   };
   speed?: {
     rpm: number;
+    design_rpm?: number;
   };
   efficiency?: {
     percentage: number;
+  };
+  
+  // Advanced Lubrication Parameters
+  lubrication?: {
+    oil_level?: string; // "normal" | "low" | "high"
+    oil_pressure?: number;
+    oil_temperature?: number;
+    oil_condition?: {
+      particle_ppm?: number;
+      water_content?: number;
+    };
+    grease_frequency?: string;
+    grease_type?: string;
+  };
+  
+  // Electrical Parameters
+  electrical?: {
+    current_amps?: number;
+    voltage?: number;
+    power_factor?: number;
+    insulation_resistance?: number;
+  };
+  
+  // Run Hours & Duty Cycle
+  runtime?: {
+    hours_since_maintenance?: number;
+    start_stop_cycles?: number;
+    duty_cycle_percentage?: number;
+  };
+  
+  // Environmental Conditions
+  environmental?: {
+    ambient_temperature?: number;
+    humidity_percentage?: number;
+    corrosive_agents?: string[];
+    dust_level?: string; // "low" | "medium" | "high"
+    external_vibration?: boolean;
+  };
+  
+  // Process-Specific Parameters
+  process?: {
+    npsh_available?: number;
+    npsh_required?: number;
+    media_type?: string; // "water" | "oil" | "slurry" | "chemical"
+    ph_level?: number;
+    solids_content_percentage?: number;
+    viscosity?: number;
+  };
+  
+  // Setpoints & Alarms
+  setpoints?: {
+    design_vs_actual?: Record<string, { design: number; actual: number }>;
+    alarm_limits?: Record<string, { low: number; high: number }>;
+    excursions?: Array<{
+      parameter: string;
+      timestamp: string;
+      value: number;
+      limit: number;
+    }>;
   };
 }
 
 export interface HistoricalData {
   maintenanceRecords: Array<{
     date: string;
-    type: string;
+    type: string; // "preventive" | "corrective" | "predictive" | "emergency"
     description: string;
     cost?: number;
+    parts_replaced?: string[];
+    technician?: string;
+    work_order?: string;
   }>;
   performanceMetrics: Array<{
     date: string;
     parameters: OperatingParameters;
     efficiency?: number;
+    baseline_deviation?: Record<string, number>;
   }>;
   previousFailures: Array<{
     date: string;
     rootCause: string;
+    failure_mode: string;
     resolution: string;
     downtime: number;
+    cost?: number;
+    lessons_learned?: string;
+  }>;
+  
+  // Enhanced Event Metadata
+  eventMetadata?: {
+    operator_at_failure?: string;
+    shift?: string; // "day" | "night" | "weekend"
+    active_alarms?: Array<{
+      alarm_name: string;
+      timestamp: string;
+      severity: "low" | "medium" | "high" | "critical";
+    }>;
+    sequence_of_events?: Array<{
+      timestamp: string;
+      event: string;
+      parameter_values?: Record<string, number>;
+    }>;
+  };
+  
+  // Equipment Specifications
+  equipmentSpecs?: {
+    manufacturer?: string;
+    model?: string;
+    serial_number?: string;
+    year_installed?: number;
+    design_life_years?: number;
+    criticality?: "low" | "medium" | "high" | "critical";
+    modifications?: Array<{
+      date: string;
+      description: string;
+      reason: string;
+    }>;
+  };
+  
+  // Trend Analysis Data
+  trendData?: Array<{
+    parameter: string;
+    trend: "increasing" | "decreasing" | "stable" | "erratic";
+    rate_of_change?: number;
+    confidence?: number;
+    baseline_value?: number;
+    current_value?: number;
   }>;
 }
 
