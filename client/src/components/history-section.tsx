@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default function HistorySection() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [, setLocation] = useLocation();
   const itemsPerPage = 10;
 
   // Build query parameters
@@ -208,8 +210,12 @@ export default function HistorySection() {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm">
-                              View
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setLocation(`/analysis/${analysis.id}`)}
+                            >
+                              View Details
                             </Button>
                             <Button variant="ghost" size="sm">
                               Export
