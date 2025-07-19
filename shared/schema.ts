@@ -14,7 +14,7 @@ export const aiSettings = pgTable("ai_settings", {
   provider: text("provider").notNull(), // openai, gemini, anthropic
   encryptedApiKey: text("encrypted_api_key").notNull(),
   isActive: boolean("is_active").notNull().default(false),
-  createdBy: integer("created_by").references(() => users.id),
+  createdBy: integer("created_by"), // Remove foreign key constraint for now
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastTestedAt: timestamp("last_tested_at"),
   testStatus: text("test_status"), // success, failed, pending

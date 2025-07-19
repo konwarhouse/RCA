@@ -269,10 +269,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         encryptedApiKey: undefined // Don't send back encrypted key
       });
     } catch (error) {
+      console.error("AI Settings save error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to save AI settings" });
+      res.status(500).json({ message: "Failed to save AI settings", error: error.message });
     }
   });
 
