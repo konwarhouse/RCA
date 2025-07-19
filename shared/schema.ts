@@ -6,6 +6,18 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("user"), // user, admin
+});
+
+export const aiSettings = pgTable("ai_settings", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(), // openai, gemini, anthropic
+  encryptedApiKey: text("encrypted_api_key").notNull(),
+  isActive: boolean("is_active").notNull().default(false),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastTestedAt: timestamp("last_tested_at"),
+  testStatus: text("test_status"), // success, failed, pending
 });
 
 export const analyses = pgTable("analyses", {
@@ -41,11 +53,22 @@ export const insertAnalysisSchema = createInsertSchema(analyses).omit({
 
 export const updateAnalysisSchema = insertAnalysisSchema.partial();
 
+export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
+  id: true,
+  createdAt: true,
+  lastTestedAt: true,
+  encryptedApiKey: true,
+}).extend({
+  apiKey: z.string().min(1, "API key is required"),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Analysis = typeof analyses.$inferSelect;
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type UpdateAnalysis = z.infer<typeof updateAnalysisSchema>;
+export type AiSettings = typeof aiSettings.$inferSelect;
+export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 
 export interface FileInfo {
   name: string;

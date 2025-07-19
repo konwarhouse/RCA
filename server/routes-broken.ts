@@ -334,28 +334,16 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
     }
   } catch (error) {
     console.warn("AI analysis failed, falling back to simulation:", error.message);
+    // Fall back to simulation if AI fails
   }
   
-  // If no AI results, use simulation
+  // If no AI results or fallback needed, use simulation
   if (!rootCause) {
-    const stages = [
-      { name: "parsing", duration: 2000 },
-      { name: "nlp", duration: 3000 },
-      { name: "pattern", duration: 4000 },
-      { name: "rootcause", duration: 3500 },
-      { name: "recommendations", duration: 2500 }
-    ];
-    
-    // Simulate processing stages
-    for (const stage of stages) {
-      await new Promise(resolve => setTimeout(resolve, stage.duration));
-    }
-    
-    // Equipment-specific root cause analysis
+    // Equipment-specific root cause analysis (simulation fallback)
     const equipmentSpecificCauses = {
       pump: [
         "Blocked suction strainer reducing flow capacity",
-        "Impeller wear causing efficiency degradation",
+        "Impeller wear causing efficiency degradation", 
         "Seal failure leading to fluid leakage",
         "Cavitation due to insufficient NPSH",
         "Bearing wear from improper lubrication"
@@ -373,83 +361,126 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
         "Oil contamination in compression chamber",
         "Belt misalignment causing power loss",
         "Pressure relief valve stuck open"
-      ],
-      conveyor: [
-        "Belt slippage due to insufficient tension",
-        "Roller bearing failure causing belt tracking issues",
-        "Motor overload from material buildup",
-        "Drive chain wear causing power transmission loss",
-        "Guide rail misalignment affecting belt stability"
-      ],
-      gearbox: [
-        "Gear tooth wear from inadequate lubrication",
-        "Bearing failure due to contaminated oil",
-        "Seal leakage causing oil loss",
-        "Misalignment causing excessive stress",
-        "Overheating from high operating loads"
-      ],
-      heat_exchanger: [
-        "Tube fouling reducing heat transfer efficiency",
-        "Gasket failure causing internal leakage",
-        "Corrosion damage from aggressive media",
-        "Thermal stress cracking in tube sheets",
-        "Baffle damage affecting flow distribution"
       ]
     };
 
-    const equipmentRecommendations = {
-      pump: [
-        "Clean or replace suction strainer",
-        "Inspect and replace impeller if worn",
-        "Replace pump seals and gaskets",
-        "Check and optimize suction piping",
-        "Upgrade bearing lubrication system"
-      ],
-      motor: [
-        "Clean motor cooling fins and housing",
-        "Balance rotor and check coupling alignment",
-        "Replace motor bearings and seals",
-        "Upgrade insulation system",
-        "Install vibration monitoring system"
-      ],
-      compressor: [
-        "Service or replace faulty valves",
-        "Clean intercooler and cooling system",
-        "Change oil and filter system",
-        "Realign belt drive system",
-        "Calibrate pressure relief system"
-      ],
-      conveyor: [
-        "Adjust belt tension to specifications",
-        "Replace worn rollers and bearings",
-        "Implement belt tension monitoring",
-        "Align motor coupling and drive system"
-      ],
-      heat_exchanger: [
-        "Chemical cleaning to remove fouling",
-        "Replace damaged tubes and gaskets",
-        "Install expansion joints for thermal stress",
-        "Upgrade materials for chemical resistance"
-      ]
-    };
+    const causes = equipmentSpecificCauses[equipmentType as keyof typeof equipmentSpecificCauses] || 
+                   equipmentSpecificCauses.pump;
+    rootCause = causes[Math.floor(Math.random() * causes.length)];
+  }
 
-    // Parameter-based analysis enhancement
-    let parameterInsights = [];
-    if (operatingParameters) {
-      if (operatingParameters.temperature?.bearing > 140) {
-        parameterInsights.push("Elevated bearing temperature indicates potential lubrication issues");
-      }
-      if (operatingParameters.vibration?.horizontal > 3.0) {
-        parameterInsights.push("High horizontal vibration suggests misalignment or imbalance");
-      }
-      if (operatingParameters.pressure && operatingParameters.pressure.upstream > operatingParameters.pressure.downstream * 1.5) {
-        parameterInsights.push("Excessive pressure drop indicates potential blockage or restriction");
-      }
-      if (operatingParameters.power?.consumption && equipmentType === 'pump' && operatingParameters.power.consumption > 20) {
-        parameterInsights.push("Higher than expected power consumption suggests efficiency loss");
-      }
+  if (finalRecommendations.length === 0) {
+    finalRecommendations = [
+      "Schedule immediate inspection and repair",
+      "Implement continuous monitoring system",
+      "Update maintenance schedule based on findings",
+      "Train operators on early warning signs",
+      "Consider equipment upgrade if cost-effective"
+    ];
+  }
+
+  const stages = [
+    { name: "parsing", duration: 2000 },
+    { name: "nlp", duration: 3000 },
+    { name: "pattern", duration: 4000 },
+    { name: "rootcause", duration: 3500 },
+    { name: "recommendations", duration: 2500 }
+  ];
+  
+  // Simulate processing stages
+  for (const stage of stages) {
+    await new Promise(resolve => setTimeout(resolve, stage.duration));
+  }
+  
+  // Equipment-specific root cause analysis
+  const equipmentSpecificCauses = {
+    pump: [
+      "Blocked suction strainer reducing flow capacity",
+      "Impeller wear causing efficiency degradation",
+      "Seal failure leading to fluid leakage",
+      "Cavitation due to insufficient NPSH",
+      "Bearing wear from improper lubrication"
+    ],
+    motor: [
+      "Overheating due to blocked ventilation",
+      "Bearing failure from excessive vibration",
+      "Insulation breakdown from moisture ingress",
+      "Rotor imbalance causing vibration",
+      "Stator winding deterioration"
+    ],
+    compressor: [
+      "Valve malfunction affecting compression efficiency",
+      "Intercooler fouling reducing heat transfer",
+      "Oil contamination in compression chamber",
+      "Belt misalignment causing power loss",
+      "Pressure relief valve stuck open"
+    ],
+    conveyor: [
+      "Belt tracking issues causing misalignment",
+      "Worn drive rollers reducing grip",
+      "Bearing failure in roller assemblies",
+      "Chain elongation affecting timing",
+      "Motor coupling misalignment"
+    ],
+    heat_exchanger: [
+      "Fouling reducing heat transfer efficiency",
+      "Tube erosion from high velocity flow",
+      "Gasket failure causing internal leakage",
+      "Thermal expansion stress cracking",
+      "Corrosion from chemical incompatibility"
+    ]
+  };
+
+  const equipmentRecommendations = {
+    pump: [
+      "Replace suction strainer and implement filtration",
+      "Schedule impeller inspection and replacement",
+      "Install continuous vibration monitoring",
+      "Verify and improve NPSH conditions"
+    ],
+    motor: [
+      "Clean ventilation passages and install temperature monitoring",
+      "Balance rotor and align coupling",
+      "Improve moisture protection and insulation",
+      "Implement predictive maintenance program"
+    ],
+    compressor: [
+      "Service and calibrate all valves",
+      "Clean intercooler and improve cooling",
+      "Change oil and install filtration system",
+      "Realign belt drive system"
+    ],
+    conveyor: [
+      "Adjust belt tracking and install guides",
+      "Replace worn rollers and bearings",
+      "Implement belt tension monitoring",
+      "Align motor coupling and drive system"
+    ],
+    heat_exchanger: [
+      "Chemical cleaning to remove fouling",
+      "Replace damaged tubes and gaskets",
+      "Install expansion joints for thermal stress",
+      "Upgrade materials for chemical resistance"
+    ]
+  };
+
+  // Parameter-based analysis enhancement
+  let parameterInsights = [];
+  if (operatingParameters) {
+    if (operatingParameters.temperature?.bearing > 140) {
+      parameterInsights.push("Elevated bearing temperature indicates potential lubrication issues");
     }
-    
+    if (operatingParameters.vibration?.horizontal > 3.0) {
+      parameterInsights.push("High horizontal vibration suggests misalignment or imbalance");
+    }
+    if (operatingParameters.pressure && operatingParameters.pressure.upstream > operatingParameters.pressure.downstream * 1.5) {
+      parameterInsights.push("Excessive pressure drop indicates potential blockage or restriction");
+    }
+    if (operatingParameters.power?.consumption && equipmentType === 'pump' && operatingParameters.power.consumption > 20) {
+      parameterInsights.push("Higher than expected power consumption suggests efficiency loss");
+    }
+  }
+  
     const causes = equipmentSpecificCauses[equipmentType as keyof typeof equipmentSpecificCauses] || 
                    equipmentSpecificCauses.pump;
     const recommendations = equipmentRecommendations[equipmentType as keyof typeof equipmentRecommendations] || 
@@ -469,7 +500,6 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
     ];
     
     confidence = Math.floor(Math.random() * 15) + 85; // 85-99% for equipment-specific analysis
-  }
   
   // Generate learning insights for equipment
   const learningInsights = {
@@ -484,7 +514,7 @@ async function simulateAIProcessing(analysisId: number, equipmentType?: string, 
         pattern: `${equipmentType} failure correlation with operating parameters`,
         frequency: Math.floor(Math.random() * 5) + 1,
         severity: confidence > 90 ? "high" : confidence > 80 ? "medium" : "low",
-        conditions: operatingParameters ? Object.keys(operatingParameters) : ["normal operating conditions"]
+        conditions: parameterInsights.length > 0 ? parameterInsights : ["normal operating conditions"]
       }
     ],
     predictiveIndicators: operatingParameters ? Object.keys(operatingParameters).map(param => ({

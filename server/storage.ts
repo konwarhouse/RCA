@@ -1,4 +1,4 @@
-import { analyses, users, type Analysis, type InsertAnalysis, type UpdateAnalysis, type User, type InsertUser } from "@shared/schema";
+import { analyses, users, aiSettings, type Analysis, type InsertAnalysis, type UpdateAnalysis, type User, type InsertUser, type AiSettings, type InsertAiSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, ilike, or } from "drizzle-orm";
 
@@ -17,6 +17,13 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(insertUser: InsertUser): Promise<User>;
+  
+  // AI Settings methods
+  createAiSettings(settings: Omit<InsertAiSettings, 'apiKey'> & { encryptedApiKey: string; testStatus: string }): Promise<AiSettings>;
+  getAllAiSettings(): Promise<AiSettings[]>;
+  getActiveAiSettings(): Promise<AiSettings | undefined>;
+  deactivateAllAiSettings(): Promise<void>;
+  deleteAiSettings(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -102,6 +109,32 @@ export class DatabaseStorage implements IStorage {
         lte(analyses.createdAt, endDate)
       )
     ).orderBy(desc(analyses.createdAt));
+  }
+
+  // AI Settings methods
+  async createAiSettings(settings: Omit<InsertAiSettings, 'apiKey'> & { encryptedApiKey: string; testStatus: string }): Promise<AiSettings> {
+    const [aiSetting] = await db
+      .insert(aiSettings)
+      .values(settings)
+      .returning();
+    return aiSetting;
+  }
+
+  async getAllAiSettings(): Promise<AiSettings[]> {
+    return await db.select().from(aiSettings).orderBy(desc(aiSettings.createdAt));
+  }
+
+  async getActiveAiSettings(): Promise<AiSettings | undefined> {
+    const [setting] = await db.select().from(aiSettings).where(eq(aiSettings.isActive, true));
+    return setting || undefined;
+  }
+
+  async deactivateAllAiSettings(): Promise<void> {
+    await db.update(aiSettings).set({ isActive: false });
+  }
+
+  async deleteAiSettings(id: number): Promise<void> {
+    await db.delete(aiSettings).where(eq(aiSettings.id, id));
   }
 }
 

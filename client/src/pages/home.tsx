@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { Brain, Activity, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
 import UploadSection from "@/components/upload-section";
 import DashboardSection from "@/components/dashboard-section";
 import HistorySection from "@/components/history-section";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -29,10 +33,14 @@ export default function Home() {
                 <span className="w-2 h-2 bg-accent rounded-full"></span>
                 <span>System Active</span>
               </div>
-              <button className="bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm font-medium text-secondary-foreground transition-colors">
-                <Users className="w-4 h-4 mr-2 inline" />
-                Admin
-              </button>
+              <Button 
+                variant="secondary" 
+                onClick={() => setLocation('/admin')}
+                className="text-sm font-medium"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Admin Settings
+              </Button>
             </div>
           </div>
         </div>

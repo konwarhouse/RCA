@@ -58,40 +58,17 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
         }
       }
 
-      // Vibration-related factors
-      if (params.vibration) {
-        const vibIssues = [];
-        if (params.vibration.horizontal > 3.0) vibIssues.push('High horizontal vibration');
-        if (params.vibration.vertical > 3.0) vibIssues.push('High vertical vibration');
-        
-        if (vibIssues.length > 0) {
-          contributingFactors.push({
-            id: 'vib-factor',
-            label: 'Vibration Anomalies',
-            confidence: 92,
-            evidence: vibIssues,
-            type: 'primary',
-            children: vibIssues.map((issue, idx) => ({
-              id: `vib-evidence-${idx}`,
-              label: issue,
-              confidence: 88,
-              evidence: [`Measurement: ${params.vibration.horizontal} mm/s horizontal`],
-              type: 'evidence'
-            }))
-          });
-        }
-      }
-
-      // Pressure-related factors (for pumps)
-      if (params.pressure && equipmentType === 'pump') {
+      // Pressure-related factors
+      if (params.pressure) {
         const pressureIssues = [];
-        const pressureDrop = params.pressure.upstream - params.pressure.downstream;
-        if (pressureDrop > 5) pressureIssues.push('Excessive pressure drop');
+        const pressureDiff = params.pressure.upstream - params.pressure.downstream;
+        if (pressureDiff > 50) pressureIssues.push('High pressure differential');
+        if (params.pressure.upstream > 150) pressureIssues.push('Excessive upstream pressure');
         
         if (pressureIssues.length > 0) {
           contributingFactors.push({
             id: 'pressure-factor',
-            label: 'Pressure Anomalies',
+            label: 'Pressure Issues',
             confidence: 78,
             evidence: pressureIssues,
             type: 'primary',
@@ -99,7 +76,31 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
               id: `pressure-evidence-${idx}`,
               label: issue,
               confidence: 75,
-              evidence: [`Pressure drop: ${pressureDrop.toFixed(1)} PSI`],
+              evidence: [`Operating parameter: ${params.pressure.upstream} PSI upstream`],
+              type: 'evidence'
+            }))
+          });
+        }
+      }
+
+      // Vibration-related factors
+      if (params.vibration) {
+        const vibrationIssues = [];
+        if (params.vibration.amplitude > 10) vibrationIssues.push('High vibration amplitude');
+        if (params.vibration.frequency > 60) vibrationIssues.push('Abnormal frequency detected');
+        
+        if (vibrationIssues.length > 0) {
+          contributingFactors.push({
+            id: 'vibration-factor',
+            label: 'Vibration Issues',
+            confidence: 82,
+            evidence: vibrationIssues,
+            type: 'primary',
+            children: vibrationIssues.map((issue, idx) => ({
+              id: `vibration-evidence-${idx}`,
+              label: issue,
+              confidence: 80,
+              evidence: [`Operating parameter: ${params.vibration.amplitude} mm/s amplitude`],
               type: 'evidence'
             }))
           });
@@ -107,207 +108,204 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       }
     }
 
-    // Add maintenance-related factors from historical data
-    if (analysis.historicalData) {
-      const histData = analysis.historicalData as any;
-      if (histData.previousFailures && histData.previousFailures.length > 0) {
-        contributingFactors.push({
-          id: 'maintenance-factor',
-          label: 'Maintenance History',
-          confidence: 70,
-          evidence: histData.previousFailures.map((f: any) => f.rootCause),
-          type: 'secondary',
-          children: histData.previousFailures.map((failure: any, idx: number) => ({
-            id: `maint-evidence-${idx}`,
-            label: failure.rootCause,
-            confidence: 65,
-            evidence: [`Previous failure: ${failure.date}`, `Downtime: ${failure.downtime} hours`],
+    // Add default contributing factors if none detected
+    if (contributingFactors.length === 0) {
+      contributingFactors.push({
+        id: 'default-factor',
+        label: 'Operational Factors',
+        confidence: 75,
+        evidence: ['General operational conditions', 'Equipment age and wear'],
+        type: 'primary',
+        children: [
+          {
+            id: 'wear-evidence',
+            label: 'Normal wear and tear',
+            confidence: 70,
+            evidence: ['Equipment usage patterns'],
             type: 'evidence'
-          }))
-        });
-      }
+          }
+        ]
+      });
     }
 
     return {
-      id: 'root',
+      id: 'root-node',
       label: rootCause,
-      confidence: analysis.confidence || 0,
-      evidence: [`Analysis ID: ${analysis.analysisId}`, `Equipment: ${analysis.equipmentId}`],
+      confidence: analysis.confidence || 85,
+      evidence: ['Analysis completed', 'Equipment data reviewed'],
       type: 'root',
       children: contributingFactors
     };
   };
 
-  const treeData = generateTreeData();
+  // Generate fishbone diagram data
+  const generateFishboneData = () => {
+    const categories = [
+      { name: 'Methods', factors: ['Operating procedures', 'Maintenance schedule', 'Training protocols'] },
+      { name: 'Materials', factors: ['Lubricant quality', 'Spare parts', 'Consumables'] },
+      { name: 'Machines', factors: ['Equipment age', 'Design limitations', 'Wear patterns'] },
+      { name: 'Environment', factors: ['Temperature', 'Humidity', 'Contamination'] },
+      { name: 'People', factors: ['Training level', 'Experience', 'Workload'] },
+      { name: 'Measurements', factors: ['Sensor accuracy', 'Data quality', 'Monitoring frequency'] }
+    ];
 
-  const renderTreeNode = (node: TreeNode, level: number = 0) => {
-    const getNodeColor = (type: string, confidence: number) => {
+    // Add specific factors based on analysis
+    if (analysis.operatingParameters) {
+      const params = analysis.operatingParameters as any;
+      if (params.temperature?.bearing > 130) {
+        categories[3].factors.push('Excessive heat generation');
+      }
+      if (params.vibration?.amplitude > 10) {
+        categories[2].factors.push('Mechanical imbalance');
+      }
+      if (params.pressure) {
+        categories[2].factors.push('Pressure system issues');
+      }
+    }
+
+    return {
+      rootCause: analysis.rootCause || 'Unknown root cause',
+      categories
+    };
+  };
+
+  const treeData = generateTreeData();
+  const fishboneData = generateFishboneData();
+
+  // Render tree node recursively
+  const renderTreeNode = (node: TreeNode, level = 0) => {
+    const getNodeStyle = (type: string) => {
       switch (type) {
-        case 'root': return 'bg-red-100 border-red-300 text-red-800';
-        case 'primary': return confidence > 80 ? 'bg-orange-100 border-orange-300 text-orange-800' : 'bg-yellow-100 border-yellow-300 text-yellow-800';
-        case 'secondary': return 'bg-blue-100 border-blue-300 text-blue-800';
-        case 'evidence': return 'bg-green-100 border-green-300 text-green-800';
-        default: return 'bg-gray-100 border-gray-300 text-gray-800';
+        case 'root':
+          return 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900 dark:border-red-700 dark:text-red-200';
+        case 'primary':
+          return 'bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-900 dark:border-orange-700 dark:text-orange-200';
+        case 'secondary':
+          return 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-200';
+        case 'evidence':
+          return 'bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200';
+        default:
+          return 'bg-gray-100 border-gray-300 text-gray-800 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200';
       }
     };
 
     return (
-      <div key={node.id} className={`ml-${level * 8}`}>
-        <div className={`p-3 rounded-lg border-2 mb-3 ${getNodeColor(node.type, node.confidence)}`}>
+      <div key={node.id} className={`ml-${level * 4}`}>
+        <div className={`p-3 rounded-lg border-2 mb-3 ${getNodeStyle(node.type)}`}>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-sm">{node.label}</h4>
-            <Badge variant="outline" className="text-xs">
+            <div className="flex items-center space-x-2">
+              <GitBranch className="w-4 h-4" />
+              <span className="font-medium">{node.label}</span>
+            </div>
+            <Badge variant="outline">
               {node.confidence}% confidence
             </Badge>
           </div>
+          
           {node.evidence.length > 0 && (
-            <div className="text-xs opacity-80">
-              <strong>Evidence:</strong>
-              <ul className="list-disc list-inside mt-1">
+            <div className="mt-2">
+              <p className="text-xs font-medium mb-1">Evidence:</p>
+              <ul className="text-xs space-y-1">
                 {node.evidence.map((evidence, idx) => (
-                  <li key={idx}>{evidence}</li>
+                  <li key={idx} className="flex items-start">
+                    <span className="w-1 h-1 bg-current rounded-full mt-1.5 mr-2 flex-shrink-0" />
+                    {evidence}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
         </div>
-        {node.children && node.children.map(child => renderTreeNode(child, level + 1))}
+        
+        {node.children && node.children.length > 0 && (
+          <div className="ml-4 border-l-2 border-gray-300 dark:border-gray-600 pl-4">
+            {node.children.map(child => renderTreeNode(child, level + 1))}
+          </div>
+        )}
       </div>
     );
   };
 
+  // Render fishbone diagram
   const renderFishboneDiagram = () => {
     return (
-      <div className="relative bg-white p-8 rounded-lg border">
-        <svg width="100%" height="400" viewBox="0 0 800 400" className="overflow-visible">
-          {/* Main spine */}
-          <line x1="100" y1="200" x2="700" y2="200" stroke="#374151" strokeWidth="3" />
-          
-          {/* Head (problem) */}
-          <rect x="680" y="170" width="100" height="60" fill="#ef4444" rx="8" />
-          <text x="730" y="195" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">
-            Root Cause
-          </text>
-          <text x="730" y="210" textAnchor="middle" fill="white" fontSize="10">
-            {analysis.issueDescription?.substring(0, 20)}...
-          </text>
-
-          {/* Primary branches */}
-          {treeData.children?.slice(0, 6).map((factor, idx) => {
-            const isTop = idx % 2 === 0;
-            const x = 150 + (idx * 90);
-            const y1 = 200;
-            const y2 = isTop ? 120 : 280;
-            const textY = isTop ? 110 : 295;
-            
-            return (
-              <g key={factor.id}>
-                {/* Branch line */}
-                <line x1={x} y1={y1} x2={x + 50} y2={y2} stroke="#6b7280" strokeWidth="2" />
-                
-                {/* Factor box */}
-                <rect 
-                  x={x + 30} 
-                  y={textY - 15} 
-                  width="80" 
-                  height="30" 
-                  fill="#3b82f6" 
-                  rx="4" 
-                />
-                <text 
-                  x={x + 70} 
-                  y={textY} 
-                  textAnchor="middle" 
-                  fill="white" 
-                  fontSize="10"
-                  fontWeight="bold"
-                >
-                  {factor.label.substring(0, 12)}
-                </text>
-                
-                {/* Confidence badge */}
-                <circle cx={x + 100} cy={textY} r="8" fill="#10b981" />
-                <text x={x + 100} y={textY + 3} textAnchor="middle" fill="white" fontSize="8">
-                  {factor.confidence}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="inline-block bg-red-100 border-2 border-red-300 text-red-800 dark:bg-red-900 dark:border-red-700 dark:text-red-200 px-6 py-3 rounded-lg font-bold text-lg">
+            {fishboneData.rootCause}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {fishboneData.categories.map((category, idx) => (
+            <Card key={idx} className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-center">{category.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {category.factors.map((factor, factorIdx) => (
+                    <li key={factorIdx} className="flex items-start text-sm">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 mr-2 flex-shrink-0" />
+                      {factor}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   };
 
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
             <GitBranch className="w-5 h-5" />
-            <span>Root Cause Analysis Tree</span>
+            <span>RCA Tree Visualization</span>
           </CardTitle>
-          <div className="flex items-center space-x-2">
-            {onEdit && (
-              <Button variant="outline" size="sm" onClick={() => onEdit(analysis)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Analysis
-              </Button>
-            )}
-            <Button variant="outline" size="sm">
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => onEdit?.(analysis)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Analysis
+            </Button>
+            <Button variant="outline">
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export Diagram
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'tree' | 'fishbone')}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="tree">Tree View</TabsTrigger>
             <TabsTrigger value="fishbone">Fishbone Diagram</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="tree" className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-4">
-                <strong>Analysis:</strong> {analysis.analysisId} | <strong>Equipment:</strong> {analysis.equipmentId} | <strong>Confidence:</strong> {analysis.confidence}%
+          <TabsContent value="tree" className="mt-6">
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground mb-4">
+                Interactive root cause analysis tree showing the primary root cause, contributing factors, and supporting evidence with confidence levels.
               </div>
-              {renderTreeNode(treeData)}
+              <div className="max-h-96 overflow-y-auto">
+                {renderTreeNode(treeData)}
+              </div>
             </div>
           </TabsContent>
           
-          <TabsContent value="fishbone">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-4">
-                <strong>Ishikawa Diagram:</strong> Visual representation of contributing factors
+          <TabsContent value="fishbone" className="mt-6">
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground mb-4">
+                Fishbone (Ishikawa) diagram categorizing potential causes across the 6M framework: Methods, Materials, Machines, Environment, People, and Measurements.
               </div>
               {renderFishboneDiagram()}
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Legend */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-semibold text-sm mb-3">Legend</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-              <span className="text-xs">Root Cause</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-orange-100 border border-orange-300 rounded"></div>
-              <span className="text-xs">Primary Factor</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-              <span className="text-xs">Secondary Factor</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-              <span className="text-xs">Evidence</span>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
