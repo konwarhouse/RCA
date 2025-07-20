@@ -2,17 +2,34 @@
 
 ## Overview
 
-This is a full-stack web application for performing AI-powered Root Cause Analysis (RCA) on uploaded data files. The system allows users to upload various file formats (CSV, Excel, PDF, JSON, TXT), analyzes them to identify potential root causes of issues, and provides intelligent recommendations with confidence scores.
+This is a comprehensive web-based AI-powered platform for root cause analysis (RCA) and safety investigation, following ISO 14224 standards. The system implements:
+- Plant Asset RCA using Fault Tree Analysis for equipment failures
+- Safety/Incident RCA using Event-Causal Factor Analysis (ECFA)
+- Dynamic questionnaire-driven evidence gathering with ISO 14224 taxonomy
+- Explainable AI with complete audit trails
+- Advanced data ingestion supporting Excel, CSV, PDF, JSON, TXT formats
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault tree logic, ensure complete auditability.
 
 ## Recent Changes (January 2025)
 
-### Complete Evidence-First RCA Workflow Restructuring
+### ISO 14224-Compliant RCA Platform Implementation
 - **Date**: January 20, 2025
-- **Changes**: Fundamental architectural transformation to evidence-driven root cause analysis
+- **Changes**: Complete rebuild to enterprise-grade ISO 14224-compliant root cause analysis platform
+  - **ISO 14224 Equipment Taxonomy**: Comprehensive equipment classification system (rotating, static, electrical, instrumentation, support) with subcategories and specific types
+  - **Fault Tree Analysis Engine**: Professional fault tree analysis with probability calculations, critical path identification, and evidence-based node evaluation
+  - **ECFA Support**: Event-Causal Factor Analysis framework for safety incidents with timeline reconstruction and barrier analysis
+  - **Advanced Evidence Engine**: Multi-phase evidence collection (5 phases: General, Event Details, Symptoms, History, Equipment-Specific Parameters)
+  - **Dynamic Questionnaire System**: Conditional questions based on equipment type and previous responses with real-time validation
+  - **Structured Evidence Processing**: NLP extraction simulation, evidence quality scoring, and analysis readiness assessment  
+  - **Professional Database Schema**: ISO 14224-compliant fields for equipment categorization, fault tree results, ECFA analysis, and regulatory compliance
+  - **Evidence-First Workflow**: Evidence collection → Validation → Fault Tree Analysis → Expert Review → Completed
+  - **Quality Assurance**: Evidence completeness tracking (80% minimum), quality scoring, and analysis readiness verification
+  - **Equipment-Specific Parameters**: Dynamic parameter collection for pumps (pressure, flow, vibration), valves (position, leak location), motors (current, voltage, temperature), etc.
+- **Impact**: Platform now meets enterprise standards with proper ISO 14224 taxonomy, fault tree logic, explainable AI, complete audit trails, and regulatory compliance. Evidence-driven approach ensures systematic data collection before analysis begins.
   - **Evidence-First Workflow**: Complete restructuring around question-driven evidence collection before AI analysis
   - **Structured Evidence Collection**: Comprehensive 8-phase questionnaire system (Asset Context, Symptom Definition, Operating Conditions, Maintenance History, Human Factors, External Factors, Additional Evidence, Equipment-Specific Follow-ups)
   - **Evidence Engine**: New server-side engine managing structured question definitions, validation, and evidence data structuring
@@ -59,14 +76,19 @@ The application follows a modern full-stack architecture with clear separation b
 - **Session Management**: In-memory storage (development) with PostgreSQL session store capability
 
 ### Database Design
-- **analyses** table: Enhanced with equipment-specific fields and comprehensive data storage
-  - Equipment type, ID, and location tracking
-  - Operating parameters (pressure, temperature, flow, vibration, power, speed)
-  - Historical maintenance and performance data
-  - Learning insights for predictive analysis and equipment-specific patterns
-- **users** table: User authentication (schema defined but not actively used)
-- Uses JSONB fields for flexible data storage (recommendations, operating parameters, learning insights)
-- Supports search, filtering by priority, equipment type, and date range queries
+- **analyses** table: ISO 14224-compliant comprehensive RCA data storage
+  - Equipment Classification: Category, subcategory, type per ISO 14224 taxonomy
+  - Asset Hierarchy: Site, process unit, system, location tracking
+  - Event Information: Date/time, detection method, operating mode, environmental conditions
+  - Evidence Data: Structured JSONB storage for all questionnaire phases
+  - Fault Tree Analysis: Complete fault tree results with probabilities and critical paths
+  - ECFA Analysis: Event-Causal Factor Analysis for safety incidents
+  - Workflow Management: Evidence collection → validation → analysis → review → completed
+  - Regulatory Compliance: Reportable events, compliance status, audit trail
+- **aiSettings** table: Secure AI provider configuration with encrypted keys
+- **users** table: User authentication and role-based access control
+- Uses JSONB fields for complex structured data (fault trees, evidence, recommendations)
+- Supports comprehensive filtering by equipment category, risk rating, analysis type, dates
 
 ## Implemented Features Checklist
 

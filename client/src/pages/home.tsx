@@ -68,7 +68,7 @@ function NewAnalysisSection() {
             <Link href="/new" className="flex-1">
               <Button className="w-full flex items-center gap-2" size="lg">
                 <Search className="h-5 w-5" />
-                Start New Analysis
+                Start New RCA Analysis
                 <ArrowRight className="h-4 w-4 ml-auto" />
               </Button>
             </Link>

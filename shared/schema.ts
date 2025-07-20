@@ -20,29 +20,62 @@ export const aiSettings = pgTable("ai_settings", {
   testStatus: text("test_status"), // success, failed, pending
 });
 
+// ISO 14224 compliant RCA Analysis table
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
   analysisId: text("analysis_id").notNull().unique(),
-  // Current workflow status - evidence collection first, then analysis
-  workflowStage: text("workflow_stage").notNull().default("evidence_collection"), // evidence_collection, analysis_ready, ai_processing, completed, failed
   
-  // Evidence Collection Results (structured data from questionnaire)
-  evidenceData: jsonb("evidence_data"), // Complete structured evidence from questionnaire phases
-  uploadedFiles: jsonb("uploaded_files"), // array of file info
-  parsedData: jsonb("parsed_data"), // structured data extracted from uploads
+  // Analysis Type - Asset RCA (Fault Tree) or Safety RCA (ECFA)  
+  analysisType: text("analysis_type").notNull(), // "asset_rca" | "safety_rca"
   
-  // Legacy fields for backward compatibility (will be populated from evidenceData)
-  issueDescription: text("issue_description"),
-  equipmentType: text("equipment_type"), 
-  equipmentId: text("equipment_id"),
+  // Workflow Management
+  workflowStage: text("workflow_stage").notNull().default("evidence_collection"), 
+  // evidence_collection -> validation -> ai_processing -> expert_review -> completed
+  
+  // ISO 14224 Equipment Classification
+  equipmentCategory: text("equipment_category"), // rotating, static, electrical, instrumentation, support
+  equipmentSubcategory: text("equipment_subcategory"), // pumps, valves, motors, etc.
+  equipmentType: text("equipment_type"), // centrifugal_pump, gate_valve, etc.
+  equipmentTag: text("equipment_tag").notNull(), // unique equipment identifier
+  
+  // Location & Asset Hierarchy
+  site: text("site"),
+  processUnit: text("process_unit"),
+  system: text("system"),
   location: text("location"),
   
-  // AI Analysis Results (only populated after evidence collection is complete)
-  rootCause: text("root_cause"),
-  confidence: integer("confidence"), // percentage 0-100
-  priority: text("priority").notNull().default("medium"), // high, medium, low
-  status: text("status").notNull().default("evidence_collection"), // evidence_collection, processing, completed, failed
-  recommendations: jsonb("recommendations"), // array of recommendation strings
+  // Event Information
+  eventDateTime: timestamp("event_datetime"),
+  detectedBy: text("detected_by"),
+  detectionMethod: text("detection_method"),
+  operatingMode: text("operating_mode"), // normal, startup, shutdown, standby
+  
+  // Evidence Collection (comprehensive structured data)
+  evidenceData: jsonb("evidence_data"), // Complete questionnaire responses organized by phases
+  requiredEvidenceComplete: boolean("required_evidence_complete").default(false),
+  evidenceValidationStatus: text("evidence_validation_status").default("pending"), // pending, validated, incomplete
+  
+  // Data Ingestion
+  uploadedFiles: jsonb("uploaded_files"), // Original file attachments
+  parsedData: jsonb("parsed_data"), // NLP extracted data from files
+  dataValidationResults: jsonb("data_validation_results"), // Validation flags and issues
+  
+  // Analysis Results 
+  faultTreeAnalysis: jsonb("fault_tree_analysis"), // Fault tree structure and probabilities
+  ecfaAnalysis: jsonb("ecfa_analysis"), // Event-Causal Factor Analysis for safety events
+  rootCauses: jsonb("root_causes"), // Primary and contributing causes with evidence links
+  recommendations: jsonb("recommendations"), // Corrective and preventive actions
+  confidenceScore: integer("confidence_score"), // 0-100 overall confidence
+  riskRating: text("risk_rating"), // low, medium, high, critical
+  
+  // Status and Priority
+  status: text("status").notNull().default("evidence_collection"),
+  priority: text("priority").notNull().default("medium"),
+  
+  // Regulatory and Compliance
+  reportableEvent: boolean("reportable_event").default(false),
+  regulatoryRequirements: jsonb("regulatory_requirements"),
+  complianceStatus: text("compliance_status"),
   operatingParameters: jsonb("operating_parameters"), // pressure, temperature, flow, etc
   historicalData: jsonb("historical_data"), // past performance and maintenance data
   learningInsights: jsonb("learning_insights"), // ML insights for equipment-specific learning

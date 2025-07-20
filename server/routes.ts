@@ -6,7 +6,13 @@ import { insertAnalysisSchema, updateAnalysisSchema, insertAiSettingsSchema } fr
 import { AIService } from "./ai-service";
 import { DataParser } from "./data-parser";
 import { RCAEngine } from "./rca-engine";
+import { EvidenceEngine } from "./evidence-engine";
+import { FaultTreeEngine } from "./fault-tree-engine";
 import { z } from "zod";
+
+// Initialize new ISO 14224 engines
+const evidenceEngine = new EvidenceEngine();
+const faultTreeEngine = new FaultTreeEngine();
 
 const upload = multer({
   storage: multer.memoryStorage(),
