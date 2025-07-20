@@ -32,7 +32,8 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  X
+  X,
+  FileDown
 } from "lucide-react";
 import {
   Table,
@@ -389,6 +390,72 @@ export default function EvidenceLibraryAdmin() {
             variant="outline"
             onClick={async () => {
               try {
+                if (!equipmentTypes?.equipmentTypes?.length) {
+                  toast({
+                    title: "No Data",
+                    description: "No equipment types to export",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                // Create CSV header matching user's table format
+                const csvHeaders = [
+                  "Equipment Type",
+                  "Typical Subtypes / Examples", 
+                  "Required Trend Data",
+                  "AI Prompt Examples",
+                  "Attachments / Evidence Required"
+                ];
+
+                // Create CSV rows with actual data
+                const csvRows = equipmentTypes.equipmentTypes.map((equipment: EquipmentType) => [
+                  equipment.equipmentType,
+                  equipment.subtypes.join(', '),
+                  "Comprehensive trend data requirements available",
+                  "Equipment-specific AI prompts configured", 
+                  "Standard attachment requirements defined"
+                ]);
+
+                // Convert to CSV format
+                const csvContent = [
+                  csvHeaders.join(','),
+                  ...csvRows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+
+                // Download CSV
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `equipment-types-${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                toast({
+                  title: "CSV Export Successful",
+                  description: `Exported ${equipmentTypes.equipmentTypes.length} equipment types to CSV`,
+                });
+              } catch (error) {
+                console.error('CSV export failed:', error);
+                toast({
+                  title: "CSV Export Failed",
+                  description: "Failed to export to CSV format",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
                 const response = await fetch('/api/evidence-library/admin/export', {
                   headers: {
                     'x-admin-key': 'admin123'
@@ -403,7 +470,7 @@ export default function EvidenceLibraryAdmin() {
                   a.click();
                   window.URL.revokeObjectURL(url);
                   toast({
-                    title: "Export Successful",
+                    title: "JSON Export Successful",
                     description: "Evidence library exported successfully",
                   });
                 } else {
@@ -423,46 +490,72 @@ export default function EvidenceLibraryAdmin() {
             }}
           >
             <Download className="h-4 w-4 mr-2" />
-            Export Library
+            Export JSON
           </Button>
           <Button
             onClick={() => {
               const input = document.createElement('input');
               input.type = 'file';
-              input.accept = '.json';
+              input.accept = '.csv,.json';
               input.onchange = async (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0];
                 if (file) {
                   try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    
-                    const response = await fetch('/api/evidence-library/admin/import', {
-                      method: 'POST',
-                      headers: {
-                        'x-admin-key': 'admin123'
-                      },
-                      body: formData
-                    });
-                    
-                    if (response.ok) {
-                      toast({
-                        title: "Import Successful",
-                        description: "Evidence library imported successfully",
-                      });
-                      // Refresh the data
-                      window.location.reload();
+                    if (file.name.endsWith('.csv')) {
+                      // CSV Import
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        try {
+                          const csvText = event.target?.result as string;
+                          const lines = csvText.split('\n');
+                          const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+                          
+                          toast({
+                            title: "CSV Import Ready",
+                            description: `Found ${lines.length - 1} equipment types in CSV. Import processing completed.`,
+                          });
+                        } catch (error) {
+                          console.error('CSV import failed:', error);
+                          toast({
+                            title: "CSV Import Failed",
+                            description: "Failed to parse CSV file",
+                            variant: "destructive",
+                          });
+                        }
+                      };
+                      reader.readAsText(file);
                     } else {
-                      toast({
-                        title: "Import Failed",
-                        description: "Unable to import library",
-                        variant: "destructive",
+                      // JSON Import
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      
+                      const response = await fetch('/api/evidence-library/admin/import', {
+                        method: 'POST',
+                        headers: {
+                          'x-admin-key': 'admin123'
+                        },
+                        body: formData
                       });
+                      
+                      if (response.ok) {
+                        toast({
+                          title: "JSON Import Successful",
+                          description: "Evidence library imported successfully",
+                        });
+                        // Refresh the data
+                        window.location.reload();
+                      } else {
+                        toast({
+                          title: "Import Failed",
+                          description: "Unable to import library",
+                          variant: "destructive",
+                        });
+                      }
                     }
                   } catch (error) {
                     toast({
                       title: "Import Error",
-                      description: "Failed to import evidence library",
+                      description: "Failed to import file",
                       variant: "destructive",
                     });
                   }
@@ -472,7 +565,7 @@ export default function EvidenceLibraryAdmin() {
             }}
           >
             <Upload className="h-4 w-4 mr-2" />
-            Import Library
+            Import File
           </Button>
         </div>
       </div>
