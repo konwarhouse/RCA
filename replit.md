@@ -30,6 +30,7 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - **Equipment-Specific Parameters**: Conditional parameter collection for pumps, motors, valves with proper ISO 14224 classification
   - **Comprehensive API**: Complete REST API supporting investigation lifecycle with file uploads and analysis generation
 - **Impact**: Platform now properly implements both ECFA and Fault Tree methodologies as specified, with mandatory type selection driving all downstream logic, forms, and analysis outputs. System ensures thorough evidence collection before analysis begins.
+  - **Legacy Component Removal**: Removed outdated direct file upload interface in favor of the comprehensive evidence-first workflow, eliminating user confusion and maintaining focus on proper investigation methodologies
   - **Evidence-First Workflow**: Complete restructuring around question-driven evidence collection before AI analysis
   - **Structured Evidence Collection**: Comprehensive 8-phase questionnaire system (Asset Context, Symptom Definition, Operating Conditions, Maintenance History, Human Factors, External Factors, Additional Evidence, Equipment-Specific Follow-ups)
   - **Evidence Engine**: New server-side engine managing structured question definitions, validation, and evidence data structuring

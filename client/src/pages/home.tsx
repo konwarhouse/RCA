@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation, Link } from "wouter";
-import UploadSection from "@/components/upload-section";
+
 import DashboardSection from "@/components/dashboard-section";
 import HistorySection from "@/components/history-section";
 
@@ -86,20 +86,8 @@ function NewAnalysisSection() {
         </CardContent>
       </Card>
 
-      {/* Legacy Upload Section for Backward Compatibility */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg text-gray-600 dark:text-gray-400">
-            Legacy: Direct File Upload
-          </CardTitle>
-          <CardDescription>
-            Traditional file-first approach (less comprehensive than evidence-first workflow)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <UploadSection />
-        </CardContent>
-      </Card>
+
+
     </div>
   );
 }
