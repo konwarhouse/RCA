@@ -1732,6 +1732,592 @@ export const EVIDENCE_REQUIREMENTS_LIBRARY: Record<string, EquipmentEvidenceProf
     ],
     lastUpdated: '2025-01-20',
     updatedBy: 'RCA System Admin'
+  },
+
+  // UPS/Rectifiers - from user comprehensive data
+  ups_rectifiers: {
+    equipmentType: 'UPS/Rectifiers',
+    iso14224Code: 'UP-018',
+    subtypes: ['Static', 'Rotary'],
+    requiredTrendData: [
+      {
+        id: 'output_voltage',
+        name: 'Output Voltage',
+        description: 'UPS output voltage monitoring',
+        units: 'V',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'battery_voltage', 
+        name: 'Battery Voltage',
+        description: 'Battery bank voltage monitoring',
+        units: 'V',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'ups_temperature',
+        name: 'Temperature',
+        description: 'UPS internal temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '5 minutes'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'voltage_chart',
+        name: 'Voltage Chart',
+        description: 'Output and battery voltage logs, alarm history',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 20
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'UPS problems involve battery failures, inverter faults, or load transfer issues',
+        prompt: 'Upload output and battery voltage logs, alarm history. Any battery replacement or faults?',
+        examples: ['Battery voltage dropped to 10.8V, backup time reduced to 5 minutes, temperature alarm at 55°C'],
+        validation: 'Must include voltage trends and alarm data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'battery_failure',
+        name: 'UPS Battery Failure',
+        description: 'Battery degradation reducing backup capacity',
+        typicalSymptoms: ['Low voltage', 'Reduced backup time', 'Temperature rise'],
+        criticalEvidence: ['voltage_chart'],
+        diagnosticQuestions: ['Battery age and last replacement?', 'Backup duration vs design?'],
+        commonCauses: ['End of life', 'Overcharging', 'Temperature', 'Sulfation']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Cables/Busbars - from user comprehensive data
+  cables_busbars: {
+    equipmentType: 'Cables/Busbars',
+    iso14224Code: 'CB-019',
+    subtypes: ['Power', 'Control'],
+    requiredTrendData: [
+      {
+        id: 'cable_current',
+        name: 'Current',
+        description: 'Cable/busbar current loading',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'cable_temperature',
+        name: 'Temperature',
+        description: 'Cable/busbar surface temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '5 minutes'
+      },
+      {
+        id: 'insulation_resistance',
+        name: 'Insulation Resistance',
+        description: 'IR test results',
+        units: 'MΩ',
+        mandatory: false,
+        samplingFrequency: 'Monthly'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'ir_test_report',
+        name: 'IR Test Report',
+        description: 'Insulation resistance test results and current/temp logs',
+        fileTypes: ['pdf', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Cable problems involve insulation breakdown, overheating, or mechanical damage',
+        prompt: 'Provide current/temp logs and last insulation resistance test.',
+        examples: ['IR test dropped from 5000 MΩ to 500 MΩ, cable temperature 85°C, current 80% of rating'],
+        validation: 'Must include IR test results and temperature data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'insulation_failure',
+        name: 'Cable Insulation Failure',
+        description: 'Degradation of cable insulation leading to faults',
+        typicalSymptoms: ['Low IR', 'High temperature', 'Partial discharge'],
+        criticalEvidence: ['ir_test_report'],
+        diagnosticQuestions: ['IR test trend over time?', 'Any moisture or contamination?'],
+        commonCauses: ['Aging', 'Moisture', 'Overloading', 'Mechanical damage']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Sensors/Transmitters - from user comprehensive data
+  sensors_transmitters: {
+    equipmentType: 'Sensors/Transmitters',
+    iso14224Code: 'ST-020',
+    subtypes: ['Temperature', 'Pressure', 'Flow', 'Level'],
+    requiredTrendData: [
+      {
+        id: 'output_signal',
+        name: 'Output Signal',
+        description: 'Transmitter output signal (4-20mA)',
+        units: 'mA',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'input_value',
+        name: 'Input Value',
+        description: 'Measured process variable',
+        units: 'varies',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'signal_chart',
+        name: 'Signal Chart',
+        description: 'Signal output trend and calibration history',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 15
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Sensor problems involve drift, noise, failure, or calibration issues',
+        prompt: 'Upload signal trend and last calibration record. Any drift or signal dropout?',
+        examples: ['Output drifted from 12.5mA to 11.2mA over 3 months, calibration off by 2.5%'],
+        validation: 'Must include signal data and calibration information'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'sensor_drift',
+        name: 'Sensor Measurement Drift',
+        description: 'Gradual change in sensor accuracy over time',
+        typicalSymptoms: ['Signal drift', 'Calibration error', 'Process deviation'],
+        criticalEvidence: ['signal_chart'],
+        diagnosticQuestions: ['Rate and direction of drift?', 'When was last calibration?'],
+        commonCauses: ['Aging', 'Contamination', 'Temperature effects', 'Vibration']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // PLCs/DCS Systems - from user comprehensive data
+  plcs_dcs: {
+    equipmentType: 'PLCs/DCS Systems',
+    iso14224Code: 'PL-021',
+    subtypes: ['Redundant', 'Non-redundant'],
+    requiredTrendData: [
+      {
+        id: 'power_supply_voltage',
+        name: 'Power Supply Voltage',
+        description: 'System power supply monitoring',
+        units: 'V',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'cpu_temperature',
+        name: 'CPU Temperature',
+        description: 'Controller CPU temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '5 minutes'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'system_logs',
+        name: 'System Logs',
+        description: 'Fault/alarm log and I/O status history',
+        fileTypes: ['csv', 'txt'],
+        mandatory: true,
+        maxSizeMB: 20
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'PLC/DCS problems involve power issues, communication faults, or hardware failures',
+        prompt: 'Provide fault/alarm log and I/O status history. Any unexpected restarts or power dips?',
+        examples: ['CPU fault 3 times this week, power supply voltage dropped to 21V, I/O card offline'],
+        validation: 'Must include system logs and power/temperature data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'power_supply_failure',
+        name: 'Power Supply Failure',
+        description: 'System power supply degradation or failure',
+        typicalSymptoms: ['Voltage fluctuation', 'System restarts', 'I/O faults'],
+        criticalEvidence: ['system_logs'],
+        diagnosticQuestions: ['Voltage stability over time?', 'Any correlation with system faults?'],
+        commonCauses: ['Power supply aging', 'Overloading', 'Temperature', 'Input voltage issues']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Control Valves - from user comprehensive data
+  control_valves_pneumatic: {
+    equipmentType: 'Control Valves',
+    iso14224Code: 'CV-022',
+    subtypes: ['Pneumatic', 'Electric', 'Hydraulic'],
+    requiredTrendData: [
+      {
+        id: 'stem_position_cv',
+        name: 'Stem Position',
+        description: 'Valve position feedback',
+        units: '%',
+        mandatory: true,
+        samplingFrequency: '1 second'
+      },
+      {
+        id: 'setpoint_signal',
+        name: 'Setpoint Signal',
+        description: 'Control signal from controller',
+        units: 'mA',
+        mandatory: true,
+        samplingFrequency: '1 second'
+      },
+      {
+        id: 'travel_time',
+        name: 'Travel Time',
+        description: 'Full stroke operation time',
+        units: 'seconds',
+        mandatory: false,
+        samplingFrequency: 'Weekly test'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'position_trends',
+        name: 'Position Trends',
+        description: 'Position vs setpoint, pressure trends, travel time data',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 20
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Control valve problems involve stiction, hunting, leakage, or calibration issues',
+        prompt: 'Upload position and setpoint signal trend, pressure trends, travel time data. Any stiction or calibration issue?',
+        examples: ['Valve sticking at 45% position, travel time increased from 8s to 15s, hunting ±3%'],
+        validation: 'Must include position data and performance characteristics'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'valve_stiction',
+        name: 'Control Valve Stiction',
+        description: 'Friction preventing smooth valve movement',
+        typicalSymptoms: ['Jerky movement', 'Position lag', 'Control oscillation'],
+        criticalEvidence: ['position_trends'],
+        diagnosticQuestions: ['Position response to signal changes?', 'Any dead band or hysteresis?'],
+        commonCauses: ['Packing wear', 'Stem corrosion', 'Actuator problems', 'Valve sizing']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Analyzers - from user comprehensive data
+  analyzers: {
+    equipmentType: 'Analyzers',
+    iso14224Code: 'AN-023',
+    subtypes: ['Gas Chromatograph', 'pH', 'Conductivity', 'Moisture'],
+    requiredTrendData: [
+      {
+        id: 'analyzer_output',
+        name: 'Output Signal',
+        description: 'Analyzer measurement output',
+        units: 'varies',
+        mandatory: true,
+        samplingFrequency: '1 minute'
+      },
+      {
+        id: 'calibration_trend',
+        name: 'Calibration Trend',
+        description: 'Calibration check results over time',
+        units: '% error',
+        mandatory: true,
+        samplingFrequency: 'Daily check'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'analyzer_charts',
+        name: 'Signal/Calibration Charts',
+        description: 'Output/calibration trends and validation records',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 20
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Analyzer problems involve calibration drift, contamination, or component failures',
+        prompt: 'Attach output/calibration trends and validation records. Any sudden shifts or error codes?',
+        examples: ['GC baseline shifted 15%, retention time drift 0.2 min, detector response down 20%'],
+        validation: 'Must include calibration data and validation records'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'calibration_drift',
+        name: 'Analyzer Calibration Drift',
+        description: 'Gradual change in analyzer accuracy requiring recalibration',
+        typicalSymptoms: ['Reading offset', 'Validation failures', 'Baseline drift'],
+        criticalEvidence: ['analyzer_charts'],
+        diagnosticQuestions: ['Rate and direction of drift?', 'Sample contamination possible?'],
+        commonCauses: ['Detector aging', 'Contamination', 'Temperature effects', 'Component wear']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // HVAC Units - from user comprehensive data
+  hvac_units: {
+    equipmentType: 'HVAC Units',
+    iso14224Code: 'HV-025',
+    subtypes: ['Air Handler', 'Split', 'Chiller'],
+    requiredTrendData: [
+      {
+        id: 'hvac_temp',
+        name: 'Temperature',
+        description: 'Supply/return air temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      },
+      {
+        id: 'hvac_pressure',
+        name: 'Pressure',
+        description: 'System pressure monitoring',
+        units: 'kPa',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      },
+      {
+        id: 'hvac_flow',
+        name: 'Flow',
+        description: 'Air flow rate',
+        units: 'm³/hr',
+        mandatory: true,
+        samplingFrequency: '5 min'
+      },
+      {
+        id: 'hvac_current',
+        name: 'Current',
+        description: 'Motor current',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'hvac_trends',
+        name: 'HVAC Trend Charts',
+        description: 'Temperature, pressure, flow and current trends',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'HVAC problems involve temperature control, pressure issues, or mechanical failures',
+        prompt: 'Upload temp, pressure and current trend. Any refrigerant leaks, trip events, or abnormal noise?',
+        examples: ['Temperature control ±5°C from setpoint, compressor tripping on high pressure, refrigerant leak detected'],
+        validation: 'Must include temperature, pressure and current data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'refrigerant_leak',
+        name: 'Refrigerant System Leak',
+        description: 'Loss of refrigerant affecting cooling capacity',
+        typicalSymptoms: ['Poor cooling', 'Low pressure', 'Ice formation'],
+        criticalEvidence: ['hvac_trends'],
+        diagnosticQuestions: ['Refrigerant pressure levels?', 'Any visible leaks?'],
+        commonCauses: ['Joint failure', 'Corrosion', 'Vibration', 'Age deterioration']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Cranes/Hoists - from user comprehensive data
+  cranes_hoists: {
+    equipmentType: 'Cranes/Hoists',
+    iso14224Code: 'CR-026',
+    subtypes: ['Bridge', 'Gantry', 'Jib'],
+    requiredTrendData: [
+      {
+        id: 'crane_load',
+        name: 'Load',
+        description: 'Current load on crane',
+        units: 'tonnes',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      },
+      {
+        id: 'crane_current',
+        name: 'Motor Current',
+        description: 'Hoist motor current',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      },
+      {
+        id: 'limit_switch_status',
+        name: 'Limit Switch Status',
+        description: 'Position limit switches',
+        units: 'boolean',
+        mandatory: true,
+        samplingFrequency: '1 sec'
+      },
+      {
+        id: 'brake_temp',
+        name: 'Brake Temperature',
+        description: 'Brake system temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '5 min'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'crane_charts',
+        name: 'Load/Current Charts',
+        description: 'Load and motor current trends, limit switch logs',
+        fileTypes: ['csv', 'xlsx'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Crane problems involve load handling, brake issues, or structural problems',
+        prompt: 'Provide load/motor current trends, limit switch logs. Any brake overheating or trip events?',
+        examples: ['Load swinging excessively, brake temperature 95°C, motor current spiking to 150A'],
+        validation: 'Must include load data and inspection results'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'brake_overheating',
+        name: 'Crane Brake Overheating',
+        description: 'Excessive brake temperature due to overuse or malfunction',
+        typicalSymptoms: ['High brake temp', 'Smoking', 'Load slippage'],
+        criticalEvidence: ['crane_charts'],
+        diagnosticQuestions: ['Brake temperature readings?', 'Frequency of use?'],
+        commonCauses: ['Brake adjustment', 'Overloading', 'Brake wear', 'Cooling issues']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  // Fire Protection Systems - from user comprehensive data
+  fire_protection: {
+    equipmentType: 'Fire Protection Systems',
+    iso14224Code: 'FP-027',
+    subtypes: ['Deluge', 'Sprinkler', 'Alarm', 'Hydrant'],
+    requiredTrendData: [
+      {
+        id: 'fire_pressure',
+        name: 'System Pressure',
+        description: 'Fire water system pressure',
+        units: 'bar',
+        mandatory: true,
+        samplingFrequency: '1 min'
+      },
+      {
+        id: 'fire_flow_test',
+        name: 'Flow Test',
+        description: 'Flow test results',
+        units: 'L/min',
+        mandatory: true,
+        samplingFrequency: 'Monthly'
+      },
+      {
+        id: 'alarm_history',
+        name: 'Alarm History',
+        description: 'Fire alarm activation log',
+        units: 'count',
+        mandatory: true,
+        samplingFrequency: 'Event'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'fire_test_records',
+        name: 'Test Records',
+        description: 'Pressure/flow test and alarm logs',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 5
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Fire protection problems involve pressure loss, flow issues, or system failures',
+        prompt: 'Upload pressure/flow test and alarm logs. Any failed activations or leaks?',
+        examples: ['System pressure dropped to 5.2 bar, flow test 15% below spec, pump failed to start on demand'],
+        validation: 'Must include pressure and flow test data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'fire_pump_failure',
+        name: 'Fire Pump Failure',
+        description: 'Fire pump unable to maintain required pressure/flow',
+        typicalSymptoms: ['Low pressure', 'Pump trips', 'Flow deficiency'],
+        criticalEvidence: ['fire_test_records'],
+        diagnosticQuestions: ['Pump performance vs spec?', 'Any trips or alarms?'],
+        commonCauses: ['Pump wear', 'Motor failure', 'Suction problems', 'Control issues']
+      }
+    ],
+    smartSuggestions: [],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
   }
 };
 
