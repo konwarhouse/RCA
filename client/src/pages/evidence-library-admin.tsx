@@ -95,16 +95,9 @@ export default function EvidenceLibraryAdmin() {
   const [filterByComplexity, setFilterByComplexity] = useState<string>("all");
   const [filterByLastUpdated, setFilterByLastUpdated] = useState<string>("all");
 
-  // Fetch all equipment types with debugging
+  // Fetch all equipment types - using default queryFn pattern
   const { data: equipmentTypes, isLoading, error } = useQuery({
     queryKey: ['/api/evidence-library/equipment-types'],
-    queryFn: async () => {
-      console.log('Fetching equipment types...');
-      const result = await apiRequest('/api/evidence-library/equipment-types');
-      console.log('API Result:', result);
-      console.log('Equipment Types Count:', result?.equipmentTypes?.length || 0);
-      return result;
-    },
   });
 
   console.log("Query State:", { 
@@ -871,10 +864,10 @@ export default function EvidenceLibraryAdmin() {
             {/* Results Summary */}
             <div className="flex items-center justify-between py-2 px-1">
               <div className="text-sm text-gray-600">
-                Showing {equipmentTypes?.equipmentTypes?.length || 0} of {equipmentTypes?.equipmentTypes?.length || 0} equipment types
+                Showing {equipmentTypes?.equipmentTypes?.length || 0} of {equipmentTypes?.totalCount || equipmentTypes?.equipmentTypes?.length || 0} equipment types
               </div>
               <div className="text-xs text-gray-500">
-                Last updated: {new Date().toLocaleDateString()}
+                API Status: {equipmentTypes?.success ? 'Connected' : 'Disconnected'} | Last updated: {new Date().toLocaleDateString()}
               </div>
             </div>
           </div>
