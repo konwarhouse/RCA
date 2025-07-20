@@ -91,8 +91,8 @@ export default function EvidenceLibraryAdmin() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
   
-  // Advanced filter states
-  const [filterByComplexity, setFilterByComplexity] = useState<string>("all");
+  // Advanced filter states - FIXED: Equipment categories not complexity
+  const [filterByCategory, setFilterByCategory] = useState<string>("all");
   const [filterByLastUpdated, setFilterByLastUpdated] = useState<string>("all");
 
   // Fetch all equipment types - using default queryFn pattern
@@ -146,17 +146,20 @@ export default function EvidenceLibraryAdmin() {
       });
     }
     
-    // Apply complexity filter
-    if (filterByComplexity !== "all") {
+    // Apply category filter (advanced)
+    if (filterByCategory !== "all") {
       filtered = filtered.filter((equipment: EquipmentType) => {
-        const subtypeCount = equipment.subtypes.length;
-        switch (filterByComplexity) {
-          case "simple":
-            return subtypeCount <= 3;
-          case "moderate":
-            return subtypeCount > 3 && subtypeCount <= 6;
-          case "complex":
-            return subtypeCount > 6;
+        switch (filterByCategory) {
+          case "rotating":
+            return ["Pumps", "Compressors", "Turbines", "Electric Motors", "Fans / Blowers", "Generators", "Agitators / Mixers"].includes(equipment.equipmentType);
+          case "static":
+            return ["Heat Exchangers", "Pressure Vessels", "Tanks", "Piping", "Columns/Towers", "Filters/Strainers", "Boilers"].includes(equipment.equipmentType);
+          case "electrical":
+            return ["Electric Motors", "Generators", "Transformers", "Switchgear", "UPS/Rectifiers", "Cables/Busbars"].includes(equipment.equipmentType);
+          case "process":
+            return ["Heat Exchangers", "Columns/Towers", "Pressure Vessels", "Filters/Strainers", "Tanks", "Control Valves", "Valves"].includes(equipment.equipmentType);
+          case "instrumentation":
+            return ["Sensors/Transmitters", "PLCs/DCS Systems", "Analyzers", "Control Valves"].includes(equipment.equipmentType);
           default:
             return true;
         }
@@ -216,7 +219,7 @@ export default function EvidenceLibraryAdmin() {
     });
     
     return filtered;
-  }, [equipmentTypes, searchQuery, filterBy, sortBy, sortOrder, filterByComplexity, filterByLastUpdated]);
+  }, [equipmentTypes, searchQuery, filterBy, sortBy, sortOrder, filterByCategory, filterByLastUpdated]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -224,7 +227,7 @@ export default function EvidenceLibraryAdmin() {
     setFilterBy("all");
     setSortBy("equipmentType");
     setSortOrder("asc");
-    setFilterByComplexity("all");
+    setFilterByCategory("all");
     setFilterByLastUpdated("all");
   };
   
@@ -250,7 +253,7 @@ export default function EvidenceLibraryAdmin() {
     filterBy !== "all",
     sortBy !== "equipmentType",
     sortOrder !== "asc",
-    filterByComplexity !== "all",
+    filterByCategory !== "all",
     filterByLastUpdated !== "all"
   ].filter(Boolean).length;
 
@@ -672,7 +675,7 @@ export default function EvidenceLibraryAdmin() {
                 )}
 
                 <div className="text-sm text-gray-600 ml-auto">
-                  Showing {filteredAndSortedEquipment.length} of {equipmentTypes?.equipmentTypes?.length || 0} equipment types
+                  Showing {filteredAndSortedEquipment.length} of {equipmentTypes?.totalCount || equipmentTypes?.equipmentTypes?.length || 0} equipment types
                 </div>
               </div>
 
@@ -682,16 +685,18 @@ export default function EvidenceLibraryAdmin() {
                   <h4 className="font-medium mb-3">Advanced Filters</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Equipment Complexity</Label>
-                      <Select value={filterByComplexity} onValueChange={setFilterByComplexity}>
+                      <Label className="text-sm font-medium">Equipment Category</Label>
+                      <Select value={filterByCategory} onValueChange={setFilterByCategory}>
                         <SelectTrigger className="mt-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Complexity Levels</SelectItem>
-                          <SelectItem value="simple">Simple (≤ 3 subtypes)</SelectItem>
-                          <SelectItem value="moderate">Moderate (4-6 subtypes)</SelectItem>
-                          <SelectItem value="complex">Complex (&gt; 6 subtypes)</SelectItem>
+                          <SelectItem value="all">All Equipment Types</SelectItem>
+                          <SelectItem value="rotating">Rotating Equipment</SelectItem>
+                          <SelectItem value="static">Static Equipment</SelectItem>
+                          <SelectItem value="electrical">Electrical Systems</SelectItem>
+                          <SelectItem value="process">Process Control</SelectItem>
+                          <SelectItem value="instrumentation">Instrumentation</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -717,7 +722,7 @@ export default function EvidenceLibraryAdmin() {
                         variant="outline" 
                         size="sm" 
                         onClick={() => {
-                          setFilterByComplexity("all");
+                          setFilterByCategory("all");
                           setFilterByLastUpdated("all");
                         }}
                         className="w-full"
@@ -744,18 +749,8 @@ export default function EvidenceLibraryAdmin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!isLoading && equipmentTypes?.equipmentTypes?.length > 0 ? (
-                    equipmentTypes.equipmentTypes
-                      .filter((equipment: EquipmentType) => {
-                        if (!searchQuery) return true;
-                        const query = searchQuery.toLowerCase();
-                        return (
-                          equipment.equipmentType.toLowerCase().includes(query) ||
-                          equipment.iso14224Code.toLowerCase().includes(query) ||
-                          equipment.subtypes.some(s => s.toLowerCase().includes(query))
-                        );
-                      })
-                      .map((equipment: EquipmentType) => (
+                  {!isLoading && filteredAndSortedEquipment.length > 0 ? (
+                    filteredAndSortedEquipment.map((equipment: EquipmentType) => (
                         <TableRow key={equipment.iso14224Code}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
@@ -870,7 +865,7 @@ export default function EvidenceLibraryAdmin() {
             {/* Results Summary */}
             <div className="flex items-center justify-between py-2 px-1">
               <div className="text-sm text-gray-600">
-                Showing {equipmentTypes?.equipmentTypes?.length || 0} of {equipmentTypes?.totalCount || equipmentTypes?.equipmentTypes?.length || 0} equipment types
+                Showing {filteredAndSortedEquipment.length} of {equipmentTypes?.totalCount || equipmentTypes?.equipmentTypes?.length || 0} equipment types
               </div>
               <div className="text-xs text-gray-500">
                 API Status: {equipmentTypes?.success ? 'Connected' : 'Disconnected'} | Last updated: {new Date().toLocaleDateString()}
