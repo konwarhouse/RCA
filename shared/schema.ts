@@ -23,28 +23,40 @@ export const aiSettings = pgTable("ai_settings", {
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
   analysisId: text("analysis_id").notNull().unique(),
-  issueDescription: text("issue_description").notNull(),
-  equipmentType: text("equipment_type").notNull(), // pump, motor, compressor, heat_exchanger, etc
-  equipmentId: text("equipment_id"), // unique equipment identifier
-  location: text("location"), // physical location of equipment
+  // Current workflow status - evidence collection first, then analysis
+  workflowStage: text("workflow_stage").notNull().default("evidence_collection"), // evidence_collection, analysis_ready, ai_processing, completed, failed
+  
+  // Evidence Collection Results (structured data from questionnaire)
+  evidenceData: jsonb("evidence_data"), // Complete structured evidence from questionnaire phases
+  uploadedFiles: jsonb("uploaded_files"), // array of file info
+  parsedData: jsonb("parsed_data"), // structured data extracted from uploads
+  
+  // Legacy fields for backward compatibility (will be populated from evidenceData)
+  issueDescription: text("issue_description"),
+  equipmentType: text("equipment_type"), 
+  equipmentId: text("equipment_id"),
+  location: text("location"),
+  
+  // AI Analysis Results (only populated after evidence collection is complete)
   rootCause: text("root_cause"),
   confidence: integer("confidence"), // percentage 0-100
-  priority: text("priority").notNull(), // high, medium, low
-  status: text("status").notNull().default("processing"), // processing, completed, failed
+  priority: text("priority").notNull().default("medium"), // high, medium, low
+  status: text("status").notNull().default("evidence_collection"), // evidence_collection, processing, completed, failed
   recommendations: jsonb("recommendations"), // array of recommendation strings
-  uploadedFiles: jsonb("uploaded_files"), // array of file info
   operatingParameters: jsonb("operating_parameters"), // pressure, temperature, flow, etc
   historicalData: jsonb("historical_data"), // past performance and maintenance data
   learningInsights: jsonb("learning_insights"), // ML insights for equipment-specific learning
+  
   // Enhanced RCA fields
-  parsedData: jsonb("parsed_data"), // structured data extracted from uploads
   rcaAnalysis: jsonb("rca_analysis"), // comprehensive RCA analysis results
   evidenceCorrelation: jsonb("evidence_correlation"), // supporting/contradicting evidence
   stepwiseReasoning: jsonb("stepwise_reasoning"), // AI reasoning process
   missingDataPrompts: jsonb("missing_data_prompts"), // what data is still needed
   manualAdjustments: jsonb("manual_adjustments"), // expert overrides and corrections
   versionHistory: jsonb("version_history"), // analysis version tracking
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  evidenceCompletedAt: timestamp("evidence_completed_at"),
   completedAt: timestamp("completed_at"),
 });
 
@@ -305,3 +317,200 @@ export const EQUIPMENT_TYPES = [
 ] as const;
 
 export type EquipmentType = typeof EQUIPMENT_TYPES[number];
+
+// Evidence Collection Schema for Question-Driven RCA
+export interface EvidenceData {
+  // Phase 1: Asset Context
+  assetContext: {
+    equipmentType: string; // valve, pump, motor, compressor, conveyor, fan, other
+    subtype?: string; // ball valve, centrifugal pump, induction motor, etc.
+    mainFunction?: string; // process water transfer, slurry control, air supply
+    location: string; // site, plant area, line number, asset ID
+    assetAge?: {
+      inServiceSince?: string;
+      totalRunHours?: number;
+      dutyCycle?: string;
+    };
+  };
+
+  // Phase 2: Symptom Definition
+  symptomDefinition: {
+    observedProblem: string; // leak, noise, high vibration, low output, failure to start, etc.
+    symptomLocation?: string; // stem, seat, body, bearing, casing, wiring, etc.
+    firstNoticed?: {
+      dateTime?: string;
+      operatingState?: string; // operation, startup, shutdown, after maintenance
+    };
+    problemPattern?: string; // constant, intermittent, recurring
+    frequency?: string;
+    alarmsActivated?: Array<{
+      alarmName: string;
+      timestamp?: string;
+      details?: string;
+    }>;
+  };
+
+  // Phase 3: Operating Conditions
+  operatingConditions: {
+    currentParameters: {
+      flow?: { rate?: number; unit?: string };
+      pressure?: { upstream?: number; downstream?: number; unit?: string };
+      temperature?: { inlet?: number; outlet?: number; bearing?: number; ambient?: number; unit?: string };
+      speed?: { rpm?: number };
+      power?: { consumption?: number; voltage?: number; current?: number; unit?: string };
+      vibration?: { axial?: number; vertical?: number; horizontal?: number; unit?: string };
+      lubrication?: {
+        oilLevel?: string;
+        oilQuality?: string;
+        lastChange?: string;
+      };
+      environmental?: {
+        humidity?: number;
+        dustLevel?: string;
+        corrosiveAgents?: string[];
+        ambientTemp?: number;
+      };
+    };
+    recentChanges?: {
+      processChanges?: string[];
+      setpointChanges?: string[];
+      productChanges?: string[];
+      environmentalChanges?: string[];
+    };
+  };
+
+  // Phase 4: Maintenance and Event History
+  maintenanceHistory: {
+    lastMaintenance?: {
+      date?: string;
+      type?: string; // PM, CM, overhaul, inspection
+      description?: string;
+    };
+    recentWork?: {
+      partsReplaced?: string[];
+      adjustmentsMade?: string[];
+      installations?: string[];
+      modifications?: string[];
+    };
+    similarProblems?: Array<{
+      description: string;
+      dateOccurred?: string;
+      actionsTaken?: string[];
+      wasEffective?: boolean;
+    }>;
+    processUpsets?: Array<{
+      description: string;
+      dateOccurred?: string;
+      impact?: string;
+    }>;
+  };
+
+  // Phase 5: Human/Operational Factors
+  humanFactors: {
+    operatorAtTime?: {
+      operatorId?: string;
+      shift?: string;
+      experienceLevel?: string; // experienced, new, training
+    };
+    operationalErrors?: {
+      knownErrors?: string[];
+      sopDeviations?: string[];
+      unusualActions?: string[];
+    };
+  };
+
+  // Phase 6: Design, Installation & External Factors
+  designFactors: {
+    modifications?: Array<{
+      description: string;
+      date?: string;
+      reason?: string;
+    }>;
+    installationCompliance?: boolean;
+    manufacturerSpecs?: boolean;
+    externalFactors?: {
+      weather?: string[];
+      adjacentEquipment?: string[];
+      construction?: string[];
+      other?: string[];
+    };
+  };
+
+  // Phase 7: Evidence & Data Collection
+  additionalEvidence: {
+    inspectionReports?: Array<{
+      type: string;
+      date?: string;
+      findings: string;
+      fileAttached?: boolean;
+    }>;
+    photos?: boolean;
+    videos?: boolean;
+    testResults?: Array<{
+      testType: string;
+      results: string;
+      date?: string;
+    }>;
+    trendData?: Array<{
+      parameter: string;
+      trend: string;
+      timeframe: string;
+    }>;
+    otherObservations?: string;
+  };
+
+  // Phase 8: Dynamic/Conditional Follow-ups
+  equipmentSpecific?: {
+    // Valve-specific
+    valve?: {
+      actuatorType?: string; // manual, electric, pneumatic, hydraulic
+      leakLocation?: string; // seat, stem, body
+      cyclingFrequency?: string;
+    };
+    // Pump-specific
+    pump?: {
+      pumpType?: string; // centrifugal, reciprocating, screw, diaphragm
+      cavitationSigns?: boolean;
+      sealLeakage?: boolean;
+      suctionCondition?: string;
+      dischargeCondition?: string;
+    };
+    // Motor/Electrical-specific
+    electrical?: {
+      overcurrentTrip?: boolean;
+      insulationBreakdown?: boolean;
+      hotSpots?: boolean;
+      arcingSigns?: boolean;
+    };
+  };
+
+  // Completeness tracking
+  completedPhases: string[]; // Array of completed phase names
+  requiredFollowUps: string[]; // Array of required follow-up questions based on responses
+}
+
+// Analysis workflow stages
+export const WORKFLOW_STAGES = [
+  'evidence_collection',
+  'analysis_ready', 
+  'ai_processing',
+  'completed',
+  'failed'
+] as const;
+
+export type WorkflowStage = typeof WORKFLOW_STAGES[number];
+
+// Question definitions for the evidence collection process
+export interface QuestionDefinition {
+  id: string;
+  phase: string;
+  text: string;
+  type: 'text' | 'select' | 'multiselect' | 'number' | 'date' | 'boolean';
+  options?: string[];
+  required: boolean;
+  dependsOn?: {
+    questionId: string;
+    value: string | string[];
+  };
+  equipmentSpecific?: string[]; // Equipment types this question applies to
+}

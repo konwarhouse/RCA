@@ -75,7 +75,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new analysis with comprehensive data parsing
+  // Create new analysis - Evidence Collection First Workflow
+  app.post("/api/analyses/create", upload.array("files"), async (req, res) => {
+    try {
+      console.log("[RCA] Creating new analysis with evidence-first workflow...");
+      
+      const analysisId = `RCA-${new Date().getFullYear()}-${Math.floor(Math.random() * 900000) + 100000}`;
+      
+      // Create analysis in evidence_collection stage
+      const analysis = await storage.createAnalysis({
+        analysisId,
+        workflowStage: "evidence_collection",
+        status: "evidence_collection",
+        priority: "medium",
+        uploadedFiles: req.files ? (req.files as Express.Multer.File[]).map(file => ({
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          uploadedAt: new Date().toISOString()
+        })) : [],
+        // Initially empty - will be populated during evidence collection
+        issueDescription: null,
+        equipmentType: null,
+        equipmentId: null,
+        location: null
+      });
+
+      console.log(`[RCA] Created analysis ${analysisId} in evidence collection mode`);
+      
+      res.status(201).json(analysis);
+    } catch (error) {
+      console.error("[RCA] Error creating analysis:", error);
+      res.status(500).json({ message: "Failed to create analysis" });
+    }
+  });
+
+  // Update evidence data
+  app.put("/api/analyses/:id/evidence", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { evidenceData, answers } = req.body;
+      
+      console.log(`[RCA] Updating evidence data for analysis ${id}`);
+      
+      // Extract legacy fields from evidence data for backward compatibility
+      const issueDescription = evidenceData?.symptomDefinition?.observedProblem || 
+                              answers?.observed_problem || 
+                              "Evidence collection in progress";
+      const equipmentType = evidenceData?.assetContext?.equipmentType || 
+                           answers?.equipment_type;
+      const equipmentId = evidenceData?.assetContext?.equipmentId || 
+                         answers?.equipment_id;
+      const location = evidenceData?.assetContext?.location || 
+                      answers?.location;
+
+      const updatedAnalysis = await storage.updateAnalysis(id, {
+        evidenceData,
+        issueDescription,
+        equipmentType,
+        equipmentId,
+        location,
+        workflowStage: "evidence_collection"
+      });
+
+      res.json(updatedAnalysis);
+    } catch (error) {
+      console.error("[RCA] Error updating evidence:", error);
+      res.status(500).json({ message: "Failed to update evidence" });
+    }
+  });
+
+  // Proceed to AI Analysis (after evidence collection is complete)
+  app.post("/api/analyses/:id/proceed-to-analysis", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { answers } = req.body;
+      
+      console.log(`[RCA] Proceeding to AI analysis for analysis ${id}`);
+      
+      // Update status to analysis_ready
+      await storage.updateAnalysis(id, {
+        workflowStage: "analysis_ready",
+        status: "processing",
+        evidenceCompletedAt: new Date()
+      });
+
+      // Start AI analysis process in background
+      performComprehensiveRCA(id, answers);
+      
+      res.json({ message: "AI analysis started" });
+    } catch (error) {
+      console.error("[RCA] Error starting analysis:", error);
+      res.status(500).json({ message: "Failed to start analysis" });
+    }
+  });
+
+  // Legacy route for backward compatibility - Create new analysis with comprehensive data parsing
   app.post("/api/analyses", upload.array("files"), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
@@ -430,7 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Comprehensive RCA processing with stepwise analysis and evidence correlation
 async function performComprehensiveRCA(
   analysisId: number, 
-  parsedData: any, 
+  evidenceData?: any, 
   userInputs?: any,
   historicalData?: any
 ) {

@@ -1,12 +1,108 @@
 import { useState } from "react";
-import { Brain, Activity, Users } from "lucide-react";
+import { Brain, Activity, Users, Search, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLocation } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useLocation, Link } from "wouter";
 import UploadSection from "@/components/upload-section";
 import DashboardSection from "@/components/dashboard-section";
 import HistorySection from "@/components/history-section";
+
+function NewAnalysisSection() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            Evidence-First Root Cause Analysis
+          </CardTitle>
+          <CardDescription>
+            Comprehensive, systematic approach to accurate root cause identification
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Alert>
+            <Search className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Enhanced Workflow:</strong> Our new evidence-driven process guides you through 
+              structured data collection before AI analysis, ensuring higher accuracy and confidence.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">1</Badge>
+                <h4 className="font-medium">Evidence Collection</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Structured questionnaire covering asset context, symptoms, operating conditions, and maintenance history
+              </p>
+            </div>
+            
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">2</Badge>
+                <h4 className="font-medium">AI Analysis</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Advanced root cause analysis using collected evidence with confidence scoring and reasoning
+              </p>
+            </div>
+            
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">3</Badge>
+                <h4 className="font-medium">Results & Action</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Detailed findings with actionable recommendations and comprehensive audit trail
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link href="/new" className="flex-1">
+              <Button className="w-full flex items-center gap-2" size="lg">
+                <Search className="h-5 w-5" />
+                Start New Analysis
+                <ArrowRight className="h-4 w-4 ml-auto" />
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+            <p className="font-medium mb-1">What makes this better?</p>
+            <ul className="space-y-1 text-xs">
+              <li>• Systematic evidence gathering prevents missed critical information</li>
+              <li>• Equipment-specific questions provide relevant context</li>
+              <li>• Structured data ensures consistent, auditable analysis</li>
+              <li>• Higher confidence scores through comprehensive input</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Legacy Upload Section for Backward Compatibility */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg text-gray-600 dark:text-gray-400">
+            Legacy: Direct File Upload
+          </CardTitle>
+          <CardDescription>
+            Traditional file-first approach (less comprehensive than evidence-first workflow)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UploadSection />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -68,7 +164,7 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="upload">
-            <UploadSection />
+            <NewAnalysisSection />
           </TabsContent>
 
           <TabsContent value="dashboard">

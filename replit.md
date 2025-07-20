@@ -10,7 +10,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (January 2025)
 
-### Complete Interactive RCA Platform Implementation
+### Complete Evidence-First RCA Workflow Restructuring
+- **Date**: January 20, 2025
+- **Changes**: Fundamental architectural transformation to evidence-driven root cause analysis
+  - **Evidence-First Workflow**: Complete restructuring around question-driven evidence collection before AI analysis
+  - **Structured Evidence Collection**: Comprehensive 8-phase questionnaire system (Asset Context, Symptom Definition, Operating Conditions, Maintenance History, Human Factors, External Factors, Additional Evidence, Equipment-Specific Follow-ups)
+  - **Evidence Engine**: New server-side engine managing structured question definitions, validation, and evidence data structuring
+  - **Database Schema Updates**: Added workflowStage, evidenceData, evidenceCompletedAt fields to support new workflow stages
+  - **New User Interface**: Created evidence collection page with phase-based navigation, progress tracking, and equipment-specific conditional questions
+  - **Workflow Stages**: evidence_collection → analysis_ready → ai_processing → completed progression ensures comprehensive data gathering before analysis
+  - **API Endpoints**: New routes for evidence collection (/api/analyses/create, /evidence/:id, /proceed-to-analysis) and evidence updates
+  - **Enhanced Home Page**: Updated to promote evidence-first workflow while maintaining legacy compatibility
+  - **Question Validation**: Built-in validation ensuring required evidence (equipment type, location, observed problem) before AI analysis
+- **Impact**: Platform now follows systematic evidence-first approach ensuring higher accuracy, better confidence scores, and comprehensive audit trails. Users are guided through structured data collection before AI analysis begins, addressing all critical factors that influence root cause determination.
+
+### Previous: Complete Interactive RCA Platform Implementation
 - **Date**: January 19, 2025
 - **Changes**: Comprehensive feature implementation to match enterprise requirements
   - **Interactive Evidence Gathering**: AI-powered questionnaire system that prompts users for missing critical information with equipment-specific questions
