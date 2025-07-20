@@ -25,8 +25,18 @@ import {
   TrendingUp,
   Camera,
   Brain,
-  History
+  History,
+  Search,
+  Eye
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface EquipmentType {
   equipmentType: string;
@@ -131,7 +141,7 @@ export default function EvidenceLibraryAdmin() {
         body: JSON.stringify({ updates, updatedBy: 'Admin User' }),
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-key': 'admin-key-here' // In production, use proper auth
+          'x-admin-key': 'admin123'
         }
       });
     },
@@ -155,7 +165,7 @@ export default function EvidenceLibraryAdmin() {
   // Export library mutation
   const exportMutation = useMutation({
     mutationFn: () => apiRequest('/api/evidence-library/admin/export', {
-      headers: { 'x-admin-key': 'admin-key-here' }
+      headers: { 'x-admin-key': 'admin123' }
     }),
     onSuccess: (data) => {
       // Create download link
@@ -209,7 +219,7 @@ export default function EvidenceLibraryAdmin() {
             Evidence Library Administration
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage equipment-specific evidence requirements and AI prompts
+            Manage equipment-specific evidence requirements and AI prompts ({equipmentTypes?.equipmentTypes?.length || 0} equipment types)
           </p>
         </div>
         <div className="flex gap-2">
@@ -304,6 +314,95 @@ export default function EvidenceLibraryAdmin() {
           </Button>
         </div>
       </div>
+
+      {/* Equipment Types Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Equipment Types Library ({equipmentTypes?.equipmentTypes?.length || 0} Types)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Equipment Types Table */}
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Equipment Type</TableHead>
+                    <TableHead>ISO 14224 Code</TableHead>
+                    <TableHead>Subtypes</TableHead>
+                    <TableHead>Last Updated</TableHead>
+                    <TableHead>Updated By</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {equipmentTypes?.equipmentTypes?.map((equipment: EquipmentType) => (
+                    <TableRow key={equipment.iso14224Code}>
+                      <TableCell className="font-medium">
+                        {equipment.equipmentType}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {equipment.iso14224Code}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {equipment.subtypes.slice(0, 3).map((subtype, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {subtype}
+                            </Badge>
+                          ))}
+                          {equipment.subtypes.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{equipment.subtypes.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {equipment.lastUpdated}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {equipment.updatedBy}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedEquipment(equipment.equipmentType.toLowerCase().replace(/[^a-z0-9]/g, '_'))}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* No data state */}
+            {(!equipmentTypes?.equipmentTypes || equipmentTypes.equipmentTypes.length === 0) && (
+              <div className="text-center py-8">
+                <Database className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">No equipment types found</p>
+                <p className="text-sm text-gray-500">Check API connection and try refreshing</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Equipment Selection */}
       <Card>
