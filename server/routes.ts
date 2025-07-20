@@ -53,10 +53,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get investigation first to get numeric ID
       let investigation;
-      if (isNaN(parseInt(id))) {
+      const numericId = parseInt(id);
+      if (isNaN(numericId) || numericId.toString() !== id) {
         investigation = await investigationStorage.getInvestigationByInvestigationId(id);
       } else {
-        investigation = await investigationStorage.getInvestigation(parseInt(id));
+        investigation = await investigationStorage.getInvestigation(numericId);
       }
       
       if (!investigation) {
@@ -85,10 +86,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get investigation by string ID or numeric ID
       let investigation;
-      if (isNaN(parseInt(id))) {
+      const numericId = parseInt(id);
+      if (isNaN(numericId) || numericId.toString() !== id) {
         investigation = await investigationStorage.getInvestigationByInvestigationId(id);
       } else {
-        investigation = await investigationStorage.getInvestigation(parseInt(id));
+        investigation = await investigationStorage.getInvestigation(numericId);
       }
       
       if (!investigation) {
@@ -115,10 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get investigation first to get numeric ID
       let investigation;
-      if (isNaN(parseInt(id))) {
+      const numericId = parseInt(id);
+      if (isNaN(numericId) || numericId.toString() !== id) {
         investigation = await investigationStorage.getInvestigationByInvestigationId(id);
       } else {
-        investigation = await investigationStorage.getInvestigation(parseInt(id));
+        investigation = await investigationStorage.getInvestigation(numericId);
       }
       
       if (!investigation) {
@@ -156,10 +159,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get investigation first to get numeric ID
       let investigation;
-      if (isNaN(parseInt(id))) {
+      const numericId = parseInt(id);
+      if (isNaN(numericId) || numericId.toString() !== id) {
         investigation = await investigationStorage.getInvestigationByInvestigationId(id);
       } else {
-        investigation = await investigationStorage.getInvestigation(parseInt(id));
+        investigation = await investigationStorage.getInvestigation(numericId);
       }
       
       if (!investigation) {
@@ -176,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update status to processing
-      await investigationStorage.updateInvestigation(parseInt(id), {
+      await investigationStorage.updateInvestigation(investigation.id, {
         currentStep: "ai_processing"
       });
 

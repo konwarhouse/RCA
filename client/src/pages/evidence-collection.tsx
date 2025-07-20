@@ -119,16 +119,16 @@ export default function EvidenceCollection() {
     // Handle equipment subcategory
     if (question.id === 'equipment_subcategory') {
       const selectedCategory = evidenceData['equipment_category'];
-      if (!selectedCategory || !EQUIPMENT_TYPES[selectedCategory]) return [];
-      return Object.keys(EQUIPMENT_TYPES[selectedCategory]);
+      if (!selectedCategory || !EQUIPMENT_TYPES[selectedCategory]?.subcategories) return [];
+      return Object.keys(EQUIPMENT_TYPES[selectedCategory].subcategories);
     }
     
     // Handle equipment type
     if (question.id === 'equipment_type') {
       const selectedCategory = evidenceData['equipment_category'];
       const selectedSubcategory = evidenceData['equipment_subcategory'];
-      if (!selectedCategory || !selectedSubcategory || !EQUIPMENT_TYPES[selectedCategory]?.[selectedSubcategory]) return [];
-      return EQUIPMENT_TYPES[selectedCategory][selectedSubcategory].types || [];
+      if (!selectedCategory || !selectedSubcategory || !EQUIPMENT_TYPES[selectedCategory]?.subcategories?.[selectedSubcategory]) return [];
+      return EQUIPMENT_TYPES[selectedCategory].subcategories[selectedSubcategory].types || [];
     }
     
     return question.options || [];

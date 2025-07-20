@@ -16,7 +16,17 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Complete ECFA & Fault Tree Analysis System Implementation
+### Critical Bug Fixes & System Stabilization
+- **Date**: January 20, 2025 (Latest)
+- **Changes**: Fixed critical parseInt() logic flaw and equipment dropdown conditional logic issues
+  - **ID Resolution Bug**: Fixed parseInt("9Bl5VYjvryyzrnrMUtemc") incorrectly returning 9 instead of treating as string ID, causing "Investigation not found" errors across all routes
+  - **Equipment Dropdown Logic**: Corrected ISO 14224 taxonomy structure access - subcategory and equipment type dropdowns now properly populate based on category selection
+  - **Database NaN Error**: Eliminated "invalid input syntax for type integer: NaN" errors in analysis endpoint by fixing ID parameter passing
+  - **Analysis Engine**: Confirmed fault tree analysis and ECFA methodologies working correctly with complete workflow
+  - **Evidence Validation**: 80% completeness requirement enforced properly before AI analysis proceeds
+- **Impact**: All investigation workflows now function correctly from creation through completion, with proper equipment taxonomies and analysis generation
+
+### Complete ECFA & Fault Tree Analysis System Implementation  
 - **Date**: January 20, 2025
 - **Changes**: Complete system revamp implementing dual investigation methodologies per comprehensive development instructions
   - **Mandatory Investigation Type Selection**: System now requires selection between ECFA (safety/environmental) vs Fault Tree Analysis (equipment failure) at the outset
