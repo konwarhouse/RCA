@@ -751,7 +751,7 @@ export default function EvidenceLibraryAdmin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {equipmentTypes?.equipmentTypes && equipmentTypes.equipmentTypes.length > 0 ? (
+                  {!isLoading && equipmentTypes?.equipmentTypes?.length > 0 ? (
                     equipmentTypes.equipmentTypes
                       .filter((equipment: EquipmentType) => {
                         if (!searchQuery) return true;
@@ -838,14 +838,27 @@ export default function EvidenceLibraryAdmin() {
                           </TableCell>
                         </TableRow>
                       ))
-                  ) : (
+                  ) : isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <Database className="h-8 w-8 text-gray-400" />
                           <p className="text-gray-600">Loading equipment types...</p>
+                          <p className="text-xs text-gray-500">Fetching data from API...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <Database className="h-8 w-8 text-red-400" />
+                          <p className="text-gray-600">No equipment types found</p>
                           <p className="text-xs text-gray-500">
-                            API Status: {isLoading ? 'Loading...' : 'Ready'}
+                            Data: {JSON.stringify(equipmentTypes)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Error: {error?.message || 'None'}
                           </p>
                         </div>
                       </TableCell>
