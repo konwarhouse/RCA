@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,11 @@ import {
   Brain,
   History,
   Search,
-  Eye
+  Eye,
+  Filter,
+  SortAsc,
+  SortDesc,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -77,12 +82,169 @@ export default function EvidenceLibraryAdmin() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTrend, setEditingTrend] = useState<TrendRequirement | null>(null);
   const [newTrend, setNewTrend] = useState<Partial<TrendRequirement>>({});
+  
+  // Smart Search State
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filterBy, setFilterBy] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("equipmentType");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+  
+  // Advanced filter states
+  const [filterByComplexity, setFilterByComplexity] = useState<string>("all");
+  const [filterByLastUpdated, setFilterByLastUpdated] = useState<string>("all");
 
   // Fetch all equipment types
   const { data: equipmentTypes, isLoading } = useQuery({
     queryKey: ['/api/evidence-library/equipment-types'],
     queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
   });
+
+  // Smart Search and Filtering Logic
+  const filteredAndSortedEquipment = useMemo(() => {
+    if (!equipmentTypes?.equipmentTypes) return [];
+    
+    let filtered = equipmentTypes.equipmentTypes;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((equipment: EquipmentType) => {
+        const searchableText = [
+          equipment.equipmentType,
+          equipment.iso14224Code,
+          ...equipment.subtypes
+        ].join(' ').toLowerCase();
+        
+        return searchableText.includes(query);
+      });
+    }
+    
+    // Apply category filter
+    if (filterBy !== "all") {
+      filtered = filtered.filter((equipment: EquipmentType) => {
+        switch (filterBy) {
+          case "rotating":
+            return ["Pumps", "Compressors", "Turbines", "Electric Motors", "Fans / Blowers", "Generators"].includes(equipment.equipmentType);
+          case "static":
+            return ["Heat Exchangers", "Pressure Vessels", "Tanks", "Piping", "Columns/Towers", "Filters/Strainers"].includes(equipment.equipmentType);
+          case "electrical":
+            return ["Electric Motors", "Generators", "Transformers", "Switchgear"].includes(equipment.equipmentType);
+          case "process":
+            return ["Heat Exchangers", "Columns/Towers", "Pressure Vessels", "Filters/Strainers", "Tanks"].includes(equipment.equipmentType);
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Apply complexity filter
+    if (filterByComplexity !== "all") {
+      filtered = filtered.filter((equipment: EquipmentType) => {
+        const subtypeCount = equipment.subtypes.length;
+        switch (filterByComplexity) {
+          case "simple":
+            return subtypeCount <= 3;
+          case "moderate":
+            return subtypeCount > 3 && subtypeCount <= 6;
+          case "complex":
+            return subtypeCount > 6;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Apply last updated filter
+    if (filterByLastUpdated !== "all") {
+      const now = new Date();
+      filtered = filtered.filter((equipment: EquipmentType) => {
+        const updatedDate = new Date(equipment.lastUpdated);
+        const daysDiff = Math.floor((now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (filterByLastUpdated) {
+          case "recent":
+            return daysDiff <= 7;
+          case "week":
+            return daysDiff <= 30;
+          case "month":
+            return daysDiff <= 90;
+          case "old":
+            return daysDiff > 90;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Apply sorting
+    filtered.sort((a: EquipmentType, b: EquipmentType) => {
+      let aValue: string, bValue: string;
+      
+      switch (sortBy) {
+        case "equipmentType":
+          aValue = a.equipmentType;
+          bValue = b.equipmentType;
+          break;
+        case "iso14224Code":
+          aValue = a.iso14224Code;
+          bValue = b.iso14224Code;
+          break;
+        case "lastUpdated":
+          aValue = a.lastUpdated;
+          bValue = b.lastUpdated;
+          break;
+        case "subtypeCount":
+          return sortOrder === "asc" 
+            ? a.subtypes.length - b.subtypes.length
+            : b.subtypes.length - a.subtypes.length;
+        default:
+          aValue = a.equipmentType;
+          bValue = b.equipmentType;
+      }
+      
+      const comparison = aValue.localeCompare(bValue);
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+    
+    return filtered;
+  }, [equipmentTypes, searchQuery, filterBy, sortBy, sortOrder, filterByComplexity, filterByLastUpdated]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setFilterBy("all");
+    setSortBy("equipmentType");
+    setSortOrder("asc");
+    setFilterByComplexity("all");
+    setFilterByLastUpdated("all");
+  };
+  
+  // Highlight search terms in text
+  const highlightSearchTerm = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">
+          {part}
+        </span>
+      ) : part
+    );
+  };
+  
+  // Get active filter count for display
+  const activeFilterCount = [
+    searchQuery.trim() !== "",
+    filterBy !== "all",
+    sortBy !== "equipmentType",
+    sortOrder !== "asc",
+    filterByComplexity !== "all",
+    filterByLastUpdated !== "all"
+  ].filter(Boolean).length;
 
   // Equipment type to profile key mapping - expanded to match user table
   const equipmentProfileMap: Record<string, string> = {
@@ -325,6 +487,149 @@ export default function EvidenceLibraryAdmin() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* Smart Search and Filters */}
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search equipment types, ISO codes, or subtypes..."
+                  className="pl-10 pr-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1 h-8 w-8 p-0"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Filter and Sort Controls */}
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <Select value={filterBy} onValueChange={setFilterBy}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Equipment</SelectItem>
+                      <SelectItem value="rotating">Rotating Equipment</SelectItem>
+                      <SelectItem value="static">Static Equipment</SelectItem>
+                      <SelectItem value="electrical">Electrical Equipment</SelectItem>
+                      <SelectItem value="process">Process Equipment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Sort by:</span>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equipmentType">Equipment Type</SelectItem>
+                      <SelectItem value="iso14224Code">ISO Code</SelectItem>
+                      <SelectItem value="lastUpdated">Last Updated</SelectItem>
+                      <SelectItem value="subtypeCount">Subtype Count</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  >
+                    {sortOrder === "asc" ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  </Button>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={showAdvancedFilters ? "bg-blue-50 border-blue-200" : ""}
+                >
+                  Advanced Filters
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+
+                {activeFilterCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear All ({activeFilterCount})
+                  </Button>
+                )}
+
+                <div className="text-sm text-gray-600 ml-auto">
+                  Showing {filteredAndSortedEquipment.length} of {equipmentTypes?.equipmentTypes?.length || 0} equipment types
+                </div>
+              </div>
+
+              {/* Advanced Filters Panel */}
+              {showAdvancedFilters && (
+                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                  <h4 className="font-medium mb-3">Advanced Filters</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Equipment Complexity</Label>
+                      <Select value={filterByComplexity} onValueChange={setFilterByComplexity}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Complexity Levels</SelectItem>
+                          <SelectItem value="simple">Simple (≤ 3 subtypes)</SelectItem>
+                          <SelectItem value="moderate">Moderate (4-6 subtypes)</SelectItem>
+                          <SelectItem value="complex">Complex (&gt; 6 subtypes)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium">Last Updated</Label>
+                      <Select value={filterByLastUpdated} onValueChange={setFilterByLastUpdated}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Any Time</SelectItem>
+                          <SelectItem value="recent">Last 7 days</SelectItem>
+                          <SelectItem value="week">Last 30 days</SelectItem>
+                          <SelectItem value="month">Last 90 days</SelectItem>
+                          <SelectItem value="old">Older than 90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setFilterByComplexity("all");
+                          setFilterByLastUpdated("all");
+                        }}
+                        className="w-full"
+                      >
+                        Reset Advanced
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Equipment Types Table */}
             <div className="border rounded-lg">
               <Table>
@@ -339,14 +644,14 @@ export default function EvidenceLibraryAdmin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {equipmentTypes?.equipmentTypes?.map((equipment: EquipmentType) => (
+                  {filteredAndSortedEquipment.map((equipment: EquipmentType) => (
                     <TableRow key={equipment.iso14224Code}>
                       <TableCell className="font-medium">
-                        {equipment.equipmentType}
+                        {highlightSearchTerm(equipment.equipmentType, searchQuery)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {equipment.iso14224Code}
+                          {highlightSearchTerm(equipment.iso14224Code, searchQuery)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -398,6 +703,18 @@ export default function EvidenceLibraryAdmin() {
                 <Database className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p className="text-gray-600">No equipment types found</p>
                 <p className="text-sm text-gray-500">Check API connection and try refreshing</p>
+              </div>
+            )}
+
+            {/* No search results state */}
+            {equipmentTypes?.equipmentTypes?.length > 0 && filteredAndSortedEquipment.length === 0 && (
+              <div className="text-center py-8">
+                <Search className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">No equipment types match your search</p>
+                <p className="text-sm text-gray-500">Try adjusting your search terms or filters</p>
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                  Clear All Filters
+                </Button>
               </div>
             )}
           </div>
