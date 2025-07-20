@@ -51,7 +51,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const investigation = await investigationStorage.updateInvestigation(parseInt(id), {
+      // Get investigation first to get numeric ID
+      let investigation;
+      if (isNaN(parseInt(id))) {
+        investigation = await investigationStorage.getInvestigationByInvestigationId(id);
+      } else {
+        investigation = await investigationStorage.getInvestigation(parseInt(id));
+      }
+      
+      if (!investigation) {
+        return res.status(404).json({ message: "Investigation not found" });
+      }
+
+      const updatedInvestigation = await investigationStorage.updateInvestigation(investigation.id, {
         investigationType,
         currentStep: "evidence_collection"
       });
@@ -59,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return appropriate questionnaire
       const questionnaire = investigationEngine.getQuestionnaire(investigationType);
       
-      res.json({ investigation, questionnaire });
+      res.json({ investigation: updatedInvestigation, questionnaire });
     } catch (error) {
       console.error("[RCA] Error setting investigation type:", error);
       res.status(500).json({ message: "Failed to set investigation type" });
@@ -70,7 +82,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/investigations/:id/questionnaire", async (req, res) => {
     try {
       const { id } = req.params;
-      const investigation = await investigationStorage.getInvestigation(parseInt(id));
+      
+      // Get investigation by string ID or numeric ID
+      let investigation;
+      if (isNaN(parseInt(id))) {
+        investigation = await investigationStorage.getInvestigationByInvestigationId(id);
+      } else {
+        investigation = await investigationStorage.getInvestigation(parseInt(id));
+      }
       
       if (!investigation) {
         return res.status(404).json({ message: "Investigation not found" });
@@ -178,11 +197,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single investigation
+  // Get single investigation (by investigationId string)
   app.get("/api/investigations/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const investigation = await investigationStorage.getInvestigation(parseInt(id));
+      
+      // Try to get by investigationId first (string), then by numeric id
+      let investigation;
+      if (isNaN(parseInt(id))) {
+        investigation = await investigationStorage.getInvestigationByInvestigationId(id);
+      } else {
+        investigation = await investigationStorage.getInvestigation(parseInt(id));
+      }
       
       if (!investigation) {
         return res.status(404).json({ message: "Investigation not found" });
