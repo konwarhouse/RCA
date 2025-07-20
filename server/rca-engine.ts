@@ -306,6 +306,11 @@ export class RCAEngine {
       }
     }
 
+    // If no causes found from specific failure modes, add generic causes
+    if (causes.length === 0) {
+      return this.getGenericCauses(symptomAnalysis);
+    }
+
     return causes.sort((a, b) => b.probability - a.probability);
   }
 
@@ -369,6 +374,18 @@ export class RCAEngine {
     // Sort by confidence and select root cause
     probableCauses.sort((a, b) => b.confidence - a.confidence);
     
+    // Ensure we have at least one probable cause
+    if (probableCauses.length === 0) {
+      probableCauses.push({
+        cause: "Insufficient data for root cause determination",
+        probability: 0.3,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0,
+        confidence: 0.3
+      });
+    }
+    
     const rootCause = probableCauses[0];
     const contributingFactors = probableCauses
       .slice(1, 4)
@@ -380,7 +397,7 @@ export class RCAEngine {
 
     return {
       probableCauses,
-      rootCause: rootCause.cause,
+      rootCause: rootCause?.cause || "Insufficient data for root cause determination",
       contributingFactors,
       confidence: overallConfidence
     };
@@ -482,16 +499,64 @@ export class RCAEngine {
   }
 
   private static getGenericCauses(symptomAnalysis: any): CauseAnalysis[] {
-    return [
+    const genericCauses = [
       {
-        cause: 'maintenance_required',
+        cause: 'Routine maintenance required',
+        probability: 0.7,
+        confidence: 0.6,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0.5
+      },
+      {
+        cause: 'Wear and tear from normal operation',
         probability: 0.6,
+        confidence: 0.5,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0.4
+      },
+      {
+        cause: 'Operating parameter deviation',
+        probability: 0.5,
         confidence: 0.4,
         supportingEvidence: [],
         contradictingEvidence: [],
-        dataCorrelation: 0
+        dataCorrelation: 0.3
       }
     ];
+
+    // Add symptom-specific causes based on primary symptom
+    if (symptomAnalysis.primary.includes('leak')) {
+      genericCauses.unshift({
+        cause: 'Seal or gasket failure',
+        probability: 0.8,
+        confidence: 0.7,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0.6
+      });
+    } else if (symptomAnalysis.primary.includes('vibration') || symptomAnalysis.primary.includes('noise')) {
+      genericCauses.unshift({
+        cause: 'Mechanical imbalance or misalignment',
+        probability: 0.8,
+        confidence: 0.7,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0.6
+      });
+    } else if (symptomAnalysis.primary.includes('temperature') || symptomAnalysis.primary.includes('overheat')) {
+      genericCauses.unshift({
+        cause: 'Lubrication issues or thermal stress',
+        probability: 0.8,
+        confidence: 0.7,
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        dataCorrelation: 0.6
+      });
+    }
+
+    return genericCauses;
   }
 
   private static catalogAvailableData(parsedData: any, historicalData?: any): any {
