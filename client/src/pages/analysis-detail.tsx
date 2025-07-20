@@ -179,20 +179,117 @@ export default function AnalysisDetail() {
                   
                   <div>
                     <h4 className="font-medium text-sm mb-2">Root Cause Analysis</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {analysis.analysisResults?.causes?.map(cause => cause.description).join("; ") || 
-                       analysis.rootCauses || 
-                       "Analysis in progress..."}
-                    </p>
+                    {analysis.analysisResults?.structuredAnalysis ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                          <h5 className="font-medium text-sm mb-2">Symptom Statement</h5>
+                          <p className="text-sm text-muted-foreground">
+                            {analysis.analysisResults.structuredAnalysis.symptomStatement}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <h5 className="font-medium text-sm mb-3">Causes Analysis</h5>
+                          <div className="space-y-3">
+                            {analysis.analysisResults.structuredAnalysis.causesConsidered.map((cause, idx) => (
+                              <div key={idx} className={`p-3 border-l-4 ${
+                                cause.classification === 'root_cause' ? 'border-red-500 bg-red-50' :
+                                cause.classification === 'contributing' ? 'border-yellow-500 bg-yellow-50' :
+                                'border-gray-300 bg-gray-50'
+                              }`}>
+                                <div className="flex items-start justify-between mb-2">
+                                  <h6 className="font-medium text-sm">{cause.cause}</h6>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      cause.classification === 'root_cause' ? 'bg-red-100 text-red-800' :
+                                      cause.classification === 'contributing' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {cause.classification.replace('_', ' ')}
+                                    </span>
+                                    <span className="text-xs font-medium">
+                                      {Math.round(cause.confidence * 100)}%
+                                    </span>
+                                  </div>
+                                </div>
+                                {cause.supportingEvidence.length > 0 && (
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium text-green-700 mb-1">Supporting Evidence:</p>
+                                    <ul className="text-xs text-green-600 list-disc list-inside">
+                                      {cause.supportingEvidence.map((evidence, i) => (
+                                        <li key={i}>{evidence}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {cause.contradictingEvidence.length > 0 && (
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium text-red-700 mb-1">Contradicting Evidence:</p>
+                                    <ul className="text-xs text-red-600 list-disc list-inside">
+                                      {cause.contradictingEvidence.map((evidence, i) => (
+                                        <li key={i}>{evidence}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                <p className="text-xs text-muted-foreground italic">{cause.reasoning}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-blue-50 border-l-4 border-blue-500">
+                          <h5 className="font-medium text-sm mb-2 text-blue-800">Conclusion</h5>
+                          <p className="text-sm text-blue-700">
+                            {analysis.analysisResults.structuredAnalysis.conclusion}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {analysis.analysisResults?.causes?.map(cause => cause.description).join("; ") || 
+                         analysis.rootCauses || 
+                         "Analysis in progress..."}
+                      </p>
+                    )}
                   </div>
                   
                   <div>
                     <h4 className="font-medium text-sm mb-2">Recommendations</h4>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                      {(analysis.recommendations || []).map((rec, idx) => (
-                        <li key={idx}>{rec}</li>
-                      ))}
-                    </ul>
+                    {analysis.analysisResults?.structuredAnalysis?.recommendations ? (
+                      <div className="space-y-3">
+                        {analysis.analysisResults.structuredAnalysis.recommendations.map((rec, idx) => (
+                          <div key={idx} className={`p-3 border-l-4 ${
+                            rec.priority === 'high' ? 'border-red-500 bg-red-50' :
+                            rec.priority === 'medium' ? 'border-yellow-500 bg-yellow-50' :
+                            'border-blue-500 bg-blue-50'
+                          }`}>
+                            <div className="flex items-start justify-between mb-1">
+                              <h6 className="font-medium text-sm">{rec.action}</h6>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rec.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                rec.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {rec.priority} priority
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              <strong>Timeframe:</strong> {rec.timeframe}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Rationale:</strong> {rec.rationale}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                        {(analysis.recommendations || []).map((rec, idx) => (
+                          <li key={idx}>{rec}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">

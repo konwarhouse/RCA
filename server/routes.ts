@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { investigationStorage } from "./storage";
 import { investigationEngine } from "./investigation-engine";
+import { RCAAnalysisEngine } from "./rca-analysis-engine";
 import evidenceLibraryRoutes from "./routes/evidence-library";
 import multer from "multer";
 
@@ -185,20 +186,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentStep: "ai_processing"
       });
 
-      // Generate analysis based on investigation type
-      let analysisResults;
-      let recommendations;
+      // Generate structured RCA analysis
+      const structuredRCA = RCAAnalysisEngine.generateStructuredRCA(investigation);
+      
+      // Convert to existing format for compatibility
+      const analysisResults = {
+        causes: structuredRCA.causesConsidered.map(cause => ({
+          description: cause.cause,
+          confidence: cause.confidence,
+          classification: cause.classification,
+          evidence: {
+            supporting: cause.supportingEvidence,
+            contradicting: cause.contradictingEvidence
+          }
+        })),
+        topEvent: 'Equipment Failure',
+        confidence: structuredRCA.confidence,
+        analysisMethod: investigation.investigationType === 'safety_environmental' ? 'ECFA' : 'Fault Tree Analysis',
+        structuredAnalysis: structuredRCA
+      };
 
-      if (investigation.investigationType === 'safety_environmental') {
-        analysisResults = investigationEngine.generateECFA(investigation.evidenceData);
-      } else {
-        analysisResults = investigationEngine.generateFaultTree(investigation.evidenceData);
-      }
-
-      recommendations = investigationEngine.generateRecommendations(
-        investigation.investigationType!,
-        investigation.evidenceData,
-        analysisResults
+      const recommendations = structuredRCA.recommendations.map(rec => 
+        `${rec.priority.toUpperCase()}: ${rec.action} (${rec.timeframe}) - ${rec.rationale}`
       );
 
       // Update investigation with results
