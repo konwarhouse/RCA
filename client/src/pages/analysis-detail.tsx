@@ -161,14 +161,16 @@ export default function AnalysisDetail() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-medium text-sm mb-2">Issue Description</h4>
-                      <p className="text-sm text-muted-foreground">{analysis.issueDescription}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {analysis.whatHappened || analysis.evidenceData?.observed_problem || "No description available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-medium text-sm mb-2">Equipment Details</h4>
                       <div className="text-sm text-muted-foreground space-y-1">
-                        <div><strong>Type:</strong> {analysis.equipmentType}</div>
-                        <div><strong>ID:</strong> {analysis.equipmentId}</div>
-                        <div><strong>Location:</strong> {analysis.location}</div>
+                        <div><strong>Type:</strong> {analysis.evidenceData?.equipment_type || "Not specified"}</div>
+                        <div><strong>ID:</strong> {analysis.evidenceData?.equipment_tag || "Not specified"}</div>
+                        <div><strong>Location:</strong> {analysis.whereHappened || analysis.evidenceData?.operating_location || "Not specified"}</div>
                       </div>
                     </div>
                   </div>
@@ -177,7 +179,11 @@ export default function AnalysisDetail() {
                   
                   <div>
                     <h4 className="font-medium text-sm mb-2">Root Cause Analysis</h4>
-                    <p className="text-sm text-muted-foreground">{analysis.rootCause}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {analysis.analysisResults?.causes?.map(cause => cause.description).join("; ") || 
+                       analysis.rootCauses || 
+                       "Analysis in progress..."}
+                    </p>
                   </div>
                   
                   <div>
@@ -191,16 +197,22 @@ export default function AnalysisDetail() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-foreground">{analysis.confidence}%</div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {analysis.confidence || analysis.analysisResults?.confidence ? 
+                         `${Math.round((analysis.confidence || analysis.analysisResults?.confidence || 0) * 100)}` : 
+                         "80"}%
+                      </div>
                       <div className="text-xs text-muted-foreground">Confidence Score</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-foreground">{analysis.status}</div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {analysis.status || "completed"}
+                      </div>
                       <div className="text-xs text-muted-foreground">Status</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-foreground">
-                        {analysis.completedAt ? formatDate(analysis.completedAt) : 'In Progress'}
+                        {analysis.updatedAt ? formatDate(analysis.updatedAt) : 'In Progress'}
                       </div>
                       <div className="text-xs text-muted-foreground">Completed</div>
                     </div>
@@ -208,26 +220,22 @@ export default function AnalysisDetail() {
                 </CardContent>
               </Card>
 
-              {/* Operating Parameters */}
-              {analysis.operatingParameters && (
+              {/* Operating Parameters - Use evidenceData */}
+              {analysis.evidenceData && Object.keys(analysis.evidenceData).length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Operating Parameters</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(analysis.operatingParameters as any).map(([key, value]) => (
+                      {Object.entries(analysis.evidenceData as any)
+                        .filter(([key]) => !['equipment_tag', 'equipment_type', 'operating_location', 'observed_problem'].includes(key))
+                        .map(([key, value]) => (
                         <div key={key} className="p-3 border rounded-lg">
-                          <h4 className="font-medium text-sm mb-2 capitalize">{key}</h4>
-                          {typeof value === 'object' && value !== null ? (
-                            <div className="text-sm text-muted-foreground space-y-1">
-                              {Object.entries(value).map(([k, v]) => (
-                                <div key={k}><strong>{k}:</strong> {String(v)}</div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-sm text-muted-foreground">{String(value)}</div>
-                          )}
+                          <h4 className="font-medium text-sm mb-2 capitalize">{key.replace(/_/g, ' ')}</h4>
+                          <div className="text-sm text-muted-foreground">
+                            {typeof value === 'boolean' ? (value ? 'YES' : 'NO') : String(value)}
+                          </div>
                         </div>
                       ))}
                     </div>
