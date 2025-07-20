@@ -74,6 +74,12 @@ export default function EvidenceLibraryAdmin() {
     queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
   });
 
+  // Equipment type to profile key mapping
+  const equipmentProfileMap = {
+    'Pumps': 'pumps_centrifugal',
+    'Compressors': 'compressors_reciprocating'
+  };
+
   // Fetch selected equipment profile
   const { data: equipmentProfile } = useQuery({
     queryKey: ['/api/evidence-library/equipment', selectedEquipment],
@@ -210,11 +216,19 @@ export default function EvidenceLibraryAdmin() {
                   <SelectValue placeholder="Choose equipment type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {equipmentTypes?.data?.equipmentTypes?.map((equipment: EquipmentType) => (
-                    <SelectItem key={equipment.equipmentType} value={equipment.equipmentType}>
-                      {equipment.equipmentType} ({equipment.iso14224Code})
-                    </SelectItem>
-                  ))}
+                  {equipmentTypes?.equipmentTypes?.map((equipment: EquipmentType) => {
+                    const profileKey = equipmentProfileMap[equipment.equipmentType as keyof typeof equipmentProfileMap];
+                    if (!profileKey) return null;
+                    
+                    return (
+                      <SelectItem 
+                        key={equipment.equipmentType} 
+                        value={profileKey}
+                      >
+                        {equipment.equipmentType} ({equipment.iso14224Code})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
