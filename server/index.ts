@@ -4,13 +4,13 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Conditional JSON parsing - skip for multipart requests
+// Only apply JSON parsing to non-multipart requests
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
   if (contentType.includes('multipart/form-data')) {
-    return next(); // Skip JSON parsing for multipart
+    return next();
   }
-  express.json()(req, res, next);
+  return express.json()(req, res, next);
 });
 
 app.use(express.urlencoded({ extended: false }));

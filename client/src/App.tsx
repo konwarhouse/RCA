@@ -8,6 +8,7 @@ import AnalysisDetail from "@/pages/analysis-detail";
 import AdminSettings from "@/pages/admin-settings";
 import NewAnalysis from "@/pages/new-analysis";
 import InteractiveEvidenceForm from "@/pages/interactive-evidence-form";
+import TestEvidence from "@/pages/test-evidence";
 import NotFound from "@/pages/not-found";
 
 
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/new" component={NewAnalysis} />
+      <Route path="/test-evidence" component={TestEvidence} />
       <Route path="/evidence/:id" component={InteractiveEvidenceForm} />
       <Route path="/analysis/:id" component={AnalysisDetail} />
       <Route path="/admin" component={AdminSettings} />
