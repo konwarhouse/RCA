@@ -74,10 +74,34 @@ export default function EvidenceLibraryAdmin() {
     queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
   });
 
-  // Equipment type to profile key mapping
+  // Equipment type to profile key mapping - expanded to match user table
   const equipmentProfileMap = {
     'Pumps': 'pumps_centrifugal',
-    'Compressors': 'compressors_reciprocating'
+    'Compressors': 'compressors_reciprocating',
+    'Turbines': 'turbines_gas',
+    'Electric Motors': 'motors_electric',
+    'Generators': 'generators_synchronous',
+    'Fans / Blowers': 'fans_centrifugal',
+    'Agitators / Mixers': 'mixers_top_entry',
+    'Heat Exchangers': 'heat_exchangers_shell_tube',
+    'Boilers': 'boilers_water_tube',
+    'Pressure Vessels': 'vessels_pressure',
+    'Columns/Towers': 'columns_distillation',
+    'Filters/Strainers': 'filters_basket',
+    'Tanks': 'tanks_atmospheric',
+    'Piping': 'piping_process',
+    'Valves': 'valves_control',
+    'Switchgear': 'switchgear_mv',
+    'Transformers': 'transformers_power',
+    'UPS/Rectifiers': 'ups_static',
+    'Cables/Busbars': 'cables_power',
+    'Sensors/Transmitters': 'sensors_pressure',
+    'PLCs/DCS Systems': 'plc_redundant',
+    'Control Valves': 'control_valves_pneumatic',
+    'Analyzers': 'analyzers_gc',
+    'HVAC Units': 'hvac_air_handler',
+    'Cranes/Hoists': 'cranes_bridge',
+    'Fire Protection Systems': 'fire_systems_deluge'
   };
 
   // Fetch selected equipment profile
@@ -218,12 +242,11 @@ export default function EvidenceLibraryAdmin() {
                 <SelectContent>
                   {equipmentTypes?.equipmentTypes?.map((equipment: EquipmentType) => {
                     const profileKey = equipmentProfileMap[equipment.equipmentType as keyof typeof equipmentProfileMap];
-                    if (!profileKey) return null;
                     
                     return (
                       <SelectItem 
                         key={equipment.equipmentType} 
-                        value={profileKey}
+                        value={profileKey || equipment.equipmentType.toLowerCase().replace(/\s+/g, '_')}
                       >
                         {equipment.equipmentType} ({equipment.iso14224Code})
                       </SelectItem>
@@ -245,6 +268,75 @@ export default function EvidenceLibraryAdmin() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add New Equipment Type Form */}
+      {showAddForm && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-lg">Add New Equipment Type</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Equipment Type Name</Label>
+                <Input
+                  placeholder="e.g., Heat Exchangers"
+                  value={newTrend.name || ''}
+                  onChange={(e) => setNewTrend(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>ISO 14224 Code</Label>
+                <Input
+                  placeholder="e.g., HE-003"
+                  value={newTrend.id || ''}
+                  onChange={(e) => setNewTrend(prev => ({ ...prev, id: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Subtypes (comma-separated)</Label>
+              <Input
+                placeholder="e.g., Shell and Tube, Plate, Air Cooled"
+                value={newTrend.units || ''}
+                onChange={(e) => setNewTrend(prev => ({ ...prev, units: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Brief description of equipment type and its applications"
+                value={newTrend.description || ''}
+                onChange={(e) => setNewTrend(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => {
+                  // Here you would normally call an API to add the equipment type
+                  toast({
+                    title: "Feature Coming Soon",
+                    description: "Equipment type addition will be implemented in the next update",
+                  });
+                  setShowAddForm(false);
+                }}
+                disabled={!newTrend.name || !newTrend.id}
+              >
+                Add Equipment Type
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewTrend({});
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content */}
       {selectedEquipment && equipmentProfile && (
@@ -282,7 +374,7 @@ export default function EvidenceLibraryAdmin() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {equipmentProfile?.data?.profile?.requiredTrendData?.map((trend: TrendRequirement) => (
+                  {equipmentProfile?.profile?.requiredTrendData?.map((trend: TrendRequirement) => (
                     <div key={trend.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -339,7 +431,7 @@ export default function EvidenceLibraryAdmin() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {equipmentProfile?.data?.profile?.requiredAttachments?.map((attachment: AttachmentRequirement) => (
+                  {equipmentProfile?.profile?.requiredAttachments?.map((attachment: AttachmentRequirement) => (
                     <div key={attachment.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">

@@ -414,6 +414,362 @@ export const EVIDENCE_REQUIREMENTS_LIBRARY: Record<string, EquipmentEvidenceProf
     ],
     lastUpdated: '2025-01-20',
     updatedBy: 'RCA System Admin'
+  },
+
+  'turbines_gas': {
+    equipmentType: 'Turbines',
+    iso14224Code: 'TU-003',
+    subtypes: ['Gas', 'Steam'],
+    requiredTrendData: [
+      {
+        id: 'rotor_vibration',
+        name: 'Rotor Vibration',
+        description: 'Rotor vibration in axial and radial directions',
+        units: 'mm/s',
+        mandatory: true,
+        samplingFrequency: '1 Hz continuous',
+        typicalRange: '2.8-7.1 mm/s'
+      },
+      {
+        id: 'bearing_temperature',
+        name: 'Bearing Temperature',
+        description: 'Journal and thrust bearing temperatures',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Ambient + 50°C max'
+      },
+      {
+        id: 'exhaust_temperature',
+        name: 'Exhaust Temperature',
+        description: 'Turbine exhaust gas temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: 'Per design specification'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'vibration_charts',
+        name: 'Vibration Charts',
+        description: 'Vibration trend plots and spectrum analysis',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 25
+      },
+      {
+        id: 'oil_analysis',
+        name: 'Oil Analysis Report',
+        description: 'Lube oil condition and contamination analysis',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Gas turbine failures often relate to vibration, bearing issues, or hot gas path problems',
+        prompt: 'Describe turbine symptoms with measurements: vibration levels, bearing temperatures, exhaust temps, speed/load variations. Include timeline and any trips.',
+        examples: [
+          'Rotor vibration increased to 12 mm/s (normal 4), bearing #2 temp 95°C (others 70°C), exhaust temp fluctuating ±15°C, started 3 days ago',
+          'High vibration at 1X running speed 8 mm/s, oil pressure drop to 2.1 bar, trip on bearing temperature alarm'
+        ],
+        validation: 'Must include vibration measurements and temperature readings'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'bearing_failure',
+        name: 'Bearing Failure',
+        description: 'Journal or thrust bearing deterioration',
+        typicalSymptoms: ['High vibration', 'Temperature rise', 'Oil pressure drop'],
+        criticalEvidence: ['vibration_charts', 'bearing_temperature', 'oil_analysis'],
+        diagnosticQuestions: [
+          'Which bearing shows elevated temperature?',
+          'Is vibration at 1X or 2X running speed?',
+          'What does oil analysis show?'
+        ],
+        commonCauses: ['Oil contamination', 'Misalignment', 'Bearing wear', 'Insufficient lubrication']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'vibration_high AND bearing_temp_high',
+        suggestion: 'High vibration with bearing temperature indicates bearing distress. Check oil condition and alignment.',
+        additionalEvidence: ['oil_sample_recent', 'alignment_check_data']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'motors_electric': {
+    equipmentType: 'Electric Motors',
+    iso14224Code: 'MO-004',
+    subtypes: ['Squirrel Cage', 'Slip Ring', 'DC'],
+    requiredTrendData: [
+      {
+        id: 'motor_current',
+        name: 'Motor Current',
+        description: 'Three-phase motor current consumption',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: '80-105% of FLA'
+      },
+      {
+        id: 'stator_temperature',
+        name: 'Stator Temperature',
+        description: 'Motor stator winding temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Class F: <155°C'
+      },
+      {
+        id: 'vibration_overall',
+        name: 'Overall Vibration',
+        description: 'Motor vibration at drive and non-drive ends',
+        units: 'mm/s',
+        mandatory: true,
+        samplingFrequency: '1 Hz continuous',
+        typicalRange: '1.8-4.5 mm/s'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'insulation_resistance',
+        name: 'Insulation Resistance Test',
+        description: 'Megger test results for winding insulation',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 5
+      },
+      {
+        id: 'current_signature',
+        name: 'Motor Current Signature Analysis',
+        description: 'MCSA for rotor bar and bearing condition',
+        fileTypes: ['csv', 'png'],
+        mandatory: false,
+        maxSizeMB: 15
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Electric motor failures typically involve current imbalance, overheating, or vibration',
+        prompt: 'Describe motor symptoms with specific data: current readings per phase, temperatures, vibration levels, any trips or overloads. Include operational timeline.',
+        examples: [
+          'Phase A current 52A, B=48A, C=55A (imbalance 7%), stator temp 165°C, vibration 6 mm/s, tripped on overload twice',
+          'Motor current increased 15% above normal, bearing vibration 8 mm/s, temperature rise 25°C above baseline'
+        ],
+        validation: 'Must include current readings and temperature measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'bearing_failure',
+        name: 'Motor Bearing Failure',
+        description: 'Rolling element bearing deterioration',
+        typicalSymptoms: ['High vibration', 'Noise', 'Temperature rise'],
+        criticalEvidence: ['vibration_overall', 'current_signature'],
+        diagnosticQuestions: [
+          'Is vibration at bearing frequencies?',
+          'Any bearing noise audible?',
+          'Current signature shows bearing defects?'
+        ],
+        commonCauses: ['Bearing wear', 'Lubrication failure', 'Contamination', 'Misalignment']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'current_imbalance AND temperature_high',
+        suggestion: 'Current imbalance with high temperature suggests winding problems. Check insulation resistance.',
+        additionalEvidence: ['winding_resistance_test', 'thermal_imaging']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'heat_exchangers_shell_tube': {
+    equipmentType: 'Heat Exchangers',
+    iso14224Code: 'HE-005',
+    subtypes: ['Shell & Tube', 'Plate', 'Air Cooler'],
+    requiredTrendData: [
+      {
+        id: 'inlet_temperature',
+        name: 'Inlet Temperature',
+        description: 'Hot and cold side inlet temperatures',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per process design'
+      },
+      {
+        id: 'outlet_temperature',
+        name: 'Outlet Temperature',
+        description: 'Hot and cold side outlet temperatures',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per process design'
+      },
+      {
+        id: 'pressure_drop',
+        name: 'Pressure Drop',
+        description: 'Differential pressure across shell and tube sides',
+        units: 'bar',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Clean condition + 20%'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'temperature_trends',
+        name: 'Temperature Trend Charts',
+        description: 'Inlet/outlet temperature trends showing heat transfer performance',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 20
+      },
+      {
+        id: 'inspection_photos',
+        name: 'Internal Inspection Photos',
+        description: 'Photos of tube condition, fouling, or corrosion',
+        fileTypes: ['jpg', 'png'],
+        mandatory: true,
+        maxSizeMB: 50
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Heat exchanger problems typically involve fouling, tube leaks, or thermal performance degradation',
+        prompt: 'Describe heat exchanger symptoms: temperature differences, pressure drops, flow rates, any tube leaks or fouling evidence. Include performance compared to baseline.',
+        examples: [
+          'Outlet temp dropped 15°C from design, pressure drop increased 0.8 bar, flow reduced 10%, brown deposits visible',
+          'Tube leak detected, cross-contamination between process streams, pressure test failed at 12 bar'
+        ],
+        validation: 'Must include temperature and pressure drop measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'fouling',
+        name: 'Heat Exchanger Fouling',
+        description: 'Accumulation of deposits reducing heat transfer',
+        typicalSymptoms: ['Poor heat transfer', 'High pressure drop', 'Temperature deviation'],
+        criticalEvidence: ['temperature_trends', 'pressure_drop', 'inspection_photos'],
+        diagnosticQuestions: [
+          'What type of fouling is observed?',
+          'How much has pressure drop increased?',
+          'When was last cleaning performed?'
+        ],
+        commonCauses: ['Process contamination', 'Corrosion products', 'Scaling', 'Biological growth']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'pressure_drop_high AND temperature_low',
+        suggestion: 'High pressure drop with poor heat transfer indicates fouling. Inspect tubes and consider cleaning.',
+        additionalEvidence: ['fouling_analysis', 'cleaning_effectiveness_data']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'valves_control': {
+    equipmentType: 'Valves',
+    iso14224Code: 'VA-006',
+    subtypes: ['Gate', 'Globe', 'Ball', 'Control', 'Safety Relief'],
+    requiredTrendData: [
+      {
+        id: 'stem_position',
+        name: 'Valve Stem Position',
+        description: 'Actual valve position feedback',
+        units: '%',
+        mandatory: true,
+        samplingFrequency: '1 second',
+        typicalRange: '0-100% per command'
+      },
+      {
+        id: 'upstream_pressure',
+        name: 'Upstream Pressure',
+        description: 'Pressure before valve',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: 'Per process design'
+      },
+      {
+        id: 'downstream_pressure',
+        name: 'Downstream Pressure',
+        description: 'Pressure after valve',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: 'Per process design'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'position_trends',
+        name: 'Position Trend Charts',
+        description: 'Valve position vs setpoint showing response and stiction',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 15
+      },
+      {
+        id: 'stroke_test',
+        name: 'Valve Stroke Test Report',
+        description: 'Full stroke test results and travel times',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Control valve problems typically involve stiction, leakage, or poor response',
+        prompt: 'Describe valve symptoms: position deviation, response time, pressure drops, any leakage or sticking. Include control loop performance impact.',
+        examples: [
+          'Valve sticking at 45% position, oscillation ±5%, response time increased to 8 seconds, process upset',
+          'Internal leakage observed, position shows 0% but flow continues, pressure drop across seat'
+        ],
+        validation: 'Must include position data and response characteristics'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'actuator_failure',
+        name: 'Valve Actuator Failure',
+        description: 'Pneumatic or electric actuator malfunction',
+        typicalSymptoms: ['Poor response', 'Position deviation', 'Stiction'],
+        criticalEvidence: ['position_trends', 'stroke_test'],
+        diagnosticQuestions: [
+          'Is actuator air supply adequate?',
+          'Any position feedback errors?',
+          'When was last calibration?'
+        ],
+        commonCauses: ['Air supply issues', 'Positioner drift', 'Actuator wear', 'Contamination']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'position_deviation AND response_slow',
+        suggestion: 'Position deviation with slow response indicates actuator problems. Check air supply and calibration.',
+        additionalEvidence: ['air_supply_pressure', 'positioner_calibration']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
   }
 };
 
