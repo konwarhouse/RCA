@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,483 +11,231 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle, ChevronRight, Upload, FileText, Brain } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronRight, Upload, FileText, Brain, ArrowRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { EvidenceData, QuestionDefinition } from "@shared/schema";
-
-// Question definitions from the Evidence Engine
-const BASE_QUESTIONS: QuestionDefinition[] = [
-  // Phase 1: Asset Context
-  {
-    id: "equipment_type",
-    phase: "Asset Context",
-    text: "What is the equipment type?",
-    type: "select",
-    options: ["valve", "pump", "motor", "compressor", "conveyor", "fan", "heat_exchanger", "turbine", "gearbox", "bearing", "reactor", "vessel", "other"],
-    required: true
-  },
-  {
-    id: "equipment_subtype", 
-    phase: "Asset Context",
-    text: "What is the specific subtype or model?",
-    type: "text",
-    required: false
-  },
-  {
-    id: "main_function",
-    phase: "Asset Context", 
-    text: "What is the equipment's main function/service?",
-    type: "text",
-    required: false
-  },
-  {
-    id: "location",
-    phase: "Asset Context",
-    text: "Where is the equipment located? (site, plant area, line number, asset ID)",
-    type: "text", 
-    required: true
-  },
-  {
-    id: "in_service_since",
-    phase: "Asset Context",
-    text: "When was this equipment put in service?",
-    type: "date",
-    required: false
-  },
-  
-  // Phase 2: Symptom Definition
-  {
-    id: "observed_problem",
-    phase: "Symptom Definition",
-    text: "What is the observed problem/symptom?",
-    type: "select",
-    options: ["leak", "noise", "high vibration", "low output", "failure to start", "trip", "overheating", "excessive wear", "contamination", "other"],
-    required: true
-  },
-  {
-    id: "symptom_location",
-    phase: "Symptom Definition", 
-    text: "Where is the symptom observed? (specific location)",
-    type: "text",
-    required: false
-  },
-  {
-    id: "first_noticed",
-    phase: "Symptom Definition",
-    text: "When was the problem first noticed?",
-    type: "date",
-    required: false
-  },
-  {
-    id: "problem_pattern",
-    phase: "Symptom Definition",
-    text: "Is the problem constant, intermittent, or recurring?",
-    type: "select",
-    options: ["constant", "intermittent", "recurring", "one-time event"],
-    required: false
-  },
-
-  // Phase 3: Operating Conditions
-  {
-    id: "current_flow_rate",
-    phase: "Operating Conditions",
-    text: "Current flow rate (if applicable)",
-    type: "number",
-    required: false
-  },
-  {
-    id: "current_pressure_upstream", 
-    phase: "Operating Conditions",
-    text: "Current upstream pressure (if applicable)",
-    type: "number",
-    required: false
-  },
-  {
-    id: "current_temperature_inlet",
-    phase: "Operating Conditions",
-    text: "Current inlet temperature (if applicable)",
-    type: "number", 
-    required: false
-  },
-  {
-    id: "current_vibration_level",
-    phase: "Operating Conditions", 
-    text: "Current vibration level (if applicable)",
-    type: "number",
-    required: false
-  },
-  {
-    id: "recent_process_changes",
-    phase: "Operating Conditions",
-    text: "Have any process or control conditions changed recently?",
-    type: "text",
-    required: false
-  },
-
-  // Phase 4: Maintenance History
-  {
-    id: "last_maintenance_date",
-    phase: "Maintenance History", 
-    text: "When was the last maintenance performed?",
-    type: "date",
-    required: false
-  },
-  {
-    id: "last_maintenance_type",
-    phase: "Maintenance History",
-    text: "Type of last maintenance",
-    type: "select",
-    options: ["preventive", "corrective", "overhaul", "inspection", "unknown"],
-    required: false
-  },
-  {
-    id: "recent_parts_replaced",
-    phase: "Maintenance History",
-    text: "What parts/components were recently replaced or adjusted?",
-    type: "text", 
-    required: false
-  },
-  {
-    id: "similar_problems_history", 
-    phase: "Maintenance History",
-    text: "Is there a history of similar problems/failures on this equipment?",
-    type: "text",
-    required: false
-  },
-
-  // Phase 5: Human Factors
-  {
-    id: "operator_at_failure",
-    phase: "Human Factors",
-    text: "Who was operating the equipment when the issue occurred?",
-    type: "text",
-    required: false
-  },
-  {
-    id: "operator_experience",
-    phase: "Human Factors", 
-    text: "Operator experience level",
-    type: "select",
-    options: ["experienced", "new", "in training", "unknown"],
-    required: false
-  },
-
-  // Phase 6: External Factors
-  {
-    id: "installation_compliance",
-    phase: "External Factors",
-    text: "Is the equipment installed according to manufacturer specifications?",
-    type: "select",
-    options: ["yes", "no", "unknown"],
-    required: false
-  },
-  {
-    id: "external_factors",
-    phase: "External Factors", 
-    text: "Any external factors that could have contributed? (weather, vibration, construction, etc.)",
-    type: "text",
-    required: false
-  },
-
-  // Phase 7: Additional Evidence
-  {
-    id: "photos_available",
-    phase: "Additional Evidence",
-    text: "Are photos or videos available?", 
-    type: "boolean",
-    required: false
-  },
-  {
-    id: "other_observations",
-    phase: "Additional Evidence",
-    text: "Anything else observed or suspected that might be relevant?",
-    type: "text",
-    required: false
-  }
-];
-
-// Equipment-specific follow-up questions
-const EQUIPMENT_SPECIFIC_QUESTIONS: Record<string, QuestionDefinition[]> = {
-  valve: [
-    {
-      id: "valve_actuator_type",
-      phase: "Equipment Specific",
-      text: "What type of actuator?",
-      type: "select",
-      options: ["manual", "electric", "pneumatic", "hydraulic"],
-      required: false
-    },
-    {
-      id: "valve_leak_location",
-      phase: "Equipment Specific", 
-      text: "Where is the leak located?",
-      type: "select",
-      options: ["seat", "stem", "body", "bonnet", "unknown"],
-      required: false
-    }
-  ],
-  pump: [
-    {
-      id: "pump_type",
-      phase: "Equipment Specific",
-      text: "What type of pump?",
-      type: "select",
-      options: ["centrifugal", "reciprocating", "screw", "diaphragm", "other"],
-      required: false
-    },
-    {
-      id: "pump_cavitation_signs",
-      phase: "Equipment Specific",
-      text: "Were there signs of cavitation?",
-      type: "boolean",
-      required: false
-    }
-  ],
-  motor: [
-    {
-      id: "motor_overcurrent_trip",
-      phase: "Equipment Specific",
-      text: "Was there an overcurrent/trip event?",
-      type: "boolean",
-      required: false
-    }
-  ]
-};
+import { EQUIPMENT_TYPES } from "@shared/schema";
 
 export default function EvidenceCollection() {
-  const [match, params] = useRoute("/evidence/:id");
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/investigation/:id/evidence");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
+  const investigationId = params?.id;
+  const [currentSection, setCurrentSection] = useState<string>("");
+  const [evidenceData, setEvidenceData] = useState<any>({});
+  const [completeness, setCompleteness] = useState(0);
+  const [questionnaire, setQuestionnaire] = useState<any[]>([]);
 
-  const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [currentPhase, setCurrentPhase] = useState(0);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [activeTab, setActiveTab] = useState("questionnaire");
-
-  // Get analysis data
-  const { data: analysis, isLoading } = useQuery({
-    queryKey: ["/api/analyses", params?.id],
-    enabled: !!params?.id
+  // Fetch investigation and questionnaire
+  const { data: investigationData, isLoading } = useQuery({
+    queryKey: ['/api/investigations', investigationId, 'questionnaire'],
+    enabled: !!investigationId
   });
 
-  // Initialize answers from existing evidence data
   useEffect(() => {
-    if (analysis?.evidenceData) {
-      // Convert structured evidence back to flat answers format
-      const flatAnswers: Record<string, any> = {};
-      const evidence = analysis.evidenceData as EvidenceData;
+    if (investigationData?.questionnaire) {
+      setQuestionnaire(investigationData.questionnaire);
+      setEvidenceData(investigationData.investigation?.evidenceData || {});
+      setCompleteness(parseFloat(investigationData.investigation?.evidenceCompleteness || "0"));
       
-      // Map evidence data back to question answers
-      flatAnswers.equipment_type = evidence.assetContext.equipmentType;
-      flatAnswers.equipment_subtype = evidence.assetContext.subtype;
-      flatAnswers.location = evidence.assetContext.location;
-      flatAnswers.observed_problem = evidence.symptomDefinition.observedProblem;
-      flatAnswers.symptom_location = evidence.symptomDefinition.symptomLocation;
-      // Add more mappings as needed...
-      
-      setAnswers(flatAnswers);
+      // Set first section as current
+      const sections = [...new Set(investigationData.questionnaire.map((q: any) => q.section))];
+      if (sections.length > 0) {
+        setCurrentSection(sections[0]);
+      }
     }
-  }, [analysis]);
+  }, [investigationData]);
 
-  // Group questions by phase
-  const phases = [
-    "Asset Context",
-    "Symptom Definition", 
-    "Operating Conditions",
-    "Maintenance History",
-    "Human Factors",
-    "External Factors",
-    "Additional Evidence"
-  ];
-
-  const getQuestionsForPhase = (phase: string) => {
-    const baseQuestions = BASE_QUESTIONS.filter(q => q.phase === phase);
-    
-    // Add equipment-specific questions if we're on the last phase and have equipment type
-    if (phase === "Additional Evidence" && answers.equipment_type) {
-      const equipmentQuestions = EQUIPMENT_SPECIFIC_QUESTIONS[answers.equipment_type] || [];
-      return [...baseQuestions, ...equipmentQuestions];
-    }
-    
-    return baseQuestions;
-  };
-
-  const currentPhaseQuestions = getQuestionsForPhase(phases[currentPhase] || "Asset Context");
-
-  // Calculate progress
-  const totalQuestions = BASE_QUESTIONS.length + (answers.equipment_type ? EQUIPMENT_SPECIFIC_QUESTIONS[answers.equipment_type]?.length || 0 : 0);
-  const answeredQuestions = Object.keys(answers).filter(key => answers[key] !== "" && answers[key] !== null && answers[key] !== undefined).length;
-  const progress = (answeredQuestions / totalQuestions) * 100;
-
-  // Check if required questions are answered
-  const requiredAnswered = BASE_QUESTIONS
-    .filter(q => q.required)
-    .every(q => answers[q.id]);
-
-  const canProceedToAnalysis = requiredAnswered && answeredQuestions >= 5; // Minimum threshold
-
-  // Update answer
-  const updateAnswer = (questionId: string, value: any) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: value
-    }));
-  };
-
-  // Save evidence data
-  const saveEvidenceMutation = useMutation({
-    mutationFn: async () => {
-      if (!params?.id) throw new Error("No analysis ID");
-      
-      // Structure the answers into EvidenceData format
-      const evidenceData: Partial<EvidenceData> = {
-        assetContext: {
-          equipmentType: answers.equipment_type || "",
-          subtype: answers.equipment_subtype,
-          mainFunction: answers.main_function,
-          location: answers.location || ""
+  // Update evidence mutation
+  const updateEvidenceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/investigations/${investigationId}/evidence`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        symptomDefinition: {
-          observedProblem: answers.observed_problem || "",
-          symptomLocation: answers.symptom_location,
-          problemPattern: answers.problem_pattern
-        },
-        operatingConditions: {
-          currentParameters: {
-            flow: answers.current_flow_rate ? { rate: answers.current_flow_rate } : undefined,
-            pressure: { upstream: answers.current_pressure_upstream },
-            temperature: { inlet: answers.current_temperature_inlet },
-            vibration: answers.current_vibration_level ? { horizontal: answers.current_vibration_level } : undefined
-          }
-        },
-        maintenanceHistory: {
-          lastMaintenance: {
-            date: answers.last_maintenance_date,
-            type: answers.last_maintenance_type
-          }
-        },
-        completedPhases: phases.slice(0, currentPhase + 1),
-        requiredFollowUps: []
-      };
-
-      return apiRequest(`/api/analyses/${params.id}/evidence`, {
-        method: "PUT",
-        body: JSON.stringify({ evidenceData, answers })
+        body: JSON.stringify(data)
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCompleteness(data.completeness);
+      if (data.canProceedToAnalysis) {
+        toast({
+          title: "Evidence Complete",
+          description: "You can now proceed to AI analysis."
+        });
+      }
+    },
+    onError: (error) => {
       toast({
-        title: "Evidence Saved",
-        description: "Your evidence data has been saved successfully."
+        title: "Error",
+        description: "Failed to update evidence. Please try again.",
+        variant: "destructive"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/analyses", params?.id] });
     }
   });
 
-  // Proceed to AI Analysis
+  // Proceed to analysis mutation
   const proceedToAnalysisMutation = useMutation({
     mutationFn: async () => {
-      if (!params?.id) throw new Error("No analysis ID");
-      
-      return apiRequest(`/api/analyses/${params.id}/proceed-to-analysis`, {
-        method: "POST",
-        body: JSON.stringify({ answers })
+      return apiRequest(`/api/investigations/${investigationId}/analyze`, {
+        method: 'POST'
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Analysis Started",
-        description: "AI analysis has begun based on your evidence."
+        title: "Analysis Complete",
+        description: "Your investigation analysis is ready."
       });
-      setLocation(`/analysis/${params?.id}`);
+      setLocation(`/investigation/${investigationId}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to perform analysis. Please ensure evidence is complete.",
+        variant: "destructive"
+      });
     }
   });
 
-  const renderQuestion = (question: QuestionDefinition) => {
-    const value = answers[question.id] || "";
+  const handleFieldChange = (questionId: string, value: any) => {
+    const updatedData = {
+      ...evidenceData,
+      [questionId]: value
+    };
+    setEvidenceData(updatedData);
+    
+    // Debounce update to server
+    setTimeout(() => {
+      updateEvidenceMutation.mutate(updatedData);
+    }, 500);
+  };
+
+  const renderQuestionField = (question: any) => {
+    const value = evidenceData[question.id] || "";
 
     switch (question.type) {
-      case "select":
+      case 'select':
         return (
-          <Select value={value} onValueChange={(val) => updateAnswer(question.id, val)}>
+          <Select
+            value={value}
+            onValueChange={(newValue) => handleFieldChange(question.id, newValue)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map(option => (
+              {question.options?.map((option: string) => (
                 <SelectItem key={option} value={option}>
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                  {option}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         );
-      
-      case "boolean":
+
+      case 'textarea':
         return (
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id={question.id}
-              checked={value === true}
-              onCheckedChange={(checked) => updateAnswer(question.id, checked)}
-            />
-            <Label htmlFor={question.id}>Yes</Label>
-          </div>
+          <Textarea
+            value={value}
+            onChange={(e) => handleFieldChange(question.id, e.target.value)}
+            placeholder="Provide detailed information..."
+            className="min-h-[100px]"
+          />
         );
-      
-      case "number":
+
+      case 'number':
         return (
           <Input
             type="number"
             value={value}
-            onChange={(e) => updateAnswer(question.id, parseFloat(e.target.value) || "")}
-            placeholder="Enter a number"
+            onChange={(e) => handleFieldChange(question.id, e.target.value)}
+            placeholder="Enter numeric value"
           />
         );
-      
-      case "date":
+
+      case 'date':
         return (
           <Input
             type="date"
             value={value}
-            onChange={(e) => updateAnswer(question.id, e.target.value)}
+            onChange={(e) => handleFieldChange(question.id, e.target.value)}
           />
         );
-      
-      case "text":
-      default:
-        return value && value.length > 100 ? (
-          <Textarea
+
+      case 'datetime':
+        return (
+          <Input
+            type="datetime-local"
             value={value}
-            onChange={(e) => updateAnswer(question.id, e.target.value)}
-            placeholder="Enter details..."
-            className="min-h-[100px]"
+            onChange={(e) => handleFieldChange(question.id, e.target.value)}
           />
-        ) : (
+        );
+
+      case 'boolean':
+        return (
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id={question.id}
+              checked={value === true}
+              onCheckedChange={(checked) => handleFieldChange(question.id, checked)}
+            />
+            <Label htmlFor={question.id}>Yes</Label>
+          </div>
+        );
+
+      default:
+        return (
           <Input
             value={value}
-            onChange={(e) => updateAnswer(question.id, e.target.value)}
-            placeholder="Enter details..."
+            onChange={(e) => handleFieldChange(question.id, e.target.value)}
+            placeholder="Enter information..."
           />
         );
     }
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+    return (
+      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading evidence collection...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  if (!investigationData?.investigation) {
+    return (
+      <div className="container mx-auto p-6 max-w-6xl">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Investigation not found or investigation type not set. Please start from the beginning.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  const investigation = investigationData.investigation;
+  const sections = [...new Set(questionnaire.map(q => q.section))];
+  const currentSectionQuestions = questionnaire.filter(q => q.section === currentSection);
+  const canProceedToAnalysis = completeness >= 80;
+
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
+    <div className="container mx-auto p-6 max-w-6xl">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Evidence Collection
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Comprehensive evidence gathering for {analysis?.analysisId}
+          Step 3 of 4: {investigation.investigationType === 'safety_environmental' ? 'ECFA' : 'Fault Tree'} Evidence Gathering
         </p>
       </div>
 
@@ -495,161 +243,173 @@ export default function EvidenceCollection() {
       <Card className="mb-6">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Collection Progress</CardTitle>
-              <CardDescription>
-                {answeredQuestions} of {totalQuestions} questions answered
-              </CardDescription>
-            </div>
+            <CardTitle className="text-lg">Evidence Completeness</CardTitle>
             <Badge variant={canProceedToAnalysis ? "default" : "secondary"}>
-              {canProceedToAnalysis ? "Ready for Analysis" : "In Progress"}
+              {completeness.toFixed(1)}% Complete
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <Progress value={progress} className="w-full" />
-          <div className="flex justify-between text-sm text-gray-500 mt-2">
-            <span>Evidence Collection</span>
-            <span>{Math.round(progress)}% Complete</span>
+          <Progress value={completeness} className="mb-4" />
+          <div className="flex items-center gap-2 text-sm">
+            {canProceedToAnalysis ? (
+              <>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-green-700 dark:text-green-400">
+                  Ready for AI Analysis (80% minimum requirement met)
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <span className="text-amber-700 dark:text-amber-400">
+                  {(80 - completeness).toFixed(1)}% more evidence needed for analysis
+                </span>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="questionnaire" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Evidence Questionnaire
-          </TabsTrigger>
-          <TabsTrigger value="files" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Supporting Files
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Section Navigation */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Sections</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sections.map((section) => {
+                const sectionQuestions = questionnaire.filter(q => q.section === section);
+                const answeredQuestions = sectionQuestions.filter(q => {
+                  const answer = evidenceData[q.id];
+                  return answer !== undefined && answer !== null && answer !== '';
+                });
+                const sectionProgress = sectionQuestions.length > 0 
+                  ? (answeredQuestions.length / sectionQuestions.length) * 100 
+                  : 0;
 
-        <TabsContent value="questionnaire" className="space-y-6">
-          {/* Phase Navigation */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {phases.map((phase, index) => (
-              <Button
-                key={phase}
-                variant={index === currentPhase ? "default" : index < currentPhase ? "outline" : "ghost"}
-                size="sm"
-                onClick={() => setCurrentPhase(index)}
-                className="flex items-center gap-1"
-              >
-                {index < currentPhase && <CheckCircle className="h-3 w-3" />}
-                {phase}
-              </Button>
-            ))}
-          </div>
+                return (
+                  <Button
+                    key={section}
+                    variant={currentSection === section ? "default" : "ghost"}
+                    className="w-full justify-between text-left h-auto p-3"
+                    onClick={() => setCurrentSection(section)}
+                  >
+                    <div>
+                      <div className="font-medium">{section}</div>
+                      <div className="text-xs opacity-70">
+                        {answeredQuestions.length}/{sectionQuestions.length} completed
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-300"
+                          style={{ width: `${sectionProgress}%` }}
+                        />
+                      </div>
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </Button>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Current Phase Questions */}
+        {/* Questions Form */}
+        <div className="lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Phase {currentPhase + 1}: {phases[currentPhase]}
-                <Badge variant="outline">{currentPhaseQuestions.length} questions</Badge>
+                <FileText className="h-5 w-5" />
+                {currentSection}
               </CardTitle>
               <CardDescription>
-                Please provide as much detail as possible to enable accurate root cause analysis.
+                {investigation.investigationType === 'safety_environmental' 
+                  ? 'ECFA evidence collection for safety/environmental incident'
+                  : 'Fault Tree Analysis evidence collection with ISO 14224 taxonomy'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {currentPhaseQuestions.map((question) => (
+              {currentSectionQuestions.map((question) => (
                 <div key={question.id} className="space-y-2">
-                  <Label htmlFor={question.id} className="flex items-center gap-2">
-                    {question.text}
-                    {question.required && (
-                      <span className="text-red-500">*</span>
+                  <Label htmlFor={question.id} className="text-base font-medium">
+                    {question.question}
+                    {question.required && <span className="text-red-500 ml-1">*</span>}
+                    {question.unit && (
+                      <span className="text-sm text-gray-500 ml-2">({question.unit})</span>
                     )}
                   </Label>
-                  {renderQuestion(question)}
-                  {question.required && !answers[question.id] && (
-                    <p className="text-sm text-red-500">This field is required</p>
-                  )}
+                  {renderQuestionField(question)}
                 </div>
               ))}
+
+              {currentSectionQuestions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No questions available for this section.
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPhase(Math.max(0, currentPhase - 1))}
-              disabled={currentPhase === 0}
-            >
-              Previous Phase
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => saveEvidenceMutation.mutate()}
-                disabled={saveEvidenceMutation.isPending}
-              >
-                Save Progress
-              </Button>
-              
-              {currentPhase < phases.length - 1 ? (
+          {/* Action Buttons */}
+          <div className="mt-6 flex justify-between">
+            <div>
+              {sections.indexOf(currentSection) > 0 && (
                 <Button
-                  onClick={() => setCurrentPhase(currentPhase + 1)}
-                  className="flex items-center gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    const currentIndex = sections.indexOf(currentSection);
+                    setCurrentSection(sections[currentIndex - 1]);
+                  }}
                 >
-                  Next Phase <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => proceedToAnalysisMutation.mutate()}
-                  disabled={!canProceedToAnalysis || proceedToAnalysisMutation.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <Brain className="h-4 w-4" />
-                  Proceed to AI Analysis
+                  Previous Section
                 </Button>
               )}
             </div>
-          </div>
-
-          {/* Required Fields Alert */}
-          {!canProceedToAnalysis && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Please complete the required fields (marked with *) to proceed to AI analysis.
-                Minimum required: Equipment Type, Location, and Observed Problem.
-              </AlertDescription>
-            </Alert>
-          )}
-        </TabsContent>
-
-        <TabsContent value="files" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Supporting Documentation</CardTitle>
-              <CardDescription>
-                Upload any relevant files such as inspection reports, photos, maintenance records, or trend data.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Upload Supporting Files
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Drag and drop files here, or click to browse
-                </p>
-                <Button variant="outline">
-                  Choose Files
+            
+            <div className="space-x-4">
+              {sections.indexOf(currentSection) < sections.length - 1 ? (
+                <Button
+                  onClick={() => {
+                    const currentIndex = sections.indexOf(currentSection);
+                    setCurrentSection(sections[currentIndex + 1]);
+                  }}
+                >
+                  Next Section
+                  <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ) : canProceedToAnalysis ? (
+                <Button
+                  onClick={() => proceedToAnalysisMutation.mutate()}
+                  disabled={proceedToAnalysisMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {proceedToAnalysisMutation.isPending ? (
+                    "Generating Analysis..."
+                  ) : (
+                    <>
+                      <Brain className="h-4 w-4 mr-2" />
+                      Proceed to AI Analysis
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Alert className="inline-block">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Complete more evidence to unlock AI analysis
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,166 +1,127 @@
-import { analyses, users, aiSettings, type Analysis, type InsertAnalysis, type UpdateAnalysis, type User, type InsertUser, type AiSettings, type InsertAiSettings } from "@shared/schema";
+import { investigations, type Investigation, type InsertInvestigation } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, ilike, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
-export interface IStorage {
-  // Analysis methods
-  createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
-  getAnalysis(id: number): Promise<Analysis | undefined>;
-  getAnalysisByAnalysisId(analysisId: string): Promise<Analysis | undefined>;
-  updateAnalysis(id: number, updates: UpdateAnalysis): Promise<Analysis | undefined>;
-  getAllAnalyses(): Promise<Analysis[]>;
-  searchAnalyses(query: string): Promise<Analysis[]>;
-  getAnalysesByPriority(priority: string): Promise<Analysis[]>;
-  getAnalysesByDateRange(startDate: Date, endDate: Date): Promise<Analysis[]>;
+// Storage interface for investigations
+export interface IInvestigationStorage {
+  // Investigation operations
+  createInvestigation(data: Partial<InsertInvestigation>): Promise<Investigation>;
+  getInvestigation(id: number): Promise<Investigation | undefined>;
+  getInvestigationByInvestigationId(investigationId: string): Promise<Investigation | undefined>;
+  updateInvestigation(id: number, data: Partial<Investigation>): Promise<Investigation>;
+  getAllInvestigations(): Promise<Investigation[]>;
   
-  // Enhanced RCA operations
-  updateAnalysisStatus(id: number, status: string, details?: string): Promise<void>;
-  
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser): Promise<User>;
-  
-  // AI Settings methods
-  createAiSettings(settings: Omit<InsertAiSettings, 'apiKey'> & { encryptedApiKey: string; testStatus: string }): Promise<AiSettings>;
-  getAllAiSettings(): Promise<AiSettings[]>;
-  getActiveAiSettings(): Promise<AiSettings | undefined>;
-  deactivateAllAiSettings(): Promise<void>;
-  deleteAiSettings(id: number): Promise<void>;
+  // Evidence operations
+  updateEvidence(id: number, evidenceData: any): Promise<Investigation>;
+  validateEvidenceCompleteness(id: number): Promise<{ completeness: number, isValid: boolean }>;
 }
 
-export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
+export class DatabaseInvestigationStorage implements IInvestigationStorage {
+  
+  async createInvestigation(data: Partial<InsertInvestigation>): Promise<Investigation> {
+    const investigationData = {
+      investigationId: nanoid(),
+      currentStep: "problem_definition",
+      status: "active",
+      evidenceCompleteness: "0.00",
+      evidenceValidated: false,
+      evidenceData: {},
+      auditTrail: [],
+      ...data
+    };
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
+    const [investigation] = await db
+      .insert(investigations)
+      .values(investigationData)
       .returning();
-    return user;
-  }
-
-  async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
-    const [analysis] = await db
-      .insert(analyses)
-      .values({
-        ...insertAnalysis,
-        createdAt: new Date(),
-        completedAt: null,
-      })
-      .returning();
-    return analysis;
-  }
-
-  async getAnalysis(id: number): Promise<Analysis | undefined> {
-    const [analysis] = await db.select().from(analyses).where(eq(analyses.id, id));
-    return analysis || undefined;
-  }
-
-  async getAnalysisByAnalysisId(analysisId: string): Promise<Analysis | undefined> {
-    const [analysis] = await db.select().from(analyses).where(eq(analyses.analysisId, analysisId));
-    return analysis || undefined;
-  }
-
-  async updateAnalysis(id: number, updates: UpdateAnalysis): Promise<Analysis | undefined> {
-    const updateData = { ...updates };
-    if (updates.status === 'completed') {
-      updateData.completedAt = new Date();
-    }
     
-    const [analysis] = await db
-      .update(analyses)
+    return investigation;
+  }
+
+  async getInvestigation(id: number): Promise<Investigation | undefined> {
+    const [investigation] = await db
+      .select()
+      .from(investigations)
+      .where(eq(investigations.id, id));
+    
+    return investigation;
+  }
+
+  async getInvestigationByInvestigationId(investigationId: string): Promise<Investigation | undefined> {
+    const [investigation] = await db
+      .select()
+      .from(investigations)
+      .where(eq(investigations.investigationId, investigationId));
+    
+    return investigation;
+  }
+
+  async updateInvestigation(id: number, data: Partial<Investigation>): Promise<Investigation> {
+    const updateData = {
+      ...data,
+      updatedAt: new Date()
+    };
+
+    const [investigation] = await db
+      .update(investigations)
       .set(updateData)
-      .where(eq(analyses.id, id))
+      .where(eq(investigations.id, id))
       .returning();
-    return analysis || undefined;
-  }
-
-  async getAllAnalyses(): Promise<Analysis[]> {
-    return await db.select().from(analyses).orderBy(desc(analyses.createdAt));
-  }
-
-  async searchAnalyses(query: string): Promise<Analysis[]> {
-    const lowercaseQuery = `%${query.toLowerCase()}%`;
-    return await db.select().from(analyses).where(
-      or(
-        ilike(analyses.issueDescription, lowercaseQuery),
-        ilike(analyses.rootCause, lowercaseQuery),
-        ilike(analyses.analysisId, lowercaseQuery),
-        ilike(analyses.equipmentType, lowercaseQuery),
-        ilike(analyses.equipmentId, lowercaseQuery)
-      )
-    ).orderBy(desc(analyses.createdAt));
-  }
-
-  async getAnalysesByPriority(priority: string): Promise<Analysis[]> {
-    return await db.select().from(analyses).where(eq(analyses.priority, priority)).orderBy(desc(analyses.createdAt));
-  }
-
-  async getAnalysesByDateRange(startDate: Date, endDate: Date): Promise<Analysis[]> {
-    return await db.select().from(analyses).where(
-      and(
-        gte(analyses.createdAt, startDate),
-        lte(analyses.createdAt, endDate)
-      )
-    ).orderBy(desc(analyses.createdAt));
-  }
-
-  // AI Settings methods
-  async createAiSettings(settings: {
-    provider: string;
-    encryptedApiKey: string;
-    isActive: boolean;
-    createdBy: number;
-    testStatus: string;
-  }): Promise<AiSettings> {
-    const [aiSetting] = await db
-      .insert(aiSettings)
-      .values(settings)
-      .returning();
-    return aiSetting;
-  }
-
-  async getAllAiSettings(): Promise<AiSettings[]> {
-    return await db.select().from(aiSettings).orderBy(desc(aiSettings.createdAt));
-  }
-
-  async getActiveAiSettings(): Promise<AiSettings | undefined> {
-    const [setting] = await db.select().from(aiSettings).where(eq(aiSettings.isActive, true));
-    return setting || undefined;
-  }
-
-  async deactivateAllAiSettings(): Promise<void> {
-    await db.update(aiSettings).set({ isActive: false });
-  }
-
-  async deleteAiSettings(id: number): Promise<void> {
-    await db.delete(aiSettings).where(eq(aiSettings.id, id));
-  }
-
-  // Enhanced RCA operations implementation
-  async updateAnalysisStatus(id: number, status: string, details?: string): Promise<void> {
-    const updateData: any = { status };
     
-    if (status === "completed") {
-      updateData.completedAt = new Date();
+    return investigation;
+  }
+
+  async getAllInvestigations(): Promise<Investigation[]> {
+    return await db
+      .select()
+      .from(investigations)
+      .orderBy(investigations.createdAt);
+  }
+
+  async updateEvidence(id: number, evidenceData: any): Promise<Investigation> {
+    const investigation = await this.getInvestigation(id);
+    if (!investigation) {
+      throw new Error("Investigation not found");
     }
-    
-    // Could store details in a status log if needed
-    if (details) {
-      console.log(`[RCA] Analysis ${id} status update: ${status} - ${details}`);
+
+    const updatedEvidenceData = {
+      ...investigation.evidenceData,
+      ...evidenceData
+    };
+
+    return await this.updateInvestigation(id, {
+      evidenceData: updatedEvidenceData,
+      updatedAt: new Date()
+    });
+  }
+
+  async validateEvidenceCompleteness(id: number): Promise<{ completeness: number, isValid: boolean }> {
+    const investigation = await this.getInvestigation(id);
+    if (!investigation) {
+      throw new Error("Investigation not found");
     }
+
+    // Calculate completeness based on investigation type
+    // This is a simplified calculation - in real implementation, 
+    // would use InvestigationEngine to validate against questionnaire
+    const evidenceData = investigation.evidenceData as any || {};
+    const evidenceKeys = Object.keys(evidenceData);
     
-    await db.update(analyses).set(updateData).where(eq(analyses.id, id));
+    // Minimum required fields based on investigation type
+    const requiredFields = investigation.investigationType === 'safety_environmental' 
+      ? ['event_type', 'event_chronology', 'immediate_causes', 'root_causes_ecfa']
+      : ['equipment_tag', 'equipment_category', 'event_datetime', 'observed_problem'];
+    
+    const completedRequired = requiredFields.filter(field => 
+      evidenceData[field] && evidenceData[field] !== ''
+    );
+    
+    const completeness = (completedRequired.length / requiredFields.length) * 100;
+    const isValid = completeness >= 80; // 80% minimum as per specs
+
+    return { completeness, isValid };
   }
 }
 
-export const storage = new DatabaseStorage();
+export const investigationStorage = new DatabaseInvestigationStorage();

@@ -16,20 +16,20 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### ISO 14224-Compliant RCA Platform Implementation
+### Complete ECFA & Fault Tree Analysis System Implementation
 - **Date**: January 20, 2025
-- **Changes**: Complete rebuild to enterprise-grade ISO 14224-compliant root cause analysis platform
-  - **ISO 14224 Equipment Taxonomy**: Comprehensive equipment classification system (rotating, static, electrical, instrumentation, support) with subcategories and specific types
-  - **Fault Tree Analysis Engine**: Professional fault tree analysis with probability calculations, critical path identification, and evidence-based node evaluation
-  - **ECFA Support**: Event-Causal Factor Analysis framework for safety incidents with timeline reconstruction and barrier analysis
-  - **Advanced Evidence Engine**: Multi-phase evidence collection (5 phases: General, Event Details, Symptoms, History, Equipment-Specific Parameters)
-  - **Dynamic Questionnaire System**: Conditional questions based on equipment type and previous responses with real-time validation
-  - **Structured Evidence Processing**: NLP extraction simulation, evidence quality scoring, and analysis readiness assessment  
-  - **Professional Database Schema**: ISO 14224-compliant fields for equipment categorization, fault tree results, ECFA analysis, and regulatory compliance
-  - **Evidence-First Workflow**: Evidence collection → Validation → Fault Tree Analysis → Expert Review → Completed
-  - **Quality Assurance**: Evidence completeness tracking (80% minimum), quality scoring, and analysis readiness verification
-  - **Equipment-Specific Parameters**: Dynamic parameter collection for pumps (pressure, flow, vibration), valves (position, leak location), motors (current, voltage, temperature), etc.
-- **Impact**: Platform now meets enterprise standards with proper ISO 14224 taxonomy, fault tree logic, explainable AI, complete audit trails, and regulatory compliance. Evidence-driven approach ensures systematic data collection before analysis begins.
+- **Changes**: Complete system revamp implementing dual investigation methodologies per comprehensive development instructions
+  - **Mandatory Investigation Type Selection**: System now requires selection between ECFA (safety/environmental) vs Fault Tree Analysis (equipment failure) at the outset
+  - **ECFA Methodology**: Full Event-Causal Factor Analysis for safety incidents with event chronology, barriers, contributing factors, risk assessment, and regulatory reporting
+  - **Fault Tree Analysis**: Complete 8-section questionnaire system for equipment failures with ISO 14224 taxonomy and equipment-specific parameters
+  - **Dynamic Evidence Collection**: Context-driven forms that adapt based on investigation type with conditional logic and validation
+  - **80% Completeness Requirement**: Evidence validation ensures minimum 80% completion before AI analysis is permitted
+  - **Professional Database Schema**: New investigations table supporting both methodologies with proper workflow management and audit trails
+  - **Investigation Engine**: Server-side engine managing questionnaire definitions, evidence validation, and analysis generation
+  - **4-Step Workflow**: Problem Definition → Investigation Type Selection → Evidence Collection → AI Analysis
+  - **Equipment-Specific Parameters**: Conditional parameter collection for pumps, motors, valves with proper ISO 14224 classification
+  - **Comprehensive API**: Complete REST API supporting investigation lifecycle with file uploads and analysis generation
+- **Impact**: Platform now properly implements both ECFA and Fault Tree methodologies as specified, with mandatory type selection driving all downstream logic, forms, and analysis outputs. System ensures thorough evidence collection before analysis begins.
   - **Evidence-First Workflow**: Complete restructuring around question-driven evidence collection before AI analysis
   - **Structured Evidence Collection**: Comprehensive 8-phase questionnaire system (Asset Context, Symptom Definition, Operating Conditions, Maintenance History, Human Factors, External Factors, Additional Evidence, Equipment-Specific Follow-ups)
   - **Evidence Engine**: New server-side engine managing structured question definitions, validation, and evidence data structuring

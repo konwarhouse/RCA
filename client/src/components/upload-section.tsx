@@ -224,9 +224,9 @@ export default function UploadSection() {
                   <SelectValue placeholder="Select equipment type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EQUIPMENT_TYPES.map((type) => (
+                  {Object.keys(EQUIPMENT_TYPES).map((type) => (
                     <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                      {EQUIPMENT_TYPES[type].label}
                     </SelectItem>
                   ))}
                 </SelectContent>
