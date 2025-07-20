@@ -51,13 +51,14 @@ export default function EvidenceCollection() {
   // Update evidence mutation
   const updateEvidenceMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/investigations/${investigationId}/evidence`, {
+      const response = await apiRequest(`/api/investigations/${investigationId}/evidence`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
       });
+      return await response.json();
     },
     onSuccess: (data) => {
       setCompleteness(data.completeness);
@@ -80,9 +81,10 @@ export default function EvidenceCollection() {
   // Proceed to analysis mutation
   const proceedToAnalysisMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/investigations/${investigationId}/analyze`, {
+      const response = await apiRequest(`/api/investigations/${investigationId}/analyze`, {
         method: 'POST'
       });
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -113,11 +115,31 @@ export default function EvidenceCollection() {
     }, 500);
   };
 
+  const getSelectOptions = (question: any) => {
+    // Handle equipment subcategory
+    if (question.id === 'equipment_subcategory') {
+      const selectedCategory = evidenceData['equipment_category'];
+      if (!selectedCategory || !EQUIPMENT_TYPES[selectedCategory]) return [];
+      return Object.keys(EQUIPMENT_TYPES[selectedCategory]);
+    }
+    
+    // Handle equipment type
+    if (question.id === 'equipment_type') {
+      const selectedCategory = evidenceData['equipment_category'];
+      const selectedSubcategory = evidenceData['equipment_subcategory'];
+      if (!selectedCategory || !selectedSubcategory || !EQUIPMENT_TYPES[selectedCategory]?.[selectedSubcategory]) return [];
+      return EQUIPMENT_TYPES[selectedCategory][selectedSubcategory].types || [];
+    }
+    
+    return question.options || [];
+  };
+
   const renderQuestionField = (question: any) => {
     const value = evidenceData[question.id] || "";
 
     switch (question.type) {
       case 'select':
+        const options = getSelectOptions(question);
         return (
           <Select
             value={value}
@@ -127,7 +149,7 @@ export default function EvidenceCollection() {
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map((option: string) => (
+              {options.map((option: string) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -142,6 +164,7 @@ export default function EvidenceCollection() {
             value={value}
             onChange={(e) => handleFieldChange(question.id, e.target.value)}
             placeholder="Provide detailed information..."
+            rows={3}
             className="min-h-[100px]"
           />
         );

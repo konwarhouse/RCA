@@ -113,20 +113,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const evidenceData = req.body;
       
-      const investigation = await investigationStorage.updateEvidence(parseInt(id), evidenceData);
+      // Get investigation first to get numeric ID
+      let investigation;
+      if (isNaN(parseInt(id))) {
+        investigation = await investigationStorage.getInvestigationByInvestigationId(id);
+      } else {
+        investigation = await investigationStorage.getInvestigation(parseInt(id));
+      }
+      
+      if (!investigation) {
+        return res.status(404).json({ message: "Investigation not found" });
+      }
+
+      const updatedInvestigation = await investigationStorage.updateEvidence(investigation.id, evidenceData);
       
       // Calculate completeness
-      const { completeness, isValid } = await investigationStorage.validateEvidenceCompleteness(parseInt(id));
+      const { completeness, isValid } = await investigationStorage.validateEvidenceCompleteness(investigation.id);
       
       // Update completeness in database
-      await investigationStorage.updateInvestigation(parseInt(id), {
+      await investigationStorage.updateInvestigation(investigation.id, {
         evidenceCompleteness: completeness.toString(),
         evidenceValidated: isValid,
         currentStep: isValid ? "analysis_ready" : "evidence_collection"
       });
 
       res.json({ 
-        investigation, 
+        investigation: updatedInvestigation, 
         completeness, 
         isValid,
         canProceedToAnalysis: isValid 
@@ -141,13 +153,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/investigations/:id/analyze", async (req, res) => {
     try {
       const { id } = req.params;
-      const investigation = await investigationStorage.getInvestigation(parseInt(id));
+      
+      // Get investigation first to get numeric ID
+      let investigation;
+      if (isNaN(parseInt(id))) {
+        investigation = await investigationStorage.getInvestigationByInvestigationId(id);
+      } else {
+        investigation = await investigationStorage.getInvestigation(parseInt(id));
+      }
       
       if (!investigation) {
         return res.status(404).json({ message: "Investigation not found" });
       }
 
-      const { completeness, isValid } = await investigationStorage.validateEvidenceCompleteness(parseInt(id));
+      const { completeness, isValid } = await investigationStorage.validateEvidenceCompleteness(investigation.id);
       
       if (!isValid) {
         return res.status(400).json({ 
@@ -178,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Update investigation with results
-      const completedInvestigation = await investigationStorage.updateInvestigation(parseInt(id), {
+      const completedInvestigation = await investigationStorage.updateInvestigation(investigation.id, {
         analysisResults,
         recommendations,
         confidence: analysisResults.confidence?.toString(),
