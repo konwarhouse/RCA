@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { EQUIPMENT_TYPES } from "@shared/schema";
 import AIEvidenceValidator from "@/components/ai-evidence-validator";
 import IntelligentAIAssistant from "@/components/intelligent-ai-assistant";
+import { getEquipmentEvidenceConfig, getRequiredEvidence } from "@shared/equipment-evidence-library";
 
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
@@ -212,29 +213,33 @@ export default function EvidenceCollection() {
 
       case 'boolean':
         return (
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id={`${question.id}_yes`}
-                name={question.id}
-                checked={value === true}
-                onChange={() => handleFieldChange(question.id, true)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <Label htmlFor={`${question.id}_yes`}>Yes</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id={`${question.id}_no`}
-                name={question.id}
-                checked={value === false}
-                onChange={() => handleFieldChange(question.id, false)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <Label htmlFor={`${question.id}_no`}>No</Label>
-            </div>
+          <div className="flex items-center space-x-4">
+            <Button
+              type="button"
+              variant={value === true ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleFieldChange(question.id, true)}
+              className={`px-6 py-2 ${
+                value === true 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              YES
+            </Button>
+            <Button
+              type="button"
+              variant={value === false ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleFieldChange(question.id, false)}
+              className={`px-6 py-2 ${
+                value === false 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              NO
+            </Button>
           </div>
         );
 

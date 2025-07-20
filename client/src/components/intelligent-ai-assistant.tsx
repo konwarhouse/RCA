@@ -16,8 +16,12 @@ import {
   ChevronDown,
   ChevronUp,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  TrendingUp,
+  FileText
 } from "lucide-react";
+import { getEquipmentEvidenceConfig, getRequiredEvidence, getSmartPrompt } from "@shared/equipment-evidence-library";
 
 interface IntelligentAIAssistantProps {
   currentQuestion: any;
@@ -138,6 +142,30 @@ export default function IntelligentAIAssistant({
     const equipmentType = evidenceData.equipment_type || '';
     const observedProblem = evidenceData.observed_problem?.toLowerCase() || '';
     
+    // Get equipment-specific configuration
+    const equipmentConfig = getEquipmentEvidenceConfig(equipmentType);
+    const requiredEvidence = equipmentConfig ? getRequiredEvidence(equipmentType, observedProblem) : [];
+    
+    // Check for missing critical evidence
+    if (equipmentConfig) {
+      const missingCriticalEvidence = requiredEvidence.filter(evidence => 
+        !evidenceData[evidence.id] && evidence.required
+      );
+      
+      if (missingCriticalEvidence.length > 0) {
+        missingCriticalEvidence.forEach(evidence => {
+          suggestions.push({
+            type: 'validation',
+            message: `⚠️ Critical Evidence Missing: ${evidence.label}. ${evidence.validation}`,
+          });
+          suggestions.push({
+            type: 'example',
+            message: evidence.prompt,
+          });
+        });
+      }
+    }
+    
     switch (questionId) {
       case 'equipment_tag':
         suggestions.push({
@@ -162,40 +190,54 @@ export default function IntelligentAIAssistant({
         break;
         
       case 'observed_problem':
-        if (equipmentType.includes('Pump')) {
+        if (equipmentConfig) {
+          // Equipment-specific prompts based on configuration
           suggestions.push({
             type: 'context',
-            message: 'For pump failures, describe physical signs, sounds, and measurements. Be specific about what changed from normal operation.',
+            message: `For ${equipmentType} failures, provide specific details on symptoms. Required trend data includes: ${equipmentConfig.requiredTrendData.join(', ')}.`,
           });
-          if (!currentValue || currentValue.length < 20) {
-            suggestions.push({
-              type: 'example',
-              message: 'Example: "Seal leaking clear fluid, high vibration at 2X running speed, temperature increased from 65°C to 85°C, grinding noise from bearing area."',
-              value: 'Seal leaking clear fluid, high vibration detected, temperature elevated above normal'
-            });
-          }
-          if (observedProblem.includes('seal')) {
-            suggestions.push({
-              type: 'next_step',
-              message: 'For seal issues, also note: leak rate, fluid color/clarity, seal face condition, if any debris was present, and temperature at seal area.',
-            });
-          }
-          if (observedProblem.includes('vibration')) {
+          
+          // Check for smart prompts based on current evidence
+          const conditions = {
+            vibration_high: observedProblem.includes('vibration'),
+            seal_leak: observedProblem.includes('seal') || observedProblem.includes('leak'),
+            pressure_drop: observedProblem.includes('pressure'),
+            temperature_rise: observedProblem.includes('temperature') || observedProblem.includes('hot'),
+            vibration_normal: !observedProblem.includes('vibration')
+          };
+          
+          const smartPrompt = getSmartPrompt(equipmentType, conditions);
+          if (smartPrompt) {
             suggestions.push({
               type: 'next_step',
-              message: 'For vibration, specify: frequency (1X, 2X running speed), amplitude, location (motor/pump), and if it was axial/radial.',
+              message: `💡 Smart Analysis: ${smartPrompt}`,
             });
           }
-        } else {
-          suggestions.push({
-            type: 'context',
-            message: 'Describe the sequence of events: what you first noticed, how it progressed, final state. Include measurements if available.',
-          });
-          suggestions.push({
-            type: 'example',
-            message: 'Example: "Started with unusual noise at 0800, vibration increased gradually, temperature rose to 95°C, unit tripped on high temperature at 0845."',
-            value: 'Equipment exhibited unusual behavior, parameters outside normal range'
-          });
+          
+          if (equipmentType === 'Centrifugal Pump') {
+            if (!currentValue || currentValue.length < 30) {
+              suggestions.push({
+                type: 'example',
+                message: 'Required details: "Mechanical seal leaking 2 L/min clear water, vibration 8.5 mm/s (normal 2.1), temperature 85°C (normal 65°C), grinding noise from DE bearing, started 3 hours ago."',
+                value: 'Mechanical seal leaking, vibration elevated to 8.5 mm/s, bearing temperature 85°C'
+              });
+            }
+            
+            // Demand specific evidence uploads
+            if (observedProblem.includes('vibration') && !evidenceData.vibration_trend) {
+              suggestions.push({
+                type: 'validation',
+                message: '📊 Upload Required: Vibration trend data is essential for pump diagnosis. Please upload CSV/Excel file with vibration readings.',
+              });
+            }
+            
+            if (observedProblem.includes('pressure') && !evidenceData.pressure_trend) {
+              suggestions.push({
+                type: 'validation',
+                message: '📊 Upload Required: Suction and discharge pressure trends needed. Upload DCS screenshot or CSV data.',
+              });
+            }
+          }
         }
         break;
 
@@ -203,17 +245,24 @@ export default function IntelligentAIAssistant({
         if (equipmentType.includes('Pump')) {
           suggestions.push({
             type: 'context',
-            message: 'Describe the physical state of the seal. Look for scoring, swelling, discoloration, and lubricant condition.',
+            message: '📷 Photo Required: Take close-up photos of seal faces. Measure scoring depth with feeler gauge if accessible.',
           });
           suggestions.push({
             type: 'example',
-            message: 'Example: "Seal appeared visually intact, light scoring present, slight discoloration on inner lip, no active leakage, lubricant level normal and clean."',
-            value: 'Seal visually inspected, light scoring observed, lubricant level normal'
+            message: 'Required format: "Primary seal face: 0.05mm deep scoring across 60% of face, carbon ring cracked, secondary O-ring swollen 15%, spring compression 2.1mm (spec 2.5mm), OEM part installed 3 months ago."',
+            value: 'Primary seal face scored 0.05mm depth, carbon ring intact, O-ring condition normal'
           });
           suggestions.push({
-            type: 'next_step',
-            message: 'Also check: Was seal OEM or aftermarket? Installation date? Any signs of dry running? Flush fluid condition?',
+            type: 'validation',
+            message: '🔍 Critical Check: Was this an OEM seal? Installation torque verified? Any contamination in seal chamber?',
           });
+          
+          if (observedProblem.includes('leak') && (!currentValue || currentValue.includes('fine') || currentValue.includes('ok'))) {
+            suggestions.push({
+              type: 'contradiction',
+              message: '❌ Logic Error: You reported seal leaking but described it as "fine." Please inspect seal faces properly and describe actual damage.',
+            });
+          }
         }
         break;
 
@@ -242,16 +291,31 @@ export default function IntelligentAIAssistant({
         break;
 
       case 'maintenance_history':
-        suggestions.push({
-          type: 'context',
-          message: 'List recent work: parts replaced, who performed it, any deviations from procedure, post-work testing.',
-        });
-        if (equipmentType.includes('Pump')) {
+      case 'last_maintenance_type':
+        if (equipmentType === 'Centrifugal Pump') {
+          suggestions.push({
+            type: 'context',
+            message: '📋 Critical Details Needed: For pump maintenance, specify parts used (OEM/aftermarket), torque values, alignment check results, test run duration.',
+          });
           suggestions.push({
             type: 'example',
-            message: 'Example: "Seal replaced 3 weeks ago by contractor, OEM parts used, alignment checked, test run normal for 2 hours, no issues noted."',
-            value: 'Recent seal replacement, OEM parts, proper installation verified'
+            message: 'Required format: "Mechanical seal replaced 2025-07-15 by ABC Contractors, OEM Flowserve seal PN 123456, torque 25 Nm per spec, post-installation alignment 0.002" TIR, test run 4 hours at 150 m³/h, no leakage observed."',
+            value: 'Mechanical seal replaced July 15, OEM parts, alignment verified, test run successful'
           });
+          
+          // Smart analysis for recent maintenance
+          if (evidenceData.last_maintenance_date) {
+            const maintenanceDate = new Date(evidenceData.last_maintenance_date);
+            const now = new Date();
+            const daysDiff = (now.getTime() - maintenanceDate.getTime()) / (1000 * 3600 * 24);
+            
+            if (daysDiff < 30 && observedProblem.includes('seal')) {
+              suggestions.push({
+                type: 'contradiction',
+                message: `⚠️ Recent Work Alert: Maintenance ${Math.round(daysDiff)} days ago, now seal failing. Was installation procedure followed correctly? OEM parts used? Evidence of installation error?`,
+              });
+            }
+          }
         }
         break;
 
@@ -280,10 +344,22 @@ export default function IntelligentAIAssistant({
             });
           }
         }
-        suggestions.push({
-          type: 'context',
-          message: 'Consider: weather conditions, power quality, construction nearby, process upsets, or other equipment failures.',
-        });
+        // Equipment-specific external influences
+        if (equipmentType === 'Centrifugal Pump') {
+          suggestions.push({
+            type: 'context',
+            message: '🔍 Pump-Specific Checks: Power quality (voltage dips cause cavitation), upstream/downstream equipment changes, process temperature spikes, utility outages, construction vibration.',
+          });
+          suggestions.push({
+            type: 'example',
+            message: 'Format: "Power quality: no interruptions, voltage 415V±2%, process temp stable 65°C, no upstream changes, construction 200m away (minimal vibration impact)."',
+          });
+        } else {
+          suggestions.push({
+            type: 'context',
+            message: 'Consider: weather conditions, power quality, construction nearby, process upsets, or other equipment failures.',
+          });
+        }
         break;
 
       case 'installation_details':

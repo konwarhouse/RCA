@@ -16,8 +16,21 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Interactive RCA Visualization Engine
+### Equipment-Specific Evidence Library & Enhanced AI Prompting
 - **Date**: January 20, 2025 (Latest)
+- **Changes**: Implemented comprehensive equipment-specific evidence collection system per user requirements
+  - **Equipment Evidence Library**: Complete configuration for Centrifugal Pumps, Reciprocating Compressors, Electric Motors with required trend data, critical evidence, and failure patterns
+  - **Smart Evidence Validation**: AI automatically detects missing critical evidence (vibration trends, pressure data, seal inspection photos) and demands specific uploads
+  - **Intelligent Re-Prompting**: Challenges vague responses ("seal was fine" → "how do you explain the leaking?") and requests specific measurements
+  - **Equipment-Specific Examples**: Real technical examples like "Primary seal face: 0.05mm deep scoring across 60% of face, carbon ring cracked"
+  - **Smart Suggestions**: Cross-references symptoms with equipment type to suggest additional evidence ("High vibration + seal leak = check alignment data")
+  - **Critical Evidence Enforcement**: For pump vibration issues, system demands vibration trend uploads in CSV/Excel format
+  - **Fixed Radio Button Selection**: YES/NO buttons now properly highlight when selected with clear visual feedback
+  - **Contextual Prompting**: Different prompts based on equipment type and failure mode combination
+- **Impact**: AI now acts like digital RCA expert providing specific, equipment-focused guidance rather than generic prompts. System enforces collection of relevant evidence fields based on equipment type selection.
+
+### Previous: Interactive RCA Visualization Engine
+- **Date**: January 20, 2025
 - **Changes**: Complete interactive diagram system with multiple visualization types generated from AI analysis results
   - **Multi-View Support**: RCA Tree, Fishbone, ECFA Timeline, and Bowtie diagrams from same analysis data
   - **Interactive Nodes**: Click nodes for details, edit labels/confidence, add child causes, drill down for deeper analysis
