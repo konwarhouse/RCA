@@ -273,6 +273,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all analyses (alias for investigations for history page)
+  app.get("/api/analyses", async (req, res) => {
+    try {
+      const investigations = await investigationStorage.getAllInvestigations();
+      
+      // Filter for completed investigations only and transform to analysis format
+      const completedAnalyses = investigations
+        .filter(inv => inv.status === 'completed' || inv.currentStep === 'completed')
+        .map(inv => ({
+          id: inv.id,
+          investigationId: inv.investigationId,
+          title: `${inv.whatHappened} - ${inv.evidenceData?.equipment_type || 'Equipment'} ${inv.evidenceData?.equipment_tag || ''}`.trim(),
+          status: inv.status === 'completed' ? 'completed' : inv.currentStep,
+          createdAt: inv.createdAt,
+          updatedAt: inv.updatedAt,
+          confidence: inv.confidence ? parseFloat(inv.confidence) * 100 : 80,
+          equipmentType: inv.evidenceData?.equipment_type || 'Unknown',
+          location: inv.whereHappened || inv.evidenceData?.operating_location || 'Unknown',
+          cause: inv.analysisResults?.structuredAnalysis?.rootCause || 
+                 inv.analysisResults?.causes?.[0]?.description || 
+                 'Equipment failure analysis',
+          priority: inv.consequence?.toLowerCase().includes('safety') ? 'high' : 
+                   inv.consequence?.toLowerCase().includes('production') ? 'medium' : 'low',
+          investigationType: inv.investigationType,
+          whatHappened: inv.whatHappened,
+          whereHappened: inv.whereHappened,
+          whenHappened: inv.whenHappened,
+          evidenceData: inv.evidenceData,
+          analysisResults: inv.analysisResults,
+          recommendations: inv.recommendations
+        }));
+
+      res.json(completedAnalyses);
+    } catch (error) {
+      console.error("[RCA] Error fetching analyses:", error);
+      res.status(500).json({ message: "Failed to fetch analyses" });
+    }
+  });
+
+  // Get analytics for dashboard
+  app.get("/api/analytics", async (req, res) => {
+    try {
+      const investigations = await investigationStorage.getAllInvestigations();
+      
+      const completedAnalyses = investigations.filter(inv => 
+        inv.status === 'completed' || inv.currentStep === 'completed'
+      );
+
+      const analytics = {
+        totalAnalyses: completedAnalyses.length,
+        averageConfidence: completedAnalyses.length > 0 
+          ? Math.round(completedAnalyses.reduce((sum, inv) => 
+              sum + (inv.confidence ? parseFloat(inv.confidence) * 100 : 80), 0
+            ) / completedAnalyses.length)
+          : 0,
+        resolvedPercentage: completedAnalyses.length > 0 
+          ? Math.round((completedAnalyses.filter(inv => inv.status === 'completed').length / completedAnalyses.length) * 100)
+          : 0,
+        trendingCauses: this.getTrendingCauses(completedAnalyses)
+      };
+
+      res.json(analytics);
+    } catch (error) {
+      console.error("[RCA] Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   // File upload for supporting documents
   app.post("/api/investigations/:id/files", upload.array('files'), async (req, res) => {
     try {
@@ -398,6 +466,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete AI settings" });
     }
   });
+
+  // Helper function for trending causes
+  function getTrendingCauses(analyses: any[]) {
+    const causeCount = {};
+    analyses.forEach(analysis => {
+      const cause = analysis.analysisResults?.structuredAnalysis?.rootCause || 
+                   analysis.analysisResults?.causes?.[0]?.description || 
+                   'Equipment failure';
+      causeCount[cause] = (causeCount[cause] || 0) + 1;
+    });
+    
+    return Object.entries(causeCount)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
+      .slice(0, 5)
+      .map(([cause, count]) => ({ cause, count }));
+  }
 
   const httpServer = createServer(app);
   return httpServer;
