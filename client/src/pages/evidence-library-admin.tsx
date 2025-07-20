@@ -95,10 +95,24 @@ export default function EvidenceLibraryAdmin() {
   const [filterByComplexity, setFilterByComplexity] = useState<string>("all");
   const [filterByLastUpdated, setFilterByLastUpdated] = useState<string>("all");
 
-  // Fetch all equipment types
-  const { data: equipmentTypes, isLoading } = useQuery({
+  // Fetch all equipment types with debugging
+  const { data: equipmentTypes, isLoading, error } = useQuery({
     queryKey: ['/api/evidence-library/equipment-types'],
-    queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
+    queryFn: async () => {
+      console.log('Fetching equipment types...');
+      const result = await apiRequest('/api/evidence-library/equipment-types');
+      console.log('API Result:', result);
+      console.log('Equipment Types Count:', result?.equipmentTypes?.length || 0);
+      return result;
+    },
+  });
+
+  console.log("Query State:", { 
+    isLoading, 
+    error: error?.message, 
+    hasData: !!equipmentTypes,
+    dataKeys: equipmentTypes ? Object.keys(equipmentTypes) : [],
+    equipmentTypesLength: equipmentTypes?.equipmentTypes?.length || 0 
   });
 
   // Smart Search and Filtering Logic
