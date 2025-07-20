@@ -79,26 +79,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/analyses/create", upload.array("files"), async (req, res) => {
     try {
       console.log("[RCA] Creating new analysis with evidence-first workflow...");
+      const files = req.files as Express.Multer.File[];
       
       const analysisId = `RCA-${new Date().getFullYear()}-${Math.floor(Math.random() * 900000) + 100000}`;
       
+      const uploadedFiles = files ? files.map(file => ({
+        name: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        uploadedAt: new Date().toISOString(),
+      })) : [];
+
       // Create analysis in evidence_collection stage
       const analysis = await storage.createAnalysis({
         analysisId,
         workflowStage: "evidence_collection",
         status: "evidence_collection",
         priority: "medium",
-        uploadedFiles: req.files ? (req.files as Express.Multer.File[]).map(file => ({
-          name: file.originalname,
-          size: file.size,
-          type: file.mimetype,
-          uploadedAt: new Date().toISOString()
-        })) : [],
+        uploadedFiles,
         // Initially empty - will be populated during evidence collection
-        issueDescription: null,
-        equipmentType: null,
+        issueDescription: "Evidence collection in progress",
+        equipmentType: "unknown",
         equipmentId: null,
-        location: null
+        location: null,
+        operatingParameters: null,
+        historicalData: null,
+        learningInsights: null,
+        rootCause: null,
+        confidence: null,
+        recommendations: null,
+        evidenceData: {},
+        evidenceCompletedAt: null,
+        parsedData: null,
+        rcaAnalysis: null,
+        evidenceCorrelation: null,
+        stepwiseReasoning: null,
+        missingDataPrompts: null,
+        manualAdjustments: null,
+        versionHistory: [{
+          version: 1,
+          timestamp: new Date().toISOString(),
+          changes: "Analysis created - evidence collection started",
+          confidence: null
+        }],
+        processSteps: ["Analysis created", "Evidence collection in progress"]
       });
 
       console.log(`[RCA] Created analysis ${analysisId} in evidence collection mode`);

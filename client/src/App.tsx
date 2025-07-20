@@ -7,15 +7,16 @@ import Home from "@/pages/home";
 import AnalysisDetail from "@/pages/analysis-detail";
 import AdminSettings from "@/pages/admin-settings";
 import NewAnalysis from "@/pages/new-analysis";
-import EvidenceCollection from "@/pages/evidence-collection";
+import InteractiveEvidenceForm from "@/pages/interactive-evidence-form";
 import NotFound from "@/pages/not-found";
+
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/new" component={NewAnalysis} />
-      <Route path="/evidence/:id" component={EvidenceCollection} />
+      <Route path="/evidence/:id" component={InteractiveEvidenceForm} />
       <Route path="/analysis/:id" component={AnalysisDetail} />
       <Route path="/admin" component={AdminSettings} />
       <Route component={NotFound} />
