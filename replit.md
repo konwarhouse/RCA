@@ -16,8 +16,20 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Intelligent AI-Assisted Evidence Collection System
+### Interactive RCA Visualization Engine
 - **Date**: January 20, 2025 (Latest)
+- **Changes**: Complete interactive diagram system with multiple visualization types generated from AI analysis results
+  - **Multi-View Support**: RCA Tree, Fishbone, ECFA Timeline, and Bowtie diagrams from same analysis data
+  - **Interactive Nodes**: Click nodes for details, edit labels/confidence, add child causes, drill down for deeper analysis
+  - **Dynamic Parsing**: Automatically converts AI analysis results into structured node relationships for visualization
+  - **Equipment-Specific Logic**: Fault Tree Analysis for equipment failures, ECFA structure for safety incidents
+  - **Real-time Editing**: Live editing with confidence scores, evidence tracking, and relationship management
+  - **Zoom and Export**: Full diagram controls with zoom, pan, reset, and export functionality
+  - **Tabbed Interface**: Seamless switching between Tree, Fishbone, Timeline, and Bowtie views from analysis detail page
+- **Impact**: Users can now visualize, interact with, and modify RCA findings through professional diagrams that adapt to investigation type and analysis complexity
+
+### Previous: Intelligent AI-Assisted Evidence Collection System  
+- **Date**: January 20, 2025
 - **Changes**: Transformed evidence collection from passive validation to proactive AI assistance
   - **Proactive AI Assistant**: Real-time guidance with context, examples, and smart suggestions for each field
   - **Conversational Support**: AI provides equipment-specific help, validates logic, and suggests improvements during input

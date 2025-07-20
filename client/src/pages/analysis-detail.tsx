@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Settings, Download, Edit, History, MessageCircle } from "lucide-react";
+import { ArrowLeft, Settings, Download, Edit, History, MessageCircle, GitBranch } from "lucide-react";
 import type { Analysis } from "@shared/schema";
 import RCATreeVisualization from "@/components/rca-tree-visualization";
+import RCADiagramEngine from "@/components/rca-diagram-engine";
 import EvidenceGathering from "@/components/evidence-gathering";
 import ManualAdjustment from "@/components/manual-adjustment";
 import ReportExport from "@/components/report-export";
@@ -138,10 +139,13 @@ export default function AnalysisDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-8 mb-8">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="reasoning">AI Reasoning</TabsTrigger>
+              <TabsTrigger value="diagrams">
+                <GitBranch className="w-4 h-4 mr-1" />
+                Diagrams
+              </TabsTrigger>
               <TabsTrigger value="rca-tree">RCA Tree</TabsTrigger>
               <TabsTrigger value="evidence">Evidence</TabsTrigger>
-              <TabsTrigger value="missing-data">Missing Data</TabsTrigger>
+              <TabsTrigger value="reasoning">AI Reasoning</TabsTrigger>
               <TabsTrigger value="export">Export</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -230,6 +234,25 @@ export default function AnalysisDetail() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="diagrams">
+              <RCADiagramEngine
+                analysisData={analysis.analysisResults}
+                investigationType={analysis.investigationType as 'equipment_failure' | 'safety_incident'}
+                onNodeUpdate={(nodeId, updates) => {
+                  // Handle node updates - could trigger a save to backend
+                  console.log('Node updated:', nodeId, updates);
+                }}
+                onNodeAdd={(parentId, newNode) => {
+                  // Handle adding new nodes
+                  console.log('Node added to parent:', parentId, newNode);
+                }}
+                onNodeDelete={(nodeId) => {
+                  // Handle node deletion
+                  console.log('Node deleted:', nodeId);
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="reasoning">
