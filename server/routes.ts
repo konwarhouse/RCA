@@ -331,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resolvedPercentage: completedAnalyses.length > 0 
           ? Math.round((completedAnalyses.filter(inv => inv.status === 'completed').length / completedAnalyses.length) * 100)
           : 0,
-        trendingCauses: this.getTrendingCauses(completedAnalyses)
+        trendingCauses: getTrendingCauses(completedAnalyses)
       };
 
       res.json(analytics);

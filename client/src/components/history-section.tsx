@@ -213,7 +213,7 @@ export default function HistorySection() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => setLocation(`/analysis/${analysis.investigationId}`)}
+                              onClick={() => setLocation(`/investigation/${analysis.investigationId}`)}
                             >
                               View Details
                             </Button>

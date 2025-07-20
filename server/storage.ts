@@ -55,13 +55,18 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
 
   async getInvestigationByInvestigationId(investigationId: string): Promise<Investigation | undefined> {
     console.log("[RCA] Looking for investigation with investigationId:", investigationId);
-    const [investigation] = await db
-      .select()
-      .from(investigations)
-      .where(eq(investigations.investigationId, investigationId));
-    
-    console.log("[RCA] Found investigation:", investigation);
-    return investigation;
+    try {
+      const [investigation] = await db
+        .select()
+        .from(investigations)
+        .where(eq(investigations.investigationId, investigationId));
+      
+      console.log("[RCA] Found investigation:", investigation ? `ID ${investigation.id}` : 'undefined');
+      return investigation;
+    } catch (error) {
+      console.error("[RCA] Error finding investigation by investigationId:", error);
+      return undefined;
+    }
   }
 
   async updateInvestigation(id: number, data: Partial<Investigation>): Promise<Investigation> {
