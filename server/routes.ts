@@ -318,6 +318,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evidence Library Management Routes
   app.use("/api/evidence-library", evidenceLibraryRoutes);
 
+  // Admin AI Settings Routes
+  app.get("/api/admin/ai-settings", async (req, res) => {
+    try {
+      const settings = await investigationStorage.getAllAiSettings();
+      // Don't send encrypted keys to frontend
+      const sanitizedSettings = settings.map((setting: any) => ({
+        ...setting,
+        encryptedApiKey: undefined
+      }));
+      res.json(sanitizedSettings);
+    } catch (error) {
+      console.error("[RCA] Error fetching AI settings:", error);
+      res.status(500).json({ message: "Failed to fetch AI settings" });
+    }
+  });
+
+  app.post("/api/admin/ai-settings/test", async (req, res) => {
+    try {
+      const { provider, apiKey } = req.body;
+      
+      if (!provider || !apiKey) {
+        return res.status(400).json({ message: "Provider and API key are required" });
+      }
+
+      // Simple test - just verify key format
+      if (provider === 'openai' && !apiKey.startsWith('sk-')) {
+        return res.status(400).json({ success: false, message: "Invalid OpenAI API key format" });
+      }
+      
+      res.json({ success: true, message: "API key format is valid" });
+    } catch (error) {
+      console.error("[RCA] Error testing API key:", error);
+      res.status(500).json({ success: false, message: "Test failed" });
+    }
+  });
+
+  app.post("/api/admin/ai-settings", async (req, res) => {
+    try {
+      const { provider, apiKey, isActive, createdBy } = req.body;
+      
+      if (!provider || !apiKey) {
+        return res.status(400).json({ message: "Provider and API key are required" });
+      }
+
+      const savedSettings = await investigationStorage.saveAiSettings({
+        provider,
+        apiKey,
+        isActive: isActive || false,
+        createdBy: createdBy || 1
+      });
+
+      res.status(201).json({
+        ...savedSettings,
+        encryptedApiKey: undefined // Don't send back encrypted key
+      });
+    } catch (error) {
+      console.error("[RCA] Error saving AI settings:", error);
+      res.status(500).json({ message: "Failed to save AI settings" });
+    }
+  });
+
+  app.delete("/api/admin/ai-settings/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await investigationStorage.deleteAiSettings(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("[RCA] Error deleting AI settings:", error);
+      res.status(500).json({ message: "Failed to delete AI settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

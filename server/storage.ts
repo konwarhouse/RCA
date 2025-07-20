@@ -15,6 +15,11 @@ export interface IInvestigationStorage {
   // Evidence operations
   updateEvidence(id: number, evidenceData: any): Promise<Investigation>;
   validateEvidenceCompleteness(id: number): Promise<{ completeness: number, isValid: boolean }>;
+  
+  // AI Settings operations
+  getAllAiSettings(): Promise<any[]>;
+  saveAiSettings(data: any): Promise<any>;
+  deleteAiSettings(id: number): Promise<void>;
 }
 
 export class DatabaseInvestigationStorage implements IInvestigationStorage {
@@ -123,6 +128,39 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     const isValid = completeness >= 80; // 80% minimum as per specs
 
     return { completeness, isValid };
+  }
+
+  // AI Settings methods - in-memory for now
+  private aiSettings: any[] = [];
+
+  async getAllAiSettings(): Promise<any[]> {
+    return this.aiSettings;
+  }
+
+  async saveAiSettings(data: any): Promise<any> {
+    const newSetting = {
+      id: this.aiSettings.length + 1,
+      provider: data.provider,
+      isActive: data.isActive,
+      createdBy: data.createdBy,
+      createdAt: new Date(),
+      // Don't store the actual API key in memory for security
+      hasApiKey: true
+    };
+    
+    // Remove other active settings if this one is active
+    if (data.isActive) {
+      this.aiSettings.forEach(setting => {
+        setting.isActive = false;
+      });
+    }
+    
+    this.aiSettings.push(newSetting);
+    return newSetting;
+  }
+
+  async deleteAiSettings(id: number): Promise<void> {
+    this.aiSettings = this.aiSettings.filter(setting => setting.id !== id);
   }
 }
 
