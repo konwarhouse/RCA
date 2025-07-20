@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { investigationStorage } from "./storage";
 import { investigationEngine } from "./investigation-engine";
+import evidenceLibraryRoutes from "./routes/evidence-library";
 import multer from "multer";
 
 // Configure multer for file uploads
@@ -313,6 +314,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch equipment parameters" });
     }
   });
+
+  // Evidence Library Management Routes
+  app.use("/api/evidence-library", evidenceLibraryRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

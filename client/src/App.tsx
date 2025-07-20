@@ -10,6 +10,7 @@ import AdminSettings from "@/pages/admin-settings";
 import NewInvestigation from "@/pages/new-investigation";
 import InvestigationType from "@/pages/investigation-type";
 import EvidenceCollection from "@/pages/evidence-collection";
+import EvidenceLibraryAdmin from "@/pages/evidence-library-admin";
 import NotFound from "@/pages/not-found";
 
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/investigation/:id/evidence" component={EvidenceCollection} />
       <Route path="/investigation/:id" component={AnalysisDetail} />
       <Route path="/admin" component={AdminSettings} />
+      <Route path="/admin/evidence-library" component={EvidenceLibraryAdmin} />
       <Route component={NotFound} />
     </Switch>
   );
