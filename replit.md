@@ -16,8 +16,20 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Critical Bug Fixes & System Stabilization
+### Intelligent AI-Assisted Evidence Collection System
 - **Date**: January 20, 2025 (Latest)
+- **Changes**: Transformed evidence collection from passive validation to proactive AI assistance
+  - **Proactive AI Assistant**: Real-time guidance with context, examples, and smart suggestions for each field
+  - **Conversational Support**: AI provides equipment-specific help, validates logic, and suggests improvements during input
+  - **Smart Field Insights**: Real-time validation with context-aware prompts instead of punitive error lists
+  - **Dynamic Suggestions**: Equipment-specific guidance that adapts based on previous answers and investigation context  
+  - **Educational Approach**: AI acts as digital assistant providing explanations and examples rather than just gatekeeper
+  - **Graceful Error Handling**: Comprehensive error boundary system prevents crashes and provides user-friendly messaging
+  - **Cross-Field Intelligence**: AI detects inconsistencies and suggests related evidence based on investigation patterns
+- **Impact**: Evidence collection is now educational and supportive, guiding users through comprehensive data gathering with AI expertise
+
+### Previous: Critical Bug Fixes & System Stabilization
+- **Date**: January 20, 2025 
 - **Changes**: Fixed critical parseInt() logic flaw and equipment dropdown conditional logic issues
   - **ID Resolution Bug**: Fixed parseInt("9Bl5VYjvryyzrnrMUtemc") incorrectly returning 9 instead of treating as string ID, causing "Investigation not found" errors across all routes
   - **Equipment Dropdown Logic**: Corrected ISO 14224 taxonomy structure access - subcategory and equipment type dropdowns now properly populate based on category selection

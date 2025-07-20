@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EQUIPMENT_TYPES } from "@shared/schema";
 import AIEvidenceValidator from "@/components/ai-evidence-validator";
+import AIAssistant from "@/components/ai-assistant";
 
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
@@ -30,6 +31,8 @@ export default function EvidenceCollection() {
   const [questionnaire, setQuestionnaire] = useState<any[]>([]);
   const [aiValidation, setAiValidation] = useState<any>(null);
   const [showAIValidator, setShowAIValidator] = useState(true);
+  const [currentFieldQuestion, setCurrentFieldQuestion] = useState<any>(null);
+  const [fieldCompletionStatus, setFieldCompletionStatus] = useState<Record<string, boolean>>({});
 
   // Fetch investigation and questionnaire
   const { data: investigationData, isLoading } = useQuery({
@@ -111,6 +114,13 @@ export default function EvidenceCollection() {
       [questionId]: value
     };
     setEvidenceData(updatedData);
+    
+    // Mark field as completed if it has a meaningful value
+    if (value !== undefined && value !== null && value !== '') {
+      setFieldCompletionStatus(prev => ({ ...prev, [questionId]: true }));
+    } else {
+      setFieldCompletionStatus(prev => ({ ...prev, [questionId]: false }));
+    }
     
     // Debounce update to server
     setTimeout(() => {
@@ -334,17 +344,25 @@ export default function EvidenceCollection() {
         </CardContent>
       </Card>
 
-      {/* AI Evidence Validator */}
-      {showAIValidator && questionnaire.length > 0 && (
-        <AIEvidenceValidator
-          evidenceData={evidenceData}
-          questionnaire={questionnaire}
-          onValidationUpdate={setAiValidation}
-          onPromptResponse={(fieldId, response) => {
-            handleFieldChange(fieldId, response);
-          }}
-        />
-      )}
+      {/* Smart Progress Overview */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-blue-600" />
+            AI-Assisted Evidence Collection
+            <Badge variant={completeness >= 80 ? "default" : "secondary"}>
+              {completeness.toFixed(1)}% Complete
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Progress value={completeness} className="mb-4" />
+          <div className="text-sm text-gray-600">
+            AI assistant will guide you through each field with context, examples, and smart suggestions.
+            Click on any field to get personalized help.
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
@@ -411,15 +429,32 @@ export default function EvidenceCollection() {
             </CardHeader>
             <CardContent className="space-y-6">
               {currentSectionQuestions.map((question) => (
-                <div key={question.id} className="space-y-2">
-                  <Label htmlFor={question.id} className="text-base font-medium">
-                    {question.question}
-                    {question.required && <span className="text-red-500 ml-1">*</span>}
-                    {question.unit && (
-                      <span className="text-sm text-gray-500 ml-2">({question.unit})</span>
-                    )}
-                  </Label>
-                  {renderQuestionField(question)}
+                <div key={question.id} className="space-y-4">
+                  <div 
+                    className="space-y-2"
+                    onFocus={() => setCurrentFieldQuestion(question)}
+                    onClick={() => setCurrentFieldQuestion(question)}
+                  >
+                    <Label htmlFor={question.id} className="text-base font-medium">
+                      {question.question}
+                      {question.required && <span className="text-red-500 ml-1">*</span>}
+                      {question.unit && (
+                        <span className="text-sm text-gray-500 ml-2">({question.unit})</span>
+                      )}
+                    </Label>
+                    {renderQuestionField(question)}
+                  </div>
+                  
+                  {/* AI Assistant for current field */}
+                  {currentFieldQuestion?.id === question.id && (
+                    <AIAssistant
+                      currentQuestion={question}
+                      currentValue={evidenceData[question.id]}
+                      evidenceData={evidenceData}
+                      onSuggestion={(value) => handleFieldChange(question.id, value)}
+                      onFieldComplete={() => setCurrentFieldQuestion(null)}
+                    />
+                  )}
                 </div>
               ))}
 
@@ -461,17 +496,17 @@ export default function EvidenceCollection() {
               ) : canProceedToAnalysis ? (
                 <Button
                   onClick={() => {
-                    if (!aiValidation?.readyForAnalysis) {
+                    if (completeness < 80) {
                       toast({
-                        title: "Evidence Insufficient",
-                        description: "Please address AI validation prompts before proceeding to analysis.",
+                        title: "More Evidence Needed",
+                        description: "Please complete more fields before proceeding to analysis. The AI assistant will guide you.",
                         variant: "destructive"
                       });
                       return;
                     }
                     proceedToAnalysisMutation.mutate();
                   }}
-                  disabled={proceedToAnalysisMutation.isPending || (aiValidation && !aiValidation.readyForAnalysis)}
+                  disabled={proceedToAnalysisMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                 >
                   {proceedToAnalysisMutation.isPending ? (
