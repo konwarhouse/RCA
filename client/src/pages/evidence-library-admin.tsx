@@ -824,6 +824,12 @@ export default function EvidenceLibraryAdmin() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Edit Equipment Type",
+                                    description: `Editing ${equipment.equipmentType} - Advanced editing interface will be available soon`,
+                                  });
+                                }}
                               >
                                 <Edit3 className="h-3 w-3" />
                               </Button>
