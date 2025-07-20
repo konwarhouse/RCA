@@ -36,6 +36,14 @@ export const analyses = pgTable("analyses", {
   operatingParameters: jsonb("operating_parameters"), // pressure, temperature, flow, etc
   historicalData: jsonb("historical_data"), // past performance and maintenance data
   learningInsights: jsonb("learning_insights"), // ML insights for equipment-specific learning
+  // Enhanced RCA fields
+  parsedData: jsonb("parsed_data"), // structured data extracted from uploads
+  rcaAnalysis: jsonb("rca_analysis"), // comprehensive RCA analysis results
+  evidenceCorrelation: jsonb("evidence_correlation"), // supporting/contradicting evidence
+  stepwiseReasoning: jsonb("stepwise_reasoning"), // AI reasoning process
+  missingDataPrompts: jsonb("missing_data_prompts"), // what data is still needed
+  manualAdjustments: jsonb("manual_adjustments"), // expert overrides and corrections
+  versionHistory: jsonb("version_history"), // analysis version tracking
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });

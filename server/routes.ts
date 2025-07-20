@@ -4,6 +4,8 @@ import multer from "multer";
 import { storage } from "./storage";
 import { insertAnalysisSchema, updateAnalysisSchema, insertAiSettingsSchema } from "@shared/schema";
 import { AIService } from "./ai-service";
+import { DataParser } from "./data-parser";
+import { RCAEngine } from "./rca-engine";
 import { z } from "zod";
 
 const upload = multer({
@@ -73,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new analysis with file upload
+  // Create new analysis with comprehensive data parsing
   app.post("/api/analyses", upload.array("files"), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
@@ -85,9 +87,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         operatingParameters 
       } = req.body;
       
-      if (!issueDescription || !equipmentType) {
+      if (!issueDescription && (!files || files.length === 0)) {
         return res.status(400).json({ 
-          message: "Issue description and equipment type are required" 
+          message: "Either issue description or uploaded files are required" 
         });
       }
       
@@ -110,13 +112,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn("Failed to parse operating parameters:", e);
         }
       }
+
+      // Step 1: Parse uploaded files to extract structured data
+      let parsedData: any = {};
+      let extractionConfidence = 0;
       
+      if (files && files.length > 0) {
+        console.log(`[RCA] Parsing ${files.length} uploaded files...`);
+        
+        for (const file of files) {
+          try {
+            const fileData = await DataParser.parseFile(file.buffer, file.originalname);
+            console.log(`[RCA] Successfully parsed ${file.originalname}`);
+            
+            // Merge parsed data
+            parsedData = {
+              ...parsedData,
+              [`file_${file.originalname}`]: fileData
+            };
+            
+            // Update confidence based on data quality
+            if (fileData.confidence) {
+              extractionConfidence = Math.max(extractionConfidence, fileData.confidence);
+            }
+          } catch (error) {
+            console.warn(`[RCA] Failed to parse ${file.originalname}:`, error.message);
+          }
+        }
+        
+        // Clean and normalize parsed data
+        parsedData = DataParser.cleanAndValidate(parsedData);
+      }
+
+      // If no equipment type provided, try to extract from parsed data
+      let finalEquipmentType = equipmentType;
+      if (!finalEquipmentType && parsedData.equipment?.type) {
+        finalEquipmentType = parsedData.equipment.type;
+      }
+
+      // Create initial analysis record
       const analysisData = {
         analysisId,
-        issueDescription,
-        equipmentType,
-        equipmentId: equipmentId || null,
-        location: location || null,
+        issueDescription: issueDescription || "Analysis from uploaded data",
+        equipmentType: finalEquipmentType || "unknown",
+        equipmentId: equipmentId || parsedData.equipment?.id || null,
+        location: location || parsedData.equipment?.location || null,
         priority: "medium",
         status: "processing" as const,
         uploadedFiles,
@@ -126,13 +166,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rootCause: null,
         confidence: null,
         recommendations: null,
+        // Enhanced fields for comprehensive RCA
+        parsedData,
+        rcaAnalysis: null,
+        evidenceCorrelation: null,
+        stepwiseReasoning: null,
+        missingDataPrompts: null,
+        manualAdjustments: null,
+        versionHistory: [{
+          version: 1,
+          timestamp: new Date().toISOString(),
+          changes: "Initial analysis created",
+          confidence: extractionConfidence
+        }]
       };
       
       const validatedData = insertAnalysisSchema.parse(analysisData);
       const analysis = await storage.createAnalysis(validatedData);
       
-      // Start AI processing simulation in the background
-      simulateAIProcessing(analysis.id, equipmentType, parsedOperatingParameters);
+      // Step 2: Start comprehensive RCA processing in the background
+      performComprehensiveRCA(analysis.id, parsedData, {
+        equipmentType: finalEquipmentType,
+        operatingParameters: parsedOperatingParameters,
+        issueDescription
+      });
       
       res.status(201).json(analysis);
     } catch (error) {
@@ -287,8 +344,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Handle missing data prompts and re-analysis
+  app.post("/api/analyses/:id/provide-data", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { responses, additionalData } = req.body;
+      
+      const analysis = await storage.getAnalysis(id);
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Merge new responses with existing data
+      const updatedData = {
+        ...analysis.parsedData,
+        userResponses: responses,
+        additionalData
+      };
+
+      // Update analysis status and trigger re-analysis
+      await storage.updateAnalysis(id, {
+        parsedData: updatedData,
+        status: "processing",
+        missingDataPrompts: null
+      });
+
+      // Re-run comprehensive RCA with additional data
+      performComprehensiveRCA(id, updatedData, responses);
+
+      res.json({ message: "Additional data provided, re-analyzing..." });
+    } catch (error) {
+      console.error("Provide data error:", error);
+      res.status(500).json({ message: "Failed to process additional data" });
+    }
+  });
+
+  // Manual adjustment endpoint for expert override
+  app.post("/api/analyses/:id/manual-adjustment", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { adjustments, reasoning, expertOverride } = req.body;
+      
+      const analysis = await storage.getAnalysis(id);
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Track manual adjustments with audit trail
+      const manualAdjustments = [
+        ...(analysis.manualAdjustments || []),
+        {
+          timestamp: new Date().toISOString(),
+          adjustments,
+          reasoning,
+          expertOverride,
+          confidence: expertOverride ? 100 : analysis.confidence
+        }
+      ];
+
+      // Update analysis with manual adjustments
+      const updateData: any = {
+        manualAdjustments,
+        status: "completed"
+      };
+
+      if (expertOverride) {
+        updateData.rootCause = adjustments.rootCause || analysis.rootCause;
+        updateData.recommendations = adjustments.recommendations || analysis.recommendations;
+        updateData.confidence = 100; // Expert override = 100% confidence
+      }
+
+      await storage.updateAnalysis(id, updateData);
+
+      res.json({ message: "Manual adjustments saved successfully" });
+    } catch (error) {
+      console.error("Manual adjustment error:", error);
+      res.status(500).json({ message: "Failed to save manual adjustments" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Comprehensive RCA processing with stepwise analysis and evidence correlation
+async function performComprehensiveRCA(
+  analysisId: number, 
+  parsedData: any, 
+  userInputs?: any,
+  historicalData?: any
+) {
+  console.log(`[RCA] Starting comprehensive analysis for ID: ${analysisId}`);
+  
+  try {
+    // Step 1: Data validation and preprocessing
+    await storage.updateAnalysisStatus(analysisId, "processing", "Data validation and preprocessing");
+    
+    // Step 2: Perform RCA analysis using the comprehensive engine
+    const rcaAnalysis = await RCAEngine.performAnalysis(parsedData, userInputs, historicalData);
+    
+    // Step 3: Check for missing critical data and generate prompts
+    const missingDataPrompts = generateMissingDataPrompts(rcaAnalysis, parsedData);
+    
+    // Step 4: Update analysis with comprehensive results
+    const updateData = {
+      status: missingDataPrompts.length > 0 ? "needs_input" : "completed",
+      rootCause: rcaAnalysis.causeAnalysis.rootCause,
+      confidence: Math.round(rcaAnalysis.causeAnalysis.confidence * 100),
+      recommendations: rcaAnalysis.recommendations.map(r => r.action),
+      rcaAnalysis,
+      evidenceCorrelation: rcaAnalysis.evidenceCorrelation,
+      stepwiseReasoning: rcaAnalysis.reasoning,
+      missingDataPrompts,
+      completedAt: missingDataPrompts.length === 0 ? new Date() : null
+    };
+    
+    await storage.updateAnalysis(analysisId, updateData);
+    
+    console.log(`[RCA] Analysis ${analysisId} completed with ${rcaAnalysis.causeAnalysis.confidence * 100}% confidence`);
+    
+  } catch (error) {
+    console.error(`[RCA] Analysis ${analysisId} failed:`, error);
+    await storage.updateAnalysisStatus(analysisId, "failed", `Analysis failed: ${error.message}`);
+  }
+}
+
+// Generate prompts for missing critical data
+function generateMissingDataPrompts(rcaAnalysis: any, parsedData: any): any[] {
+  const prompts: any[] = [];
+  
+  // Check for missing equipment details
+  if (rcaAnalysis.assetInfo.confidence < 0.8) {
+    prompts.push({
+      id: 'equipment_clarification',
+      type: 'equipment',
+      question: 'Please provide more specific equipment details',
+      priority: 'high',
+      options: ['Clarify equipment type', 'Provide equipment ID', 'Specify equipment location']
+    });
+  }
+  
+  // Check for missing operating conditions
+  if (rcaAnalysis.evidenceCorrelation.missing.length > 0) {
+    prompts.push({
+      id: 'missing_parameters',
+      type: 'operating_data',
+      question: 'Critical operating parameters are missing for higher confidence analysis',
+      priority: 'medium',
+      missing: rcaAnalysis.evidenceCorrelation.missing
+    });
+  }
+  
+  // Check for low confidence in symptom analysis
+  if (rcaAnalysis.symptomAnalysis.confidence < 0.7) {
+    prompts.push({
+      id: 'symptom_clarification',
+      type: 'symptoms',
+      question: 'Please provide more details about the observed symptoms',
+      priority: 'high',
+      context: rcaAnalysis.symptomAnalysis.primary
+    });
+  }
+  
+  return prompts;
 }
 
 // Enhanced AI processing with real AI provider integration and fallback simulation

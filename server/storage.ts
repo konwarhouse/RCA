@@ -13,6 +13,9 @@ export interface IStorage {
   getAnalysesByPriority(priority: string): Promise<Analysis[]>;
   getAnalysesByDateRange(startDate: Date, endDate: Date): Promise<Analysis[]>;
   
+  // Enhanced RCA operations
+  updateAnalysisStatus(id: number, status: string, details?: string): Promise<void>;
+  
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -141,6 +144,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAiSettings(id: number): Promise<void> {
     await db.delete(aiSettings).where(eq(aiSettings.id, id));
+  }
+
+  // Enhanced RCA operations implementation
+  async updateAnalysisStatus(id: number, status: string, details?: string): Promise<void> {
+    const updateData: any = { status };
+    
+    if (status === "completed") {
+      updateData.completedAt = new Date();
+    }
+    
+    // Could store details in a status log if needed
+    if (details) {
+      console.log(`[RCA] Analysis ${id} status update: ${status} - ${details}`);
+    }
+    
+    await db.update(analyses).set(updateData).where(eq(analyses.id, id));
   }
 }
 

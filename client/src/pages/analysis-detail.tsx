@@ -13,6 +13,8 @@ import EvidenceGathering from "@/components/evidence-gathering";
 import ManualAdjustment from "@/components/manual-adjustment";
 import ReportExport from "@/components/report-export";
 import VersionHistory from "@/components/version-history";
+import StepwiseReasoning from "@/components/stepwise-reasoning";
+import MissingDataPrompts from "@/components/missing-data-prompts";
 
 export default function AnalysisDetail() {
   const [, params] = useRoute("/analysis/:id");
@@ -134,10 +136,12 @@ export default function AnalysisDetail() {
           />
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-8">
+            <TabsList className="grid w-full grid-cols-8 mb-8">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="reasoning">AI Reasoning</TabsTrigger>
               <TabsTrigger value="rca-tree">RCA Tree</TabsTrigger>
               <TabsTrigger value="evidence">Evidence</TabsTrigger>
+              <TabsTrigger value="missing-data">Missing Data</TabsTrigger>
               <TabsTrigger value="export">Export</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -228,6 +232,10 @@ export default function AnalysisDetail() {
               )}
             </TabsContent>
 
+            <TabsContent value="reasoning">
+              <StepwiseReasoning analysis={analysis} />
+            </TabsContent>
+
             <TabsContent value="rca-tree">
               <RCATreeVisualization 
                 analysis={analysis}
@@ -237,6 +245,16 @@ export default function AnalysisDetail() {
 
             <TabsContent value="evidence">
               <EvidenceGathering analysis={analysis} />
+            </TabsContent>
+
+            <TabsContent value="missing-data">
+              <MissingDataPrompts 
+                analysis={analysis} 
+                onDataProvided={() => {
+                  // Refresh analysis data when new data is provided
+                  window.location.reload();
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="export">
