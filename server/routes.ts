@@ -220,19 +220,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/investigations/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      console.log("[RCA] Getting investigation for ID:", id);
       
       // Try to get by investigationId first (string), then by numeric id
       let investigation;
-      if (isNaN(parseInt(id))) {
+      const numericId = parseInt(id);
+      console.log("[RCA] Parsed numeric ID:", numericId, "toString check:", numericId.toString() !== id);
+      if (isNaN(numericId) || numericId.toString() !== id) {
+        // If it's not a valid number or has extra characters, treat as investigationId string
+        console.log("[RCA] Treating as string investigationId");
         investigation = await investigationStorage.getInvestigationByInvestigationId(id);
       } else {
-        investigation = await investigationStorage.getInvestigation(parseInt(id));
+        console.log("[RCA] Treating as numeric ID");
+        investigation = await investigationStorage.getInvestigation(numericId);
       }
       
       if (!investigation) {
+        console.log("[RCA] Investigation not found for ID:", id);
         return res.status(404).json({ message: "Investigation not found" });
       }
 
+      console.log("[RCA] Successfully found investigation:", investigation.id);
       res.json(investigation);
     } catch (error) {
       console.error("[RCA] Error fetching investigation:", error);
