@@ -136,32 +136,135 @@ export default function IntelligentAIAssistant({
   const generateContextualSuggestions = (suggestions: AISuggestion[]) => {
     const questionId = currentQuestion.id;
     const equipmentType = evidenceData.equipment_type || '';
+    const observedProblem = evidenceData.observed_problem?.toLowerCase() || '';
     
     switch (questionId) {
       case 'equipment_tag':
         suggestions.push({
           type: 'context',
-          message: 'Equipment tags help us identify the exact asset and access maintenance history.',
+          message: 'Equipment tags link to maintenance records, previous failures, and asset specifications. Use the exact tag from the nameplate.',
         });
         if (!currentValue) {
-          suggestions.push({
-            type: 'example',
-            message: 'Examples: "P-101", "PUMP-A", "WTR-PMP-001". Check the equipment nameplate or P&ID drawings.',
-            value: equipmentType.includes('Pump') ? 'P-101' : 'EQ-001'
-          });
+          if (equipmentType.includes('Pump')) {
+            suggestions.push({
+              type: 'example',
+              message: 'For pumps, look for: "P-101", "PMP-001A", "271P01". Check the nameplate near the motor coupling or on the pump casing.',
+              value: '271P01'
+            });
+          } else {
+            suggestions.push({
+              type: 'example',
+              message: 'Look for: "CV-201", "HX-101", "T-301". Check equipment nameplate, P&ID drawings, or asset database.',
+              value: 'EQ-001'
+            });
+          }
         }
         break;
         
       case 'observed_problem':
-        suggestions.push({
-          type: 'context',
-          message: 'Detailed problem descriptions help identify failure patterns and root causes more accurately.',
-        });
-        if (!currentValue || currentValue.length < 10) {
+        if (equipmentType.includes('Pump')) {
+          suggestions.push({
+            type: 'context',
+            message: 'For pump failures, describe physical signs, sounds, and measurements. Be specific about what changed from normal operation.',
+          });
+          if (!currentValue || currentValue.length < 20) {
+            suggestions.push({
+              type: 'example',
+              message: 'Example: "Seal leaking clear fluid, high vibration at 2X running speed, temperature increased from 65°C to 85°C, grinding noise from bearing area."',
+              value: 'Seal leaking clear fluid, high vibration detected, temperature elevated above normal'
+            });
+          }
+          if (observedProblem.includes('seal')) {
+            suggestions.push({
+              type: 'next_step',
+              message: 'For seal issues, also note: leak rate, fluid color/clarity, seal face condition, if any debris was present, and temperature at seal area.',
+            });
+          }
+          if (observedProblem.includes('vibration')) {
+            suggestions.push({
+              type: 'next_step',
+              message: 'For vibration, specify: frequency (1X, 2X running speed), amplitude, location (motor/pump), and if it was axial/radial.',
+            });
+          }
+        } else {
+          suggestions.push({
+            type: 'context',
+            message: 'Describe the sequence of events: what you first noticed, how it progressed, final state. Include measurements if available.',
+          });
           suggestions.push({
             type: 'example',
-            message: `For ${equipmentType || 'equipment'} failures, describe: What you saw, heard, or measured. When it started. How it progressed.`,
-            value: equipmentType.includes('Pump') ? 'Pump began making grinding noise, then seized completely. Water leaking from mechanical seal.' : 'Equipment stopped operating normally. Unusual noise detected.'
+            message: 'Example: "Started with unusual noise at 0800, vibration increased gradually, temperature rose to 95°C, unit tripped on high temperature at 0845."',
+            value: 'Equipment exhibited unusual behavior, parameters outside normal range'
+          });
+        }
+        break;
+
+      case 'seal_condition':
+        if (equipmentType.includes('Pump')) {
+          suggestions.push({
+            type: 'context',
+            message: 'Describe the physical state of the seal. Look for scoring, swelling, discoloration, and lubricant condition.',
+          });
+          suggestions.push({
+            type: 'example',
+            message: 'Example: "Seal appeared visually intact, light scoring present, slight discoloration on inner lip, no active leakage, lubricant level normal and clean."',
+            value: 'Seal visually inspected, light scoring observed, lubricant level normal'
+          });
+          suggestions.push({
+            type: 'next_step',
+            message: 'Also check: Was seal OEM or aftermarket? Installation date? Any signs of dry running? Flush fluid condition?',
+          });
+        }
+        break;
+
+      case 'bearing_condition':
+        suggestions.push({
+          type: 'context',
+          message: 'Assess bearing condition through vibration analysis, temperature, noise, and visual inspection if accessible.',
+        });
+        suggestions.push({
+          type: 'example',
+          message: 'Example: "Vibration 8.5 mm/s (alarm at 7.1), temperature 78°C (normal 55°C), rough rotation, grease contaminated with metallic particles."',
+          value: 'Vibration elevated, temperature increased, grease condition degraded'
+        });
+        break;
+
+      case 'alignment_status':
+        suggestions.push({
+          type: 'context',
+          message: 'Document alignment measurements or visual indicators. Misalignment causes vibration, bearing wear, and coupling damage.',
+        });
+        suggestions.push({
+          type: 'example',
+          message: 'Example: "Last aligned 6 months ago, dial indicator readings within 0.002", no visible coupling wear, foundation appears stable."',
+          value: 'Alignment checked within acceptable limits, no visible coupling damage'
+        });
+        break;
+
+      case 'maintenance_history':
+        suggestions.push({
+          type: 'context',
+          message: 'List recent work: parts replaced, who performed it, any deviations from procedure, post-work testing.',
+        });
+        if (equipmentType.includes('Pump')) {
+          suggestions.push({
+            type: 'example',
+            message: 'Example: "Seal replaced 3 weeks ago by contractor, OEM parts used, alignment checked, test run normal for 2 hours, no issues noted."',
+            value: 'Recent seal replacement, OEM parts, proper installation verified'
+          });
+        }
+        break;
+
+      case 'operating_conditions':
+        if (equipmentType.includes('Pump')) {
+          suggestions.push({
+            type: 'context',
+            message: 'Document flow, pressure, temperature, and process conditions at time of failure.',
+          });
+          suggestions.push({
+            type: 'example',
+            message: 'Example: "Flow 180 m³/h (design 200), suction pressure 2.1 bar, discharge 8.5 bar, fluid temperature 65°C, clear water service."',
+            value: 'Flow rate within design, pressure normal, temperature elevated'
           });
         }
         break;
@@ -173,30 +276,128 @@ export default function IntelligentAIAssistant({
           if (hour >= 16 && hour <= 20) {
             suggestions.push({
               type: 'contradiction',
-              message: 'The failure occurred during peak power demand hours (4-8 PM). Are you certain there were no utility issues, power dips, or electrical disturbances?',
+              message: 'Failure during peak power hours (4-8 PM). Check: voltage dips, power quality issues, electrical disturbances, or grid instability.',
             });
           }
         }
+        suggestions.push({
+          type: 'context',
+          message: 'Consider: weather conditions, power quality, construction nearby, process upsets, or other equipment failures.',
+        });
+        break;
+
+      case 'installation_details':
+        suggestions.push({
+          type: 'context',
+          message: 'Document foundation condition, piping stress, support adequacy, and installation quality.',
+        });
+        suggestions.push({
+          type: 'example',
+          message: 'Example: "Concrete foundation intact, no cracks, piping properly supported, no visible stress, grout condition good."',
+          value: 'Foundation stable, piping properly supported, no installation defects'
+        });
         break;
     }
   };
 
   const generateEquipmentSpecificGuidance = (suggestions: AISuggestion[]) => {
     const equipmentType = evidenceData.equipment_type || '';
-    const problemDescription = evidenceData.observed_problem || '';
+    const problemDescription = evidenceData.observed_problem?.toLowerCase() || '';
+    const questionId = currentQuestion.id;
     
     if (equipmentType.includes('Centrifugal Pump')) {
-      if (problemDescription.toLowerCase().includes('vibration')) {
-        suggestions.push({
-          type: 'next_step',
-          message: 'For pump vibration issues, consider collecting: bearing condition, alignment status, impeller condition, and suction conditions.',
-        });
+      // Vibration-specific guidance
+      if (problemDescription.includes('vibration')) {
+        if (questionId === 'bearing_condition') {
+          suggestions.push({
+            type: 'context',
+            message: 'Pump vibration usually indicates bearing wear. Check: vibration spectrum (1X, 2X, 3X speed), temperature, and grease condition.',
+          });
+        }
+        if (questionId === 'alignment_status') {
+          suggestions.push({
+            type: 'context',
+            message: 'Misalignment causes vibration at 2X running speed. Check coupling condition and last alignment date.',
+          });
+        }
+        if (questionId === 'installation_details') {
+          suggestions.push({
+            type: 'context',
+            message: 'Soft foot or foundation issues cause random vibration. Check foundation bolts and grouting.',
+          });
+        }
       }
       
-      if (problemDescription.toLowerCase().includes('seal')) {
+      // Seal-specific guidance
+      if (problemDescription.includes('seal')) {
+        if (questionId === 'operating_conditions') {
+          suggestions.push({
+            type: 'context',
+            message: 'Seal failures link to operating conditions. Check: suction pressure (cavitation), fluid temperature, and contamination.',
+          });
+        }
+        if (questionId === 'maintenance_history') {
+          suggestions.push({
+            type: 'context',
+            message: 'Recent seal work often causes failures. Was installation per procedure? OEM parts? Proper torque? Clean environment?',
+          });
+        }
+        if (questionId === 'external_influences') {
+          suggestions.push({
+            type: 'context',
+            message: 'External factors affecting seals: process upset, temperature spike, contamination, power disruption causing sudden stop.',
+          });
+        }
+      }
+
+      // Flow/Performance issues
+      if (problemDescription.includes('flow') || problemDescription.includes('pressure')) {
+        if (questionId === 'operating_conditions') {
+          suggestions.push({
+            type: 'context',
+            message: 'For flow/pressure issues, document: actual vs design flow, suction/discharge pressures, NPSH available vs required.',
+          });
+        }
+        if (questionId === 'impeller_condition') {
+          suggestions.push({
+            type: 'context',
+            message: 'Performance loss indicates impeller wear, damage, or blockage. Check for erosion, corrosion, or foreign objects.',
+          });
+        }
+      }
+
+      // Temperature-related
+      if (problemDescription.includes('temperature') || problemDescription.includes('hot')) {
+        if (questionId === 'bearing_condition') {
+          suggestions.push({
+            type: 'context',
+            message: 'High temperature usually means bearing failure. Check lubrication level, contamination, and bearing clearances.',
+          });
+        }
+        if (questionId === 'seal_condition') {
+          suggestions.push({
+            type: 'context',
+            message: 'Heat damages seals. Look for thermal distortion, hardening, cracking, and inadequate cooling/flushing.',
+          });
+        }
+      }
+    }
+
+    // General equipment guidance for other types
+    if (equipmentType.includes('Motor')) {
+      if (questionId === 'electrical_condition') {
         suggestions.push({
           type: 'context',
-          message: 'Pump seal failures are often caused by: dry running, excessive heat, contamination, or incorrect installation.',
+          message: 'Check motor parameters: current balance, insulation resistance, winding temperature, and power quality.',
+        });
+      }
+    }
+
+    if (equipmentType.includes('Valve')) {
+      if (questionId === 'actuator_condition') {
+        suggestions.push({
+          type: 'context',
+          message: 'For valve issues, check actuator: air supply pressure, positioner calibration, stem packing, and travel limits.',
         });
       }
     }
@@ -279,29 +480,100 @@ export default function IntelligentAIAssistant({
   const generateValueValidation = (suggestions: AISuggestion[]) => {
     const questionId = currentQuestion.id;
     const value = currentValue;
+    const equipmentType = evidenceData.equipment_type || '';
     
     switch (questionId) {
       case 'equipment_tag':
         if (typeof value === 'string' && value.length < 3) {
           suggestions.push({
             type: 'validation',
-            message: 'Equipment tag seems short. Most plant tags are 4-10 characters. Please verify this is the complete tag.',
+            message: 'Equipment tag seems short. Most plant tags are 4-10 characters. Check nameplate for complete tag.',
           });
         }
         break;
         
       case 'observed_problem':
         if (typeof value === 'string') {
-          if (value.length < 20) {
-            suggestions.push({
-              type: 'improvement',
-              message: 'More detail would help. Consider adding: timeline, severity, any unusual sounds/smells, what happened just before.',
-            });
+          if (value.length < 30) {
+            if (equipmentType.includes('Pump')) {
+              suggestions.push({
+                type: 'improvement',
+                message: 'Add specifics: What type of leak? Where exactly? How much vibration? What sounds? Temperature readings?',
+              });
+            } else {
+              suggestions.push({
+                type: 'improvement',
+                message: 'Include: exact symptoms, measurements, timeline, progression, and final state.',
+              });
+            }
           }
           if (value.toLowerCase().includes('failed') && !value.toLowerCase().includes('how')) {
             suggestions.push({
               type: 'improvement',
-              message: 'Try to describe HOW it failed, not just that it failed. This helps identify the failure mode.',
+              message: 'Describe the failure mode: seized, leaked, cracked, worn, overheated? This reveals the root cause path.',
+            });
+          }
+          if (value.toLowerCase().includes('seal') && !value.toLowerCase().includes('leak')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'For seal issues, specify: leak rate, fluid type, location of leak, any noise or temperature change.',
+            });
+          }
+          if (value.toLowerCase().includes('vibration') && !value.includes('mm/s') && !value.includes('frequency')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'Quantify vibration: magnitude (mm/s), frequency (1X, 2X speed), location, and direction (axial/radial).',
+            });
+          }
+        }
+        break;
+
+      case 'seal_condition':
+        if (typeof value === 'string') {
+          if (value.toLowerCase() === 'fine' || value.toLowerCase() === 'ok') {
+            suggestions.push({
+              type: 'validation',
+              message: 'If seal was "fine," how do you explain the seal leaking? Please inspect more closely and describe actual condition.',
+            });
+          }
+          if (!value.includes('visual') && !value.includes('inspect')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'Specify inspection method: visual only, or with measurements? Were seal faces accessible?',
+            });
+          }
+        }
+        break;
+
+      case 'maintenance_history':
+        if (typeof value === 'string') {
+          if (!value.includes('when') && !value.includes('date')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'Include dates of recent work. When was last maintenance? What was done? By whom?',
+            });
+          }
+          if (value.includes('recent') && !value.includes('OEM') && !value.includes('aftermarket')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'For recent parts replacement, specify: OEM or aftermarket parts? Installation procedure followed?',
+            });
+          }
+        }
+        break;
+
+      case 'operating_conditions':
+        if (typeof value === 'string' && equipmentType.includes('Pump')) {
+          if (!value.includes('pressure') && !value.includes('flow')) {
+            suggestions.push({
+              type: 'improvement',
+              message: 'Include key parameters: suction/discharge pressure, flow rate, temperature, and compare to design values.',
+            });
+          }
+          if (value.includes('normal') && !value.includes('actual')) {
+            suggestions.push({
+              type: 'validation',
+              message: 'Instead of "normal," provide actual readings: pressure in bar/psi, flow in m³/h, temperature in °C.',
             });
           }
         }
