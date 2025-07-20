@@ -255,16 +255,14 @@ export default function NewAnalysis() {
                   }
                 </Button>
                 
-                {uploadedFiles.length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={skipToEvidenceCollection}
-                    disabled={createAnalysisMutation.isPending}
-                    className="w-full"
-                  >
-                    Skip Files - Proceed to Evidence Collection
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={skipToEvidenceCollection}
+                  disabled={createAnalysisMutation.isPending}
+                  className="w-full"
+                >
+                  Skip Files - Proceed to Evidence Collection
+                </Button>
               </div>
             </CardContent>
           </Card>

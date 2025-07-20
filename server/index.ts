@@ -3,7 +3,16 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
+
+// Conditional JSON parsing - skip for multipart requests
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next(); // Skip JSON parsing for multipart
+  }
+  express.json()(req, res, next);
+});
+
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
