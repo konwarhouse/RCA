@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EQUIPMENT_TYPES } from "@shared/schema";
+import AIEvidenceValidator from "@/components/ai-evidence-validator";
 
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
@@ -27,6 +28,8 @@ export default function EvidenceCollection() {
   const [evidenceData, setEvidenceData] = useState<any>({});
   const [completeness, setCompleteness] = useState(0);
   const [questionnaire, setQuestionnaire] = useState<any[]>([]);
+  const [aiValidation, setAiValidation] = useState<any>(null);
+  const [showAIValidator, setShowAIValidator] = useState(true);
 
   // Fetch investigation and questionnaire
   const { data: investigationData, isLoading } = useQuery({
@@ -331,6 +334,18 @@ export default function EvidenceCollection() {
         </CardContent>
       </Card>
 
+      {/* AI Evidence Validator */}
+      {showAIValidator && questionnaire.length > 0 && (
+        <AIEvidenceValidator
+          evidenceData={evidenceData}
+          questionnaire={questionnaire}
+          onValidationUpdate={setAiValidation}
+          onPromptResponse={(fieldId, response) => {
+            handleFieldChange(fieldId, response);
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Section Navigation */}
@@ -445,9 +460,19 @@ export default function EvidenceCollection() {
                 </Button>
               ) : canProceedToAnalysis ? (
                 <Button
-                  onClick={() => proceedToAnalysisMutation.mutate()}
-                  disabled={proceedToAnalysisMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    if (!aiValidation?.readyForAnalysis) {
+                      toast({
+                        title: "Evidence Insufficient",
+                        description: "Please address AI validation prompts before proceeding to analysis.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    proceedToAnalysisMutation.mutate();
+                  }}
+                  disabled={proceedToAnalysisMutation.isPending || (aiValidation && !aiValidation.readyForAnalysis)}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                 >
                   {proceedToAnalysisMutation.isPending ? (
                     "Generating Analysis..."

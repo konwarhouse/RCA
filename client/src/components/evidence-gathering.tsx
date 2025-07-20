@@ -141,6 +141,9 @@ export default function EvidenceGathering({ analysis, onComplete }: EvidenceGath
       });
     }
 
+    // Check for missing maintenance history - declare histData first
+    const histData = analysis.historicalData as any;
+    
     // Alarm and setpoint questions
     if (!histData?.eventMetadata?.active_alarms) {
       questions.push({
@@ -163,9 +166,6 @@ export default function EvidenceGathering({ analysis, onComplete }: EvidenceGath
         context: 'Environmental factors significantly impact equipment reliability'
       });
     }
-
-    // Check for missing maintenance history
-    const histData = analysis.historicalData as any;
     if (!histData?.maintenanceRecords || histData.maintenanceRecords.length === 0) {
       questions.push({
         id: 'maintenance_history',
