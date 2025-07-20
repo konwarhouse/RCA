@@ -23,6 +23,8 @@ interface AIAssistantProps {
   evidenceData: any;
   onSuggestion: (value: string) => void;
   onFieldComplete: () => void;
+  completedSections?: string[];
+  investigationType?: string;
 }
 
 interface AISuggestion {
@@ -37,18 +39,31 @@ export default function AIAssistant({
   currentValue, 
   evidenceData,
   onSuggestion,
-  onFieldComplete 
+  onFieldComplete,
+  completedSections = [],
+  investigationType = 'equipment_failure'
 }: AIAssistantProps) {
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
   const [isExpanded, setIsExpanded] = useState(true);
   const [conversationMode, setConversationMode] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'ai', message: string}>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [sectionSummary, setSectionSummary] = useState('');
+  const [contradictoryEvidence, setContradictoryEvidence] = useState<string[]>([]);
 
   useEffect(() => {
     if (currentQuestion) {
       generateIntelligentSuggestions();
+      checkForContradictions();
     }
   }, [currentQuestion, currentValue, evidenceData]);
+
+  useEffect(() => {
+    if (completedSections.length > 0) {
+      generateSectionSummary();
+    }
+  }, [completedSections]);
 
   const generateIntelligentSuggestions = () => {
     setIsTyping(true);
@@ -70,6 +85,12 @@ export default function AIAssistant({
       
       // Next steps suggestions
       generateNextStepSuggestions(newSuggestions);
+      
+      // Dynamic follow-ups based on contradictory evidence
+      generateContradictionPrompts(newSuggestions);
+      
+      // Best practice references
+      generateBestPracticeReferences(newSuggestions);
       
       setSuggestions(newSuggestions);
       setIsTyping(false);

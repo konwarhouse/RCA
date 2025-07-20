@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EQUIPMENT_TYPES } from "@shared/schema";
 import AIEvidenceValidator from "@/components/ai-evidence-validator";
-import AIAssistant from "@/components/ai-assistant";
+import IntelligentAIAssistant from "@/components/intelligent-ai-assistant";
 
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
@@ -447,12 +447,14 @@ export default function EvidenceCollection() {
                   
                   {/* AI Assistant for current field */}
                   {currentFieldQuestion?.id === question.id && (
-                    <AIAssistant
+                    <IntelligentAIAssistant
                       currentQuestion={question}
                       currentValue={evidenceData[question.id]}
                       evidenceData={evidenceData}
                       onSuggestion={(value) => handleFieldChange(question.id, value)}
                       onFieldComplete={() => setCurrentFieldQuestion(null)}
+                      completedSections={sections.slice(0, sections.indexOf(currentSection))}
+                      investigationType={investigationData?.investigationType}
                     />
                   )}
                 </div>
