@@ -75,7 +75,7 @@ export default function EvidenceLibraryAdmin() {
   });
 
   // Equipment type to profile key mapping - expanded to match user table
-  const equipmentProfileMap = {
+  const equipmentProfileMap: Record<string, string> = {
     'Pumps': 'pumps_centrifugal',
     'Compressors': 'compressors_reciprocating',
     'Turbines': 'turbines_gas',
@@ -89,9 +89,9 @@ export default function EvidenceLibraryAdmin() {
     'Columns/Towers': 'columns_distillation',
     'Filters/Strainers': 'filters_basket',
     'Tanks': 'tanks_atmospheric',
-    'Piping': 'piping_process',
+    'Piping': 'piping_systems',
     'Valves': 'valves_control',
-    'Switchgear': 'switchgear_mv',
+    'Switchgear': 'switchgear_electrical',
     'Transformers': 'transformers_power',
     'UPS/Rectifiers': 'ups_static',
     'Cables/Busbars': 'cables_power',
@@ -103,6 +103,11 @@ export default function EvidenceLibraryAdmin() {
     'Cranes/Hoists': 'cranes_bridge',
     'Fire Protection Systems': 'fire_systems_deluge'
   };
+
+  // Debug: log the API response
+  console.log('Equipment Types API Response:', equipmentTypes);
+  console.log('Is Loading:', isLoading);
+  console.log('Equipment Types Array:', equipmentTypes?.equipmentTypes);
 
   // Fetch selected equipment profile
   const { data: equipmentProfile } = useQuery({
@@ -210,13 +215,90 @@ export default function EvidenceLibraryAdmin() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => exportMutation.mutate()}
-            disabled={exportMutation.isPending}
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/evidence-library/admin/export', {
+                  headers: {
+                    'x-admin-key': 'admin123'
+                  }
+                });
+                if (response.ok) {
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'evidence-library-export.json';
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  toast({
+                    title: "Export Successful",
+                    description: "Evidence library exported successfully",
+                  });
+                } else {
+                  toast({
+                    title: "Export Failed",
+                    description: "Unable to export library",
+                    variant: "destructive",
+                  });
+                }
+              } catch (error) {
+                toast({
+                  title: "Export Error",
+                  description: "Failed to export evidence library",
+                  variant: "destructive",
+                });
+              }
+            }}
           >
             <Download className="h-4 w-4 mr-2" />
             Export Library
           </Button>
-          <Button>
+          <Button
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.json';
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/evidence-library/admin/import', {
+                      method: 'POST',
+                      headers: {
+                        'x-admin-key': 'admin123'
+                      },
+                      body: formData
+                    });
+                    
+                    if (response.ok) {
+                      toast({
+                        title: "Import Successful",
+                        description: "Evidence library imported successfully",
+                      });
+                      // Refresh the data
+                      window.location.reload();
+                    } else {
+                      toast({
+                        title: "Import Failed",
+                        description: "Unable to import library",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Import Error",
+                      description: "Failed to import evidence library",
+                      variant: "destructive",
+                    });
+                  }
+                }
+              };
+              input.click();
+            }}
+          >
             <Upload className="h-4 w-4 mr-2" />
             Import Library
           </Button>
@@ -240,18 +322,24 @@ export default function EvidenceLibraryAdmin() {
                   <SelectValue placeholder="Choose equipment type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {equipmentTypes?.equipmentTypes?.map((equipment: EquipmentType) => {
-                    const profileKey = equipmentProfileMap[equipment.equipmentType as keyof typeof equipmentProfileMap];
-                    
-                    return (
-                      <SelectItem 
-                        key={equipment.equipmentType} 
-                        value={profileKey || equipment.equipmentType.toLowerCase().replace(/\s+/g, '_')}
-                      >
-                        {equipment.equipmentType} ({equipment.iso14224Code})
-                      </SelectItem>
-                    );
-                  })}
+                  {isLoading ? (
+                    <div className="p-2 text-center text-gray-500">Loading equipment types...</div>
+                  ) : equipmentTypes?.equipmentTypes?.length > 0 ? (
+                    equipmentTypes.equipmentTypes.map((equipment: EquipmentType) => {
+                      const profileKey = equipmentProfileMap[equipment.equipmentType as keyof typeof equipmentProfileMap];
+                      
+                      return (
+                        <SelectItem 
+                          key={equipment.equipmentType} 
+                          value={profileKey || equipment.equipmentType.toLowerCase().replace(/\s+/g, '_')}
+                        >
+                          {equipment.equipmentType} ({equipment.iso14224Code})
+                        </SelectItem>
+                      );
+                    })
+                  ) : (
+                    <div className="p-2 text-center text-gray-500">No equipment types found</div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

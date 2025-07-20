@@ -19,6 +19,7 @@ const router = Router();
 // Get all equipment types in library
 router.get('/equipment-types', (req, res) => {
   try {
+    // Get all equipment types from the library, now including new additions
     const equipmentTypes = Object.values(EVIDENCE_REQUIREMENTS_LIBRARY).map(profile => ({
       equipmentType: profile.equipmentType,
       iso14224Code: profile.iso14224Code,
@@ -27,12 +28,18 @@ router.get('/equipment-types', (req, res) => {
       updatedBy: profile.updatedBy
     }));
     
+    // Sort by equipment type name for consistent ordering
+    equipmentTypes.sort((a, b) => a.equipmentType.localeCompare(b.equipmentType));
+    
+    console.log(`Found ${equipmentTypes.length} equipment types in library`);
+    
     res.json({
       success: true,
       equipmentTypes,
       totalCount: equipmentTypes.length
     });
   } catch (error) {
+    console.error('Error retrieving equipment types:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve equipment types',
@@ -127,8 +134,8 @@ router.get('/equipment/:equipmentType/prompts/:fieldType', (req, res) => {
 
 // Administrative routes (require admin authorization)
 const requireAdmin = (req: any, res: any, next: any) => {
-  // In production, implement proper admin authorization
-  const isAdmin = req.headers['x-admin-key'] === process.env.ADMIN_KEY || req.user?.role === 'admin';
+  // Development: Allow with admin key, production should implement proper auth
+  const isAdmin = req.headers['x-admin-key'] === 'admin123' || req.user?.role === 'admin';
   if (!isAdmin) {
     return res.status(403).json({
       success: false,

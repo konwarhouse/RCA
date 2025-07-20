@@ -770,6 +770,968 @@ export const EVIDENCE_REQUIREMENTS_LIBRARY: Record<string, EquipmentEvidenceProf
     ],
     lastUpdated: '2025-01-20',
     updatedBy: 'RCA System Admin'
+  },
+
+  'generators_synchronous': {
+    equipmentType: 'Generators',
+    iso14224Code: 'GE-007',
+    subtypes: ['Synchronous', 'Induction'],
+    requiredTrendData: [
+      {
+        id: 'output_voltage',
+        name: 'Output Voltage',
+        description: 'Generator terminal voltage',
+        units: 'V',
+        mandatory: true,
+        samplingFrequency: '1 second',
+        typicalRange: '±5% of rated'
+      },
+      {
+        id: 'output_current',
+        name: 'Output Current',
+        description: 'Three-phase generator current',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '1 second',
+        typicalRange: '0-100% of rated'
+      },
+      {
+        id: 'frequency',
+        name: 'Frequency',
+        description: 'Generator output frequency',
+        units: 'Hz',
+        mandatory: true,
+        samplingFrequency: '1 second',
+        typicalRange: '±0.5% of rated'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'trend_chart',
+        name: 'Generator Output Trends',
+        description: 'Voltage, current, and frequency trend charts',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 25
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Generator failures often involve voltage regulation, frequency control, or excitation system issues',
+        prompt: 'Describe generator symptoms: voltage/frequency deviations, current imbalance, any trips or load rejections. Include excitation system status.',
+        examples: [
+          'Voltage regulation poor ±8% variation, frequency drift to 49.2 Hz under load, exciter current 15% above normal',
+          'Generator trip on undervoltage, unable to maintain 11kV output, excitation system fault alarm'
+        ],
+        validation: 'Must include voltage, current, and frequency measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'excitation_failure',
+        name: 'Excitation System Failure',
+        description: 'AVR or exciter malfunction affecting voltage control',
+        typicalSymptoms: ['Voltage instability', 'Poor regulation', 'Exciter trips'],
+        criticalEvidence: ['trend_chart', 'output_voltage'],
+        diagnosticQuestions: [
+          'Is AVR functioning properly?',
+          'Any exciter system alarms?',
+          'Voltage regulation within limits?'
+        ],
+        commonCauses: ['AVR failure', 'Exciter winding fault', 'Control system malfunction']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'voltage_unstable AND frequency_drift',
+        suggestion: 'Voltage instability with frequency drift indicates excitation or governor control issues.',
+        additionalEvidence: ['excitation_system_status', 'governor_response_test']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'fans_centrifugal': {
+    equipmentType: 'Fans / Blowers',
+    iso14224Code: 'FN-008',
+    subtypes: ['Axial', 'Centrifugal'],
+    requiredTrendData: [
+      {
+        id: 'vibration_overall',
+        name: 'Overall Vibration',
+        description: 'Fan vibration levels',
+        units: 'mm/s',
+        mandatory: true,
+        samplingFrequency: '1 Hz continuous',
+        typicalRange: '2.8-7.1 mm/s'
+      },
+      {
+        id: 'flow_rate',
+        name: 'Flow Rate',
+        description: 'Air flow through fan',
+        units: 'm³/h',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design specification'
+      },
+      {
+        id: 'static_pressure',
+        name: 'Static Pressure',
+        description: 'Fan discharge pressure',
+        units: 'Pa',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design curve'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'vibration_chart',
+        name: 'Vibration Chart',
+        description: 'Fan vibration trend analysis',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 20
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Fan failures typically involve imbalance, bearing issues, or aerodynamic problems',
+        prompt: 'Describe fan symptoms: vibration levels, flow/pressure changes, unusual noise, bearing temperatures. Include operational conditions.',
+        examples: [
+          'High vibration 12 mm/s at 1X speed, flow reduced 20%, unusual noise from impeller area',
+          'Bearing temperature 95°C (normal 65°C), vibration increased gradually over 2 weeks'
+        ],
+        validation: 'Must include vibration measurements and performance data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'imbalance',
+        name: 'Fan Imbalance',
+        description: 'Impeller imbalance causing vibration',
+        typicalSymptoms: ['High vibration', 'Bearing wear', 'Noise'],
+        criticalEvidence: ['vibration_chart', 'vibration_overall'],
+        diagnosticQuestions: [
+          'Is vibration at 1X running frequency?',
+          'Any recent impeller damage?',
+          'When was last balancing performed?'
+        ],
+        commonCauses: ['Blade erosion', 'Debris buildup', 'Manufacturing tolerance', 'Blade loss']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'vibration_high AND flow_reduced',
+        suggestion: 'High vibration with reduced flow indicates impeller problems. Check for damage or debris.',
+        additionalEvidence: ['impeller_inspection_photos', 'blade_condition_assessment']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'boilers_water_tube': {
+    equipmentType: 'Boilers',
+    iso14224Code: 'BO-009',
+    subtypes: ['Water Tube', 'Fire Tube'],
+    requiredTrendData: [
+      {
+        id: 'drum_pressure',
+        name: 'Drum Pressure',
+        description: 'Steam drum pressure',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: 'Per design pressure'
+      },
+      {
+        id: 'steam_temperature',
+        name: 'Steam Temperature',
+        description: 'Superheated steam temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: 'Per design specification'
+      },
+      {
+        id: 'feedwater_level',
+        name: 'Feedwater Level',
+        description: 'Drum water level',
+        units: '%',
+        mandatory: true,
+        samplingFrequency: '5 seconds',
+        typicalRange: '40-60% normal operating'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'trend_plots',
+        name: 'Boiler Trend Plots',
+        description: 'Pressure, temperature, and level trends',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 30
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Boiler problems involve pressure/temperature control, water level, or combustion issues',
+        prompt: 'Describe boiler symptoms: pressure/temperature deviations, level control issues, combustion problems, safety valve operations.',
+        examples: [
+          'Drum pressure fluctuating ±2 bar, steam temp 50°C below setpoint, frequent level alarms',
+          'Safety valve lifted at 8.5 bar (set 8.2), pressure control unstable, feedwater pump trips'
+        ],
+        validation: 'Must include pressure, temperature, and level data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'tube_failure',
+        name: 'Boiler Tube Failure',
+        description: 'Water tube leak or rupture',
+        typicalSymptoms: ['Pressure loss', 'Water loss', 'Steam plume', 'Level deviation'],
+        criticalEvidence: ['trend_plots', 'drum_pressure', 'feedwater_level'],
+        diagnosticQuestions: [
+          'Location of tube failure?',
+          'Rate of pressure/level loss?',
+          'Any overheating indications?'
+        ],
+        commonCauses: ['Overheating', 'Corrosion', 'Erosion', 'Thermal stress', 'Poor water quality']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'pressure_loss AND level_drop',
+        suggestion: 'Pressure loss with level drop indicates tube leak. Locate and isolate affected section.',
+        additionalEvidence: ['tube_inspection_photos', 'water_chemistry_analysis']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'transformers_power': {
+    equipmentType: 'Transformers',
+    iso14224Code: 'TR-010',
+    subtypes: ['Power', 'Distribution', 'Instrument'],
+    requiredTrendData: [
+      {
+        id: 'oil_temperature',
+        name: 'Oil Temperature',
+        description: 'Transformer oil temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Ambient + 55°C max'
+      },
+      {
+        id: 'winding_temperature',
+        name: 'Winding Temperature',
+        description: 'Transformer winding temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Oil temp + 23°C max'
+      },
+      {
+        id: 'load_current',
+        name: 'Load Current',
+        description: 'Primary and secondary current',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: '0-100% of rated'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'dga_report',
+        name: 'Dissolved Gas Analysis Report',
+        description: 'DGA results showing gas concentrations and ratios',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 10
+      },
+      {
+        id: 'oil_test',
+        name: 'Oil Quality Test',
+        description: 'Oil dielectric strength, moisture, acidity tests',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 10
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Transformer failures involve insulation breakdown, overheating, or oil degradation',
+        prompt: 'Describe transformer symptoms: temperature rises, oil condition, DGA results, any partial discharge or arcing sounds.',
+        examples: [
+          'Oil temp 85°C (normal 65°C), DGA shows H2=150ppm, C2H2=25ppm, crackling sounds observed',
+          'Winding temp alarm 120°C, oil level low, moisture content 35ppm (limit 20ppm)'
+        ],
+        validation: 'Must include temperature readings and oil analysis data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'insulation_breakdown',
+        name: 'Insulation System Breakdown',
+        description: 'Deterioration of transformer insulation',
+        typicalSymptoms: ['High temperature', 'Abnormal DGA', 'Partial discharge', 'Oil degradation'],
+        criticalEvidence: ['dga_report', 'oil_test', 'winding_temperature'],
+        diagnosticQuestions: [
+          'What gases are elevated in DGA?',
+          'Is insulation resistance adequate?',
+          'Any evidence of arcing or tracking?'
+        ],
+        commonCauses: ['Thermal aging', 'Moisture ingress', 'Overvoltage', 'Contamination', 'Design defects']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'temperature_high AND dga_abnormal',
+        suggestion: 'High temperature with abnormal DGA indicates insulation stress. Monitor closely and consider offline inspection.',
+        additionalEvidence: ['insulation_resistance_test', 'partial_discharge_measurement']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'agitators_mixers': {
+    equipmentType: 'Agitators / Mixers',
+    iso14224Code: 'AG-011',
+    subtypes: ['Top Entry', 'Bottom Entry', 'Side Entry'],
+    requiredTrendData: [
+      {
+        id: 'vibration_overall',
+        name: 'Overall Vibration',
+        description: 'Agitator vibration levels',
+        units: 'mm/s',
+        mandatory: true,
+        samplingFrequency: '1 Hz continuous',
+        typicalRange: '2.8-7.1 mm/s'
+      },
+      {
+        id: 'motor_current',
+        name: 'Motor Current',
+        description: 'Drive motor current consumption',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: '80-105% of FLA'
+      },
+      {
+        id: 'bearing_temperature',
+        name: 'Bearing Temperature',
+        description: 'Agitator bearing temperatures',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Ambient + 50°C max'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'vibration_chart',
+        name: 'Vibration Chart',
+        description: 'Agitator vibration trend analysis',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 20
+      },
+      {
+        id: 'maintenance_record',
+        name: 'Maintenance Record',
+        description: 'Recent maintenance and inspection history',
+        fileTypes: ['pdf', 'doc'],
+        mandatory: true,
+        maxSizeMB: 15
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Agitator problems typically involve imbalance, bearing wear, or seal failures',
+        prompt: 'Describe agitator symptoms: vibration levels, current changes, unusual noise, bearing temperatures, any seal leaks.',
+        examples: [
+          'High vibration 12 mm/s, motor current increased 15%, unusual noise from gearbox area',
+          'Bearing temperature 85°C (normal 60°C), seal leak observed, vibration increased gradually'
+        ],
+        validation: 'Must include vibration and current measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'bearing_failure',
+        name: 'Agitator Bearing Failure',
+        description: 'Bearing deterioration in thrust or radial bearings',
+        typicalSymptoms: ['High vibration', 'Temperature rise', 'Noise'],
+        criticalEvidence: ['vibration_chart', 'bearing_temperature'],
+        diagnosticQuestions: [
+          'Which bearing shows elevated temperature?',
+          'Is vibration at 1X or 2X frequency?',
+          'When was last lubrication?'
+        ],
+        commonCauses: ['Lubrication failure', 'Contamination', 'Misalignment', 'Overload']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'vibration_high AND current_high',
+        suggestion: 'High vibration with increased current indicates mechanical stress. Check alignment and bearing condition.',
+        additionalEvidence: ['alignment_check', 'lubrication_analysis']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'pressure_vessels': {
+    equipmentType: 'Pressure Vessels',
+    iso14224Code: 'PV-012', 
+    subtypes: ['Accumulators', 'Reactors', 'Separators'],
+    requiredTrendData: [
+      {
+        id: 'internal_pressure',
+        name: 'Internal Pressure',
+        description: 'Vessel internal pressure',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design pressure rating'
+      },
+      {
+        id: 'vessel_level',
+        name: 'Vessel Level',
+        description: 'Liquid level in vessel',
+        units: '%',
+        mandatory: true,
+        samplingFrequency: '30 seconds',
+        typicalRange: '20-80% normal operating'
+      },
+      {
+        id: 'shell_temperature',
+        name: 'Shell Temperature',
+        description: 'Vessel shell temperature',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per process design'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'ut_scan',
+        name: 'Ultrasonic Thickness Scan',
+        description: 'Wall thickness measurements for corrosion assessment',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 15
+      },
+      {
+        id: 'pressure_chart',
+        name: 'Pressure/Level Chart',
+        description: 'Pressure and level trend data',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 25
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Pressure vessel problems involve pressure deviations, level control, or structural integrity',
+        prompt: 'Describe vessel symptoms: pressure variations, level control issues, any structural concerns, wall thickness changes.',
+        examples: [
+          'Pressure fluctuating ±1.5 bar, level control unstable, wall thickness reduced 2mm from baseline',
+          'Internal pressure drop to 85% of normal, level sensor drift, visual corrosion on shell'
+        ],
+        validation: 'Must include pressure and wall thickness measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'corrosion_thinning',
+        name: 'Corrosion Wall Thinning',
+        description: 'Reduction in wall thickness due to corrosion',
+        typicalSymptoms: ['Wall thickness reduction', 'Pressure rating concern', 'Visual corrosion'],
+        criticalEvidence: ['ut_scan', 'pressure_chart'],
+        diagnosticQuestions: [
+          'What is current wall thickness vs. design?',
+          'Rate of corrosion progress?',
+          'Process chemistry changes?'
+        ],
+        commonCauses: ['Corrosive environment', 'Poor material selection', 'Process upset', 'Inadequate protection']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'thickness_reduced AND pressure_variation',
+        suggestion: 'Wall thinning with pressure variations indicates structural integrity concerns. Review pressure rating.',
+        additionalEvidence: ['stress_analysis', 'material_certification']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'columns_towers': {
+    equipmentType: 'Columns/Towers',
+    iso14224Code: 'CT-013',
+    subtypes: ['Distillation', 'Absorber', 'Stripper'],
+    requiredTrendData: [
+      {
+        id: 'column_pressure',
+        name: 'Column Pressure',
+        description: 'Operating pressure at various column heights',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design pressure profile'
+      },
+      {
+        id: 'temperature_profile',
+        name: 'Temperature Profile',
+        description: 'Temperature at multiple column trays',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per process simulation'
+      },
+      {
+        id: 'differential_pressure',
+        name: 'Differential Pressure',
+        description: 'Pressure drop across column sections',
+        units: 'mbar',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per hydraulic design'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'trend_chart',
+        name: 'Process Trend Chart',
+        description: 'Pressure and temperature trends across column',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 30
+      },
+      {
+        id: 'inspection_photo',
+        name: 'Internal Inspection Photos',
+        description: 'Photos of tray condition, damage, or fouling',
+        fileTypes: ['jpg', 'png'],
+        mandatory: true,
+        maxSizeMB: 50
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Column problems involve flooding, weeping, tray damage, or pressure/temperature deviations',
+        prompt: 'Describe column symptoms: pressure/temperature profile changes, differential pressure variations, product quality issues.',
+        examples: [
+          'Differential pressure increased 50%, flooding observed on tray 15, overhead purity dropped 2%',
+          'Temperature inversion between trays 8-12, pressure fluctuating, weeping evident during inspection'
+        ],
+        validation: 'Must include pressure and temperature profile data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'tray_damage',
+        name: 'Distillation Tray Damage',
+        description: 'Physical damage to column internals affecting separation',
+        typicalSymptoms: ['Flooding', 'Poor separation', 'High differential pressure', 'Entrainment'],
+        criticalEvidence: ['trend_chart', 'inspection_photo', 'differential_pressure'],
+        diagnosticQuestions: [
+          'Which trays show abnormal performance?',
+          'Evidence of mechanical damage?',
+          'Process upsets recently?'
+        ],
+        commonCauses: ['Hydraulic upset', 'Corrosion', 'Erosion', 'Thermal shock', 'Mechanical stress']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'differential_pressure_high AND flooding',
+        suggestion: 'High differential pressure with flooding indicates tray hydraulic problems. Inspect for damage or fouling.',
+        additionalEvidence: ['tray_inspection_report', 'hydraulic_simulation']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'filters_strainers': {
+    equipmentType: 'Filters/Strainers',
+    iso14224Code: 'FI-014',
+    subtypes: ['Basket', 'Cartridge', 'Backwash'],
+    requiredTrendData: [
+      {
+        id: 'differential_pressure',
+        name: 'Differential Pressure',
+        description: 'Pressure drop across filter element',
+        units: 'bar',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Clean: 0.1 bar, Changeout: 1.5 bar'
+      },
+      {
+        id: 'flow_rate',
+        name: 'Flow Rate',
+        description: 'Filtrate flow rate through filter',
+        units: 'm³/h',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design flow capacity'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'dp_chart',
+        name: 'Differential Pressure Chart',
+        description: 'Pressure drop trend showing filter loading',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 20
+      },
+      {
+        id: 'inspection_photo',
+        name: 'Filter Element Inspection Photos',
+        description: 'Photos of filter condition, plugging, or damage',
+        fileTypes: ['jpg', 'png'],
+        mandatory: true,
+        maxSizeMB: 30
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Filter problems typically involve plugging, element rupture, or bypass',
+        prompt: 'Describe filter symptoms: differential pressure rise rate, flow reduction, element condition, any bypass evidence.',
+        examples: [
+          'Differential pressure increased from 0.2 to 1.8 bar over 2 days, flow reduced 25%',
+          'Filter element ruptured, bypass valve opened, contamination downstream detected'
+        ],
+        validation: 'Must include differential pressure and flow measurements'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'filter_plugging',
+        name: 'Filter Element Plugging',
+        description: 'Excessive fouling of filter media reducing capacity',
+        typicalSymptoms: ['High differential pressure', 'Flow reduction', 'Frequent changeouts'],
+        criticalEvidence: ['dp_chart', 'inspection_photo'],
+        diagnosticQuestions: [
+          'What contaminants are present?',
+          'Filtration efficiency adequate?',
+          'Upstream process changes?'
+        ],
+        commonCauses: ['Contamination increase', 'Undersized filter', 'Poor pretreatment', 'Process upset']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'differential_pressure_high AND flow_reduced',
+        suggestion: 'High differential pressure with reduced flow indicates filter plugging. Inspect elements and upstream contamination.',
+        additionalEvidence: ['contamination_analysis', 'upstream_process_review']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'tanks_atmospheric': {
+    equipmentType: 'Tanks',
+    iso14224Code: 'TK-015',
+    subtypes: ['Atmospheric', 'Pressurized'],
+    requiredTrendData: [
+      {
+        id: 'tank_level',
+        name: 'Tank Level',
+        description: 'Liquid level in tank',
+        units: '%',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: '10-90% normal operating'
+      },
+      {
+        id: 'tank_pressure',
+        name: 'Tank Pressure',
+        description: 'Internal tank pressure (if applicable)',
+        units: 'mbar(g)',
+        mandatory: false,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design specification'
+      },
+      {
+        id: 'tank_temperature',
+        name: 'Tank Temperature',
+        description: 'Product temperature in tank',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '5 minutes',
+        typicalRange: 'Per product specifications'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'level_chart',
+        name: 'Level/Pressure Chart',
+        description: 'Tank level and pressure trend data',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 25
+      },
+      {
+        id: 'inspection_photo',
+        name: 'Tank Inspection Photos',
+        description: 'Photos of tank condition, roof, shell, or foundation',
+        fileTypes: ['jpg', 'png'],
+        mandatory: true,
+        maxSizeMB: 40
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Tank problems involve level control, structural deformation, or leakage',
+        prompt: 'Describe tank symptoms: level control issues, structural observations, roof movement, foundation settlement, any leaks.',
+        examples: [
+          'Tank level fluctuating ±5%, roof sagging observed, foundation cracks visible around perimeter',
+          'Level sensor drift detected, pressure relief valve weeping, shell deformation at 3m height'
+        ],
+        validation: 'Must include level data and visual inspection details'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'roof_deformation',
+        name: 'Floating Roof Deformation',
+        description: 'Structural damage to floating roof affecting operation',
+        typicalSymptoms: ['Roof sagging', 'Tilting', 'Seal leakage', 'Sticking'],
+        criticalEvidence: ['level_chart', 'inspection_photo'],
+        diagnosticQuestions: [
+          'Is roof moving freely with level changes?',
+          'Any visible structural damage?',
+          'Seal condition adequate?'
+        ],
+        commonCauses: ['Structural overload', 'Foundation settlement', 'Corrosion', 'Design inadequacy']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'level_anomaly AND structural_deformation',
+        suggestion: 'Level control issues with structural deformation indicate tank integrity concerns. Inspect foundation and shell.',
+        additionalEvidence: ['foundation_survey', 'shell_thickness_measurement']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'piping_systems': {
+    equipmentType: 'Piping',
+    iso14224Code: 'PI-016',
+    subtypes: ['Process', 'Utility', 'Steam', 'Water'],
+    requiredTrendData: [
+      {
+        id: 'line_pressure',
+        name: 'Line Pressure',
+        description: 'Operating pressure in piping system',
+        units: 'bar(g)',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design pressure rating'
+      },
+      {
+        id: 'flow_rate',
+        name: 'Flow Rate',
+        description: 'Flow rate through piping',
+        units: 'm³/h',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per design flow capacity'
+      },
+      {
+        id: 'pipe_temperature',
+        name: 'Pipe Temperature',
+        description: 'Process temperature in piping',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Per process design'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'leak_report',
+        name: 'Leak Detection Report',
+        description: 'Leak detection sensor data or visual inspection report',
+        fileTypes: ['pdf', 'csv'],
+        mandatory: true,
+        maxSizeMB: 15
+      },
+      {
+        id: 'pressure_trend',
+        name: 'Pressure Trend',
+        description: 'Pressure and flow trend data',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 20
+      },
+      {
+        id: 'inspection_photo',
+        name: 'Piping Inspection Photos',
+        description: 'Photos of pipe condition, supports, or damage',
+        fileTypes: ['jpg', 'png'],
+        mandatory: true,
+        maxSizeMB: 30
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Piping problems involve leaks, blockages, support failures, or thermal expansion issues',
+        prompt: 'Describe piping symptoms: pressure/flow variations, leaks, support condition, thermal expansion effects, vibration.',
+        examples: [
+          'Pressure drop 15% from normal, leak detected at flange connection, pipe support loose at bend',
+          'Flow restriction observed, temperature cycling ±25°C, expansion joint failure, vibration 8 mm/s'
+        ],
+        validation: 'Must include pressure, flow, and visual inspection data'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'pipe_leak',
+        name: 'Piping System Leak',
+        description: 'Loss of containment through pipe wall or joints',
+        typicalSymptoms: ['Pressure loss', 'Visible leak', 'Flow reduction', 'Environmental contamination'],
+        criticalEvidence: ['leak_report', 'pressure_trend', 'inspection_photo'],
+        diagnosticQuestions: [
+          'Location and size of leak?',
+          'Rate of pressure/flow loss?',
+          'Cause - corrosion, erosion, mechanical?'
+        ],
+        commonCauses: ['Corrosion', 'Erosion', 'Thermal stress', 'Mechanical damage', 'Joint failure']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'pressure_loss AND leak_detected',
+        suggestion: 'Pressure loss with detected leak requires immediate containment. Isolate section and assess damage extent.',
+        additionalEvidence: ['leak_rate_assessment', 'corrosion_survey']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
+  },
+
+  'switchgear_electrical': {
+    equipmentType: 'Switchgear',
+    iso14224Code: 'SW-017',
+    subtypes: ['LV', 'MV', 'HV', 'GIS'],
+    requiredTrendData: [
+      {
+        id: 'bus_voltage',
+        name: 'Bus Voltage',
+        description: 'Busbar voltage per phase',
+        units: 'V',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: '±5% of rated voltage'
+      },
+      {
+        id: 'load_current',
+        name: 'Load Current',
+        description: 'Current through breakers and feeders',
+        units: 'A',
+        mandatory: true,
+        samplingFrequency: '10 seconds',
+        typicalRange: '0-80% of rated current'
+      },
+      {
+        id: 'enclosure_temperature',
+        name: 'Enclosure Temperature',
+        description: 'Internal temperature of switchgear',
+        units: '°C',
+        mandatory: true,
+        samplingFrequency: '1 minute',
+        typicalRange: 'Ambient + 20°C max'
+      }
+    ],
+    requiredAttachments: [
+      {
+        id: 'trend_chart',
+        name: 'Electrical Trend Chart',
+        description: 'Voltage, current, and temperature trends',
+        fileTypes: ['csv', 'xlsx', 'png'],
+        mandatory: true,
+        maxSizeMB: 25
+      },
+      {
+        id: 'ir_scan',
+        name: 'Infrared Thermal Scan',
+        description: 'Thermal imaging of electrical connections',
+        fileTypes: ['jpg', 'png', 'pdf'],
+        mandatory: true,
+        maxSizeMB: 30
+      },
+      {
+        id: 'maintenance_log',
+        name: 'Maintenance Log',
+        description: 'Recent maintenance and testing records',
+        fileTypes: ['pdf', 'doc'],
+        mandatory: true,
+        maxSizeMB: 15
+      }
+    ],
+    aiPromptTemplates: [
+      {
+        fieldType: 'observed_problem',
+        context: 'Switchgear problems involve breaker misoperations, overheating, or insulation failures',
+        prompt: 'Describe switchgear symptoms: breaker operations, trip events, temperature rises, any arcing or hot spots detected.',
+        examples: [
+          'Breaker failed to trip on overcurrent, hot spot 85°C on bus connection, phase A current 120% of rated',
+          'Unexpected trip of feeder breaker, insulation resistance 50MΩ (normal 1000MΩ), moisture detected'
+        ],
+        validation: 'Must include electrical measurements and thermal scan results'
+      }
+    ],
+    failureModes: [
+      {
+        id: 'breaker_malfunction',
+        name: 'Circuit Breaker Malfunction',
+        description: 'Failure of breaker to operate correctly during fault conditions',
+        typicalSymptoms: ['Failed to trip', 'Failed to close', 'Nuisance tripping', 'Arcing'],
+        criticalEvidence: ['trend_chart', 'ir_scan', 'maintenance_log'],
+        diagnosticQuestions: [
+          'Type of breaker malfunction?',
+          'Recent maintenance performed?',
+          'Trip coil and mechanism condition?'
+        ],
+        commonCauses: ['Mechanism wear', 'Contact deterioration', 'Control circuit failure', 'Contamination']
+      }
+    ],
+    smartSuggestions: [
+      {
+        condition: 'temperature_high AND current_imbalance',
+        suggestion: 'High temperature with current imbalance indicates connection problems. Check for loose connections and hot spots.',
+        additionalEvidence: ['connection_torque_check', 'contact_resistance_test']
+      }
+    ],
+    lastUpdated: '2025-01-20',
+    updatedBy: 'RCA System Admin'
   }
 };
 
