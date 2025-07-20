@@ -66,23 +66,23 @@ export default function NewAnalysis() {
     }
   });
 
-  // Create analysis mutation
+  // Create evidence collection session
   const createAnalysisMutation = useMutation({
     mutationFn: async () => {
-      const formData = new FormData();
-      
-      uploadedFiles.forEach(file => {
-        formData.append('files', file);
-      });
-
-      return apiRequest('/api/analyses/create', {
+      return apiRequest('/api/analyses/evidence', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          hasFiles: uploadedFiles.length > 0,
+          fileCount: uploadedFiles.length
+        })
       });
     },
     onSuccess: (analysis) => {
       toast({
-        title: "Analysis Created",
+        title: "Analysis Session Created",
         description: `Analysis ${analysis.analysisId} created successfully. Starting evidence collection...`
       });
       

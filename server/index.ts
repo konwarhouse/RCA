@@ -10,7 +10,7 @@ app.use((req, res, next) => {
   if (contentType.includes('multipart/form-data')) {
     return next();
   }
-  return express.json()(req, res, next);
+  return express.json({ limit: "10mb" })(req, res, next);
 });
 
 app.use(express.urlencoded({ extended: false }));
