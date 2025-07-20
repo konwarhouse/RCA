@@ -175,23 +175,23 @@ export default function HistorySection() {
                   <TableBody>
                     {paginatedAnalyses.map((analysis) => (
                       <TableRow key={analysis.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{analysis.analysisId}</TableCell>
+                        <TableCell className="font-medium">{analysis.investigationId}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
                               {analysis.equipmentType?.charAt(0).toUpperCase() + analysis.equipmentType?.slice(1).replace('_', ' ')}
                             </span>
-                            {analysis.equipmentId && (
-                              <span className="text-xs text-muted-foreground">{analysis.equipmentId}</span>
+                            {analysis.evidenceData?.equipment_tag && (
+                              <span className="text-xs text-muted-foreground">{analysis.evidenceData.equipment_tag}</span>
                             )}
                             {analysis.location && (
                               <span className="text-xs text-muted-foreground">{analysis.location}</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate">{analysis.issueDescription}</TableCell>
+                        <TableCell className="max-w-xs truncate">{analysis.whatHappened}</TableCell>
                         <TableCell className="max-w-xs truncate">
-                          {analysis.rootCause || "Processing..."}
+                          {analysis.cause || "Processing..."}
                         </TableCell>
                         <TableCell>
                           {analysis.confidence && (
@@ -213,7 +213,7 @@ export default function HistorySection() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => setLocation(`/analysis/${analysis.id}`)}
+                              onClick={() => setLocation(`/analysis/${analysis.investigationId}`)}
                             >
                               View Details
                             </Button>
