@@ -17,17 +17,17 @@ import StepwiseReasoning from "@/components/stepwise-reasoning";
 import MissingDataPrompts from "@/components/missing-data-prompts";
 
 export default function AnalysisDetail() {
-  const [, params] = useRoute("/analysis/:id");
+  const [, params] = useRoute("/investigation/:id");
   const [activeTab, setActiveTab] = useState("overview");
   const [showManualAdjustment, setShowManualAdjustment] = useState(false);
   
-  const analysisId = params?.id ? parseInt(params.id) : null;
+  const analysisId = params?.id;
 
   const { data: analysis, isLoading, error } = useQuery<Analysis>({
-    queryKey: [`/api/analyses/${analysisId}`],
+    queryKey: [`/api/investigations/${analysisId}`],
     enabled: !!analysisId,
     queryFn: async () => {
-      const response = await fetch(`/api/analyses/${analysisId}`);
+      const response = await fetch(`/api/investigations/${analysisId}`);
       if (!response.ok) throw new Error("Failed to fetch analysis");
       return response.json();
     },

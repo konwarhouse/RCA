@@ -199,13 +199,29 @@ export default function EvidenceCollection() {
 
       case 'boolean':
         return (
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id={question.id}
-              checked={value === true}
-              onCheckedChange={(checked) => handleFieldChange(question.id, checked)}
-            />
-            <Label htmlFor={question.id}>Yes</Label>
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id={`${question.id}_yes`}
+                name={question.id}
+                checked={value === true}
+                onChange={() => handleFieldChange(question.id, true)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <Label htmlFor={`${question.id}_yes`}>Yes</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id={`${question.id}_no`}
+                name={question.id}
+                checked={value === false}
+                onChange={() => handleFieldChange(question.id, false)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <Label htmlFor={`${question.id}_no`}>No</Label>
+            </div>
           </div>
         );
 
@@ -248,7 +264,28 @@ export default function EvidenceCollection() {
 
   const investigation = investigationData.investigation;
   const sections = [...new Set(questionnaire.map(q => q.section))];
-  const currentSectionQuestions = questionnaire.filter(q => q.section === currentSection);
+  
+  // Filter questions based on conditional logic
+  const shouldShowQuestion = (question: any) => {
+    if (!question.conditionalLogic) return true;
+    
+    const { dependsOn, condition } = question.conditionalLogic;
+    const dependentValue = evidenceData[dependsOn];
+    
+    if (condition === true) {
+      return dependentValue === true;
+    } else if (condition === false) {
+      return dependentValue === false;
+    } else if (condition === "any") {
+      return dependentValue !== undefined && dependentValue !== null && dependentValue !== '';
+    }
+    
+    return dependentValue === condition;
+  };
+  
+  const currentSectionQuestions = questionnaire
+    .filter(q => q.section === currentSection)
+    .filter(shouldShowQuestion);
   const canProceedToAnalysis = completeness >= 80;
 
   return (
