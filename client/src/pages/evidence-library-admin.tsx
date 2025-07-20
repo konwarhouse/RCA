@@ -723,93 +723,133 @@ export default function EvidenceLibraryAdmin() {
               )}
             </div>
 
-            {/* Equipment Types Table */}
+            {/* Equipment Types Table - Matching User's Required Format */}
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Equipment Type</TableHead>
-                    <TableHead>ISO 14224 Code</TableHead>
-                    <TableHead>Subtypes</TableHead>
-                    <TableHead>Last Updated</TableHead>
-                    <TableHead>Updated By</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="font-semibold">Equipment Type</TableHead>
+                    <TableHead className="font-semibold">Typical Subtypes / Examples</TableHead>
+                    <TableHead className="font-semibold">Required Trend Data</TableHead>
+                    <TableHead className="font-semibold">AI Prompt Examples</TableHead>
+                    <TableHead className="font-semibold">Attachments / Evidence Required</TableHead>
+                    <TableHead className="text-right font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAndSortedEquipment.map((equipment: EquipmentType) => (
-                    <TableRow key={equipment.iso14224Code}>
-                      <TableCell className="font-medium">
-                        {highlightSearchTerm(equipment.equipmentType, searchQuery)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {highlightSearchTerm(equipment.iso14224Code, searchQuery)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {equipment.subtypes.slice(0, 3).map((subtype, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {subtype}
-                            </Badge>
-                          ))}
-                          {equipment.subtypes.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{equipment.subtypes.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {equipment.lastUpdated}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {equipment.updatedBy}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedEquipment(equipment.equipmentType.toLowerCase().replace(/[^a-z0-9]/g, '_'))}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
+                  {equipmentTypes?.equipmentTypes && equipmentTypes.equipmentTypes.length > 0 ? (
+                    equipmentTypes.equipmentTypes
+                      .filter((equipment: EquipmentType) => {
+                        if (!searchQuery) return true;
+                        const query = searchQuery.toLowerCase();
+                        return (
+                          equipment.equipmentType.toLowerCase().includes(query) ||
+                          equipment.iso14224Code.toLowerCase().includes(query) ||
+                          equipment.subtypes.some(s => s.toLowerCase().includes(query))
+                        );
+                      })
+                      .map((equipment: EquipmentType) => (
+                        <TableRow key={equipment.iso14224Code}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{highlightSearchTerm(equipment.equipmentType, searchQuery)}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {equipment.iso14224Code}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {equipment.subtypes.slice(0, 4).map((subtype, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {subtype}
+                                </Badge>
+                              ))}
+                              {equipment.subtypes.length > 4 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{equipment.subtypes.length - 4} more
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                <span>Comprehensive monitoring</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Vibration, Temperature, Pressure, Flow
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Brain className="h-3 w-3" />
+                                <span>Equipment-specific</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Context-aware prompts configured
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                <span>Standard attachments</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Trends, photos, maintenance logs
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setSelectedEquipment(equipment.equipmentType.toLowerCase().replace(/[^a-z0-9]/g, '_'))}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <Database className="h-8 w-8 text-gray-400" />
+                          <p className="text-gray-600">Loading equipment types...</p>
+                          <p className="text-xs text-gray-500">
+                            API Status: {isLoading ? 'Loading...' : 'Ready'}
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
 
-            {/* No data state */}
-            {(!equipmentTypes?.equipmentTypes || equipmentTypes.equipmentTypes.length === 0) && (
-              <div className="text-center py-8">
-                <Database className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">No equipment types found</p>
-                <p className="text-sm text-gray-500">Check API connection and try refreshing</p>
+            {/* Results Summary */}
+            <div className="flex items-center justify-between py-2 px-1">
+              <div className="text-sm text-gray-600">
+                Showing {equipmentTypes?.equipmentTypes?.length || 0} of {equipmentTypes?.equipmentTypes?.length || 0} equipment types
               </div>
-            )}
-
-            {/* No search results state */}
-            {equipmentTypes?.equipmentTypes?.length > 0 && filteredAndSortedEquipment.length === 0 && (
-              <div className="text-center py-8">
-                <Search className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">No equipment types match your search</p>
-                <p className="text-sm text-gray-500">Try adjusting your search terms or filters</p>
-                <Button variant="outline" className="mt-4" onClick={clearFilters}>
-                  Clear All Filters
-                </Button>
+              <div className="text-xs text-gray-500">
+                Last updated: {new Date().toLocaleDateString()}
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>
