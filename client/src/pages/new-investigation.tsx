@@ -26,13 +26,14 @@ export default function NewInvestigation() {
   // Step 1: Problem Definition
   const createInvestigationMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/investigations/create', {
+      const response = await apiRequest('/api/investigations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
       });
+      return await response.json();
     },
     onSuccess: (investigation) => {
       toast({
