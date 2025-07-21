@@ -16,6 +16,8 @@ import IncidentReporting from "@/pages/incident-reporting";
 import EquipmentSelection from "@/pages/equipment-selection";
 import EvidenceChecklist from "@/pages/evidence-checklist";
 import EvidenceCollection from "@/pages/evidence-collection";
+import AIAnalysis from "@/pages/ai-analysis";
+import EngineerReview from "@/pages/engineer-review";
 import NotFound from "@/pages/not-found";
 
 
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/equipment-selection" component={EquipmentSelection} />
       <Route path="/evidence-checklist" component={EvidenceChecklist} />
       <Route path="/evidence-collection" component={EvidenceCollection} />
+      <Route path="/ai-analysis" component={AIAnalysis} />
+      <Route path="/engineer-review" component={EngineerReview} />
       <Route component={NotFound} />
     </Switch>
   );

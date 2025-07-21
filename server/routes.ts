@@ -436,6 +436,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Perform AI analysis (Steps 5-6)
+  app.post("/api/incidents/:id/perform-analysis", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { equipmentGroup, equipmentType, symptoms, evidenceChecklist, evidenceFiles } = req.body;
+
+      // Perform AI cross-matching and analysis
+      const analysis = await performAIAnalysis(equipmentGroup, equipmentType, symptoms, evidenceChecklist, evidenceFiles);
+      
+      // Update incident with analysis results
+      await investigationStorage.updateIncident(id, {
+        currentStep: 6,
+        workflowStatus: "analysis_complete",
+        analysisResults: analysis,
+      });
+
+      res.json({ analysis });
+    } catch (error) {
+      console.error("[RCA] Error performing AI analysis:", error);
+      res.status(500).json({ message: "Failed to perform AI analysis" });
+    }
+  });
+
+  // Get analysis results
+  app.get("/api/incidents/:id/analysis", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(id);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      res.json(incident.analysisResults || {});
+    } catch (error) {
+      console.error("[RCA] Error fetching analysis results:", error);
+      res.status(500).json({ message: "Failed to fetch analysis results" });
+    }
+  });
+
+  // Submit engineer review (Step 8)
+  app.post("/api/incidents/:id/engineer-review", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const reviewData = req.body;
+      
+      // Update incident with engineer review
+      const incident = await investigationStorage.updateIncident(id, {
+        currentStep: 8,
+        workflowStatus: reviewData.approved ? "approved" : "under_review",
+        engineerReview: reviewData,
+      });
+
+      res.json(incident);
+    } catch (error) {
+      console.error("[RCA] Error submitting engineer review:", error);
+      res.status(500).json({ message: "Failed to submit engineer review" });
+    }
+  });
+
+  // Generate final RCA report
+  app.post("/api/incidents/:id/generate-final-report", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { engineerReview } = req.body;
+
+      // Generate comprehensive RCA report
+      const reportUrl = await generateFinalReport(id, engineerReview);
+      
+      res.json({ reportUrl });
+    } catch (error) {
+      console.error("[RCA] Error generating final report:", error);
+      res.status(500).json({ message: "Failed to generate final report" });
+    }
+  });
+
   // Get analytics for dashboard
   app.get("/api/analytics", async (req, res) => {
     try {
@@ -1137,4 +1213,134 @@ async function generateEvidenceCategories(equipmentGroup: string, equipmentType:
   ];
 
   return categories;
+}
+
+async function performAIAnalysis(equipmentGroup: string, equipmentType: string, symptoms: string, evidenceChecklist: any[], evidenceFiles: any[]) {
+  // Simulate comprehensive AI analysis with cross-matching
+  const analysisResults = {
+    overallConfidence: 87,
+    analysisDate: new Date(),
+    rootCauses: [
+      {
+        id: "rc-001",
+        description: "Inadequate Lubrication Leading to Bearing Failure",
+        confidence: 92,
+        category: "Maintenance",
+        evidence: [
+          "Vibration trends show increasing high-frequency patterns",
+          "Maintenance records indicate extended lubrication intervals",
+          "Temperature monitoring shows elevated bearing temperatures"
+        ],
+        likelihood: "Very High" as const,
+        impact: "High" as const,
+        priority: 1
+      },
+      {
+        id: "rc-002", 
+        description: "Misalignment Due to Foundation Settlement",
+        confidence: 78,
+        category: "Mechanical",
+        evidence: [
+          "Coupling wear patterns indicate angular misalignment",
+          "Foundation inspection photos show visible settling",
+          "Historical alignment data shows progressive deterioration"
+        ],
+        likelihood: "High" as const,
+        impact: "Medium" as const,
+        priority: 2
+      },
+      {
+        id: "rc-003",
+        description: "Operating Outside Design Parameters",
+        confidence: 65,
+        category: "Operational",
+        evidence: [
+          "Process data shows frequent operation above rated capacity",
+          "Temperature logs exceed manufacturer specifications",
+          "Pressure fluctuations beyond design envelope"
+        ],
+        likelihood: "Medium" as const,
+        impact: "High" as const,
+        priority: 3
+      }
+    ],
+    recommendations: [
+      {
+        id: "rec-001",
+        title: "Implement Condition-Based Lubrication Program",
+        description: "Replace time-based lubrication with vibration and temperature monitoring to optimize lubrication intervals",
+        priority: "Immediate" as const,
+        category: "Maintenance",
+        estimatedCost: "$15,000",
+        timeframe: "2 weeks",
+        responsible: "Maintenance Manager",
+        preventsProbability: 95
+      },
+      {
+        id: "rec-002",
+        title: "Foundation Repair and Alignment Correction",
+        description: "Repair foundation settling and perform precision alignment to manufacturer specifications",
+        priority: "Short-term" as const,
+        category: "Mechanical",
+        estimatedCost: "$45,000",
+        timeframe: "4-6 weeks",
+        responsible: "Engineering Manager",
+        preventsProbability: 85
+      },
+      {
+        id: "rec-003",
+        title: "Operating Parameter Review and Training",
+        description: "Review and enforce operating limits, provide operator training on equipment limitations",
+        priority: "Short-term" as const,
+        category: "Operational",
+        estimatedCost: "$8,000",
+        timeframe: "3 weeks",
+        responsible: "Operations Manager",
+        preventsProbability: 70
+      },
+      {
+        id: "rec-004",
+        title: "Enhanced Condition Monitoring System",
+        description: "Install continuous vibration and temperature monitoring with automatic alerts",
+        priority: "Long-term" as const,
+        category: "Technology",
+        estimatedCost: "$25,000",
+        timeframe: "8-12 weeks",
+        responsible: "Reliability Engineer",
+        preventsProbability: 90
+      }
+    ],
+    crossMatchResults: {
+      libraryMatches: 23,
+      patternSimilarity: 89,
+      historicalData: [
+        "Similar bearing failure in centrifugal pump - Site A (2023)",
+        "Lubrication-related failure pattern - Equipment Type: Pump (2022)",
+        "Foundation settlement case study - Industrial facility (2021)",
+        "Misalignment failure analysis - Rotating equipment database"
+      ]
+    },
+    evidenceGaps: [
+      "Recent oil analysis results not provided - recommend immediate sampling",
+      "Thermal imaging data missing - could confirm bearing temperature patterns",
+      "Baseline alignment data not available - limits comparison analysis"
+    ],
+    additionalInvestigation: [
+      "Perform comprehensive oil analysis including particle count and contamination assessment",
+      "Conduct thermal imaging survey of all similar equipment",
+      "Review foundation design specifications and soil conditions",
+      "Analyze operational data for correlation with environmental factors"
+    ]
+  };
+
+  return analysisResults;
+}
+
+async function generateFinalReport(incidentId: number, engineerReview: any) {
+  // Generate comprehensive RCA report URL
+  const reportUrl = `/api/reports/rca-${incidentId}-${Date.now()}.pdf`;
+  
+  // In a real implementation, this would generate an actual PDF report
+  // For now, return a simulated URL
+  return reportUrl;
 }

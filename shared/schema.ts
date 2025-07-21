@@ -203,6 +203,9 @@ export const incidents = pgTable("incidents", {
   aiAnalysis: jsonb("ai_analysis"), // Root causes, contributing factors, recommendations
   analysisConfidence: decimal("analysis_confidence", { precision: 5, scale: 2 }),
   
+  // Engineer Review (Step 8)
+  engineerReview: jsonb("engineer_review"), // Engineer review and approval data
+  
   // Engineer review (Step 8)
   engineerReview: jsonb("engineer_review"), // Engineer insights and modifications
   finalizedAt: timestamp("finalized_at"),
