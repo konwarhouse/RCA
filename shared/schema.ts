@@ -205,9 +205,6 @@ export const incidents = pgTable("incidents", {
   
   // Engineer Review (Step 8)
   engineerReview: jsonb("engineer_review"), // Engineer review and approval data
-  
-  // Engineer review (Step 8)
-  engineerReview: jsonb("engineer_review"), // Engineer insights and modifications
   finalizedAt: timestamp("finalized_at"),
   finalizedBy: varchar("finalized_by"),
   
