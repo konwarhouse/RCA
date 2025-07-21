@@ -65,12 +65,20 @@ export default function EquipmentSelection() {
     queryFn: async () => {
       console.log('Fetching incident:', incidentId);
       const response = await fetch(`/api/incidents/${incidentId}`);
-      if (!response.ok) throw new Error('Failed to fetch incident');
+      console.log('Response status:', response.status, response.statusText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to fetch incident: ${response.status} ${errorText}`);
+      }
       const data = await response.json();
       console.log('Incident data:', data);
+      console.log('Is incident valid?', !!data, 'Has equipment group?', !!data?.equipmentGroup);
       return data;
     },
     enabled: !!incidentId,
+    retry: 1,
+    retryDelay: 1000,
   });
 
   // Fetch evidence library items based on the equipment group
@@ -123,7 +131,10 @@ export default function EquipmentSelection() {
     updateIncidentMutation.mutate(payload);
   };
 
+  console.log('Render check - incidentId:', incidentId, 'isLoadingIncident:', isLoadingIncident, 'incident exists:', !!incident);
+
   if (!incidentId) {
+    console.log('No incident ID - showing loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
@@ -153,6 +164,11 @@ export default function EquipmentSelection() {
           <div className="text-lg font-medium text-slate-900">Loading incident data...</div>
           <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
           {isLoadingIncident && <div className="text-sm text-blue-600 mt-1">Fetching from server...</div>}
+          {incidentError && (
+            <div className="text-sm text-red-600 mt-2">
+              Error: {incidentError.message}
+            </div>
+          )}
         </div>
       </div>
     );
