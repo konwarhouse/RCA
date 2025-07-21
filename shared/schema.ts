@@ -176,6 +176,7 @@ export const incidents = pgTable("incidents", {
   description: text("description").notNull(),
   equipmentGroup: varchar("equipment_group").notNull(),
   equipmentType: varchar("equipment_type").notNull(),
+  equipmentSubtype: varchar("equipment_subtype"), // NEW: Three-level cascading dropdown system
   equipmentId: varchar("equipment_id").notNull(),
   location: varchar("location").notNull(),
   reportedBy: varchar("reported_by").notNull(),
