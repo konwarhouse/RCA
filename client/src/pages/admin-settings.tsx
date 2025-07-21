@@ -52,12 +52,18 @@ export default function AdminSettings() {
     queryKey: ['/api/equipment-groups'],
     queryFn: () => apiRequest('/api/equipment-groups'),
   });
+  
+  // Debug logging
+  console.log('Equipment Groups:', equipmentGroups, 'Loading:', equipmentGroupsLoading);
 
   // Fetch risk rankings
   const { data: riskRankings, isLoading: riskRankingsLoading } = useQuery({
     queryKey: ['/api/risk-rankings'],
     queryFn: () => apiRequest('/api/risk-rankings'),
   });
+  
+  // Debug logging
+  console.log('Risk Rankings:', riskRankings, 'Loading:', riskRankingsLoading);
 
   // Test API key mutation
   const testKeyMutation = useMutation({
