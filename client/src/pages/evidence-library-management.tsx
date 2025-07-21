@@ -635,46 +635,52 @@ export default function EvidenceLibraryManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Equipment</TableHead>
-                      <TableHead>Failure Mode</TableHead>
-                      <TableHead>Codes</TableHead>
-                      <TableHead>Risk</TableHead>
-                      <TableHead>Required Data</TableHead>
+                      <TableHead>Equipment Group</TableHead>
+                      <TableHead>Equipment Type</TableHead>
+                      <TableHead>Subtype / Example</TableHead>
+                      <TableHead>Component / Failure Mode</TableHead>
+                      <TableHead>Equipment Code</TableHead>
+                      <TableHead>Failure Code</TableHead>
+                      <TableHead>Risk Ranking</TableHead>
+                      <TableHead>Required Trend Data / Evidence</TableHead>
+                      <TableHead>AI or Investigator Questions</TableHead>
+                      <TableHead>Attachments / Evidence Required</TableHead>
                       <TableHead>Root Cause Logic</TableHead>
+                      <TableHead>Blank Column 1</TableHead>
+                      <TableHead>Blank Column 2</TableHead>
+                      <TableHead>Blank Column 3</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {evidenceItems.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {item.equipmentGroup} - {item.equipmentType}
-                            </div>
-                            {item.subtypeExample && (
-                              <div className="text-sm text-gray-500">{item.subtypeExample}</div>
-                            )}
-                          </div>
-                        </TableCell>
+                        <TableCell>{item.equipmentGroup}</TableCell>
+                        <TableCell>{item.equipmentType}</TableCell>
+                        <TableCell>{item.subtypeExample || '-'}</TableCell>
                         <TableCell>{item.componentFailureMode}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{item.equipmentCode}</div>
-                            <div className="text-gray-500">{item.failureCode}</div>
-                          </div>
-                        </TableCell>
+                        <TableCell>{item.equipmentCode}</TableCell>
+                        <TableCell>{item.failureCode}</TableCell>
                         <TableCell>
                           <Badge className={getRiskBadgeColor(item.riskRanking)}>
                             {item.riskRanking}
                           </Badge>
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="truncate">{item.requiredTrendDataEvidence}</div>
+                          <div className="truncate">{item.requiredTrendDataEvidence || '-'}</div>
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="truncate">{item.rootCauseLogic}</div>
+                          <div className="truncate">{item.aiOrInvestigatorQuestions || '-'}</div>
                         </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate">{item.attachmentsEvidenceRequired || '-'}</div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate">{item.rootCauseLogic || '-'}</div>
+                        </TableCell>
+                        <TableCell>{item.blankColumn1 || '-'}</TableCell>
+                        <TableCell>{item.blankColumn2 || '-'}</TableCell>
+                        <TableCell>{item.blankColumn3 || '-'}</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button
