@@ -360,6 +360,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI evidence checklist (Step 3)
+  app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { equipmentGroup, equipmentType, symptoms } = req.body;
+
+      // Generate equipment-specific evidence checklist using AI or library data
+      const evidenceItems = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms);
+      
+      res.json({ evidenceItems });
+    } catch (error) {
+      console.error("[RCA] Error generating evidence checklist:", error);
+      res.status(500).json({ message: "Failed to generate evidence checklist" });
+    }
+  });
+
+  // Update evidence checklist progress (Step 3 completion)
+  app.put("/api/incidents/:id/evidence-progress", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const incident = await investigationStorage.updateIncident(id, updateData);
+      res.json(incident);
+    } catch (error) {
+      console.error("[RCA] Error updating evidence progress:", error);
+      res.status(500).json({ message: "Failed to update evidence progress" });
+    }
+  });
+
+  // Generate evidence collection categories (Step 4)
+  app.post("/api/incidents/:id/generate-evidence-categories", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { equipmentGroup, equipmentType, evidenceChecklist } = req.body;
+
+      // Generate evidence collection categories based on checklist
+      const categories = await generateEvidenceCategories(equipmentGroup, equipmentType, evidenceChecklist);
+      
+      res.json({ categories });
+    } catch (error) {
+      console.error("[RCA] Error generating evidence categories:", error);
+      res.status(500).json({ message: "Failed to generate evidence categories" });
+    }
+  });
+
+  // Upload evidence files (Step 4)
+  app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { categoryId, description } = req.body;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Process and store the uploaded file
+      const fileData = {
+        id: Date.now().toString(),
+        name: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        url: `/uploads/${file.filename}`,
+        uploadedAt: new Date(),
+        category: categoryId,
+        description: description || undefined,
+      };
+
+      res.json({ file: fileData });
+    } catch (error) {
+      console.error("[RCA] Error uploading evidence:", error);
+      res.status(500).json({ message: "Failed to upload evidence" });
+    }
+  });
+
   // Get analytics for dashboard
   app.get("/api/analytics", async (req, res) => {
     try {
@@ -940,4 +1016,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Helper functions for evidence generation
+async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string) {
+  // Generate equipment-specific evidence checklist
+  const evidenceItems = [
+    {
+      id: "vibration-trends",
+      category: "Operational Data",
+      title: "Vibration Trend Data",
+      description: "Historical vibration measurements showing patterns before failure",
+      priority: "Critical" as const,
+      required: true,
+      aiGenerated: true,
+      specificToEquipment: true,
+      examples: [
+        "CSV files with vibration readings over time",
+        "Condition monitoring system exports",
+        "Handheld vibration analyzer data"
+      ],
+      completed: false
+    },
+    {
+      id: "maintenance-records",
+      category: "Maintenance History",
+      title: "Maintenance Records",
+      description: "Recent maintenance activities and findings",
+      priority: "High" as const,
+      required: true,
+      aiGenerated: true,
+      specificToEquipment: true,
+      examples: [
+        "Work order completion reports",
+        "PM inspection checklists",
+        "Previous repair documentation"
+      ],
+      completed: false
+    },
+    {
+      id: "operating-conditions",
+      category: "Process Data",
+      title: "Operating Conditions",
+      description: "Process parameters during incident",
+      priority: "High" as const,
+      required: true,
+      aiGenerated: true,
+      specificToEquipment: true,
+      examples: [
+        "DCS trend data",
+        "Process parameter logs",
+        "Alarm history"
+      ],
+      completed: false
+    },
+    {
+      id: "inspection-photos",
+      category: "Visual Evidence",
+      title: "Equipment Inspection Photos",
+      description: "Visual documentation of equipment condition",
+      priority: "Medium" as const,
+      required: false,
+      aiGenerated: true,
+      specificToEquipment: true,
+      examples: [
+        "Before/after failure photos",
+        "Component wear patterns",
+        "Environmental conditions"
+      ],
+      completed: false
+    }
+  ];
+
+  return evidenceItems;
+}
+
+async function generateEvidenceCategories(equipmentGroup: string, equipmentType: string, evidenceChecklist: any[]) {
+  // Generate evidence collection categories based on checklist
+  const categories = [
+    {
+      id: "operational-data",
+      name: "Operational Data",
+      description: "Process parameters, trends, and operational history",
+      required: true,
+      acceptedTypes: ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      maxFiles: 5,
+      files: [],
+      priority: "Critical" as const
+    },
+    {
+      id: "maintenance-records",
+      name: "Maintenance Records",
+      description: "Work orders, inspection reports, and maintenance history",
+      required: true,
+      acceptedTypes: ["application/pdf", "text/plain", "image/*"],
+      maxFiles: 10,
+      files: [],
+      priority: "High" as const
+    },
+    {
+      id: "visual-evidence",
+      name: "Visual Evidence",
+      description: "Photos, videos, and visual documentation",
+      required: false,
+      acceptedTypes: ["image/*", "video/*"],
+      maxFiles: 15,
+      files: [],
+      priority: "Medium" as const
+    },
+    {
+      id: "technical-docs",
+      name: "Technical Documentation",
+      description: "Drawings, specifications, and technical references",
+      required: false,
+      acceptedTypes: ["application/pdf", "image/*"],
+      maxFiles: 8,
+      files: [],
+      priority: "Low" as const
+    }
+  ];
+
+  return categories;
 }

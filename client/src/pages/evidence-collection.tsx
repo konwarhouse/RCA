@@ -1,542 +1,467 @@
 import { useState, useEffect } from "react";
-import { useRoute, useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Upload, FileText, Camera, Download, CheckCircle, AlertTriangle, ChevronRight, Brain, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle, ChevronRight, Upload, FileText, Brain, ArrowRight } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { EQUIPMENT_TYPES } from "@shared/schema";
-import AIEvidenceValidator from "@/components/ai-evidence-validator";
-import IntelligentAIAssistant from "@/components/intelligent-ai-assistant";
-import { getEquipmentEvidenceConfig, getRequiredEvidence } from "@shared/equipment-evidence-library";
+import { useDropzone } from "react-dropzone";
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt: Date;
+  category: string;
+  description?: string;
+}
+
+interface EvidenceCategory {
+  id: string;
+  name: string;
+  description: string;
+  required: boolean;
+  acceptedTypes: string[];
+  maxFiles: number;
+  files: UploadedFile[];
+  priority: "Critical" | "High" | "Medium" | "Low";
+}
+
+interface Incident {
+  id: number;
+  title: string;
+  equipmentGroup: string;
+  equipmentType: string;
+  equipmentId: string;
+  currentStep: number;
+  workflowStatus: string;
+  evidenceChecklist?: any[];
+}
 
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/investigation/:id/evidence");
-  const { toast } = useToast();
-  
-  const investigationId = params?.id;
-  const [currentSection, setCurrentSection] = useState<string>("");
-  const [evidenceData, setEvidenceData] = useState<any>({});
-  const [completeness, setCompleteness] = useState(0);
-  const [questionnaire, setQuestionnaire] = useState<any[]>([]);
-  const [aiValidation, setAiValidation] = useState<any>(null);
-  const [showAIValidator, setShowAIValidator] = useState(true);
-  const [currentFieldQuestion, setCurrentFieldQuestion] = useState<any>(null);
-  const [fieldCompletionStatus, setFieldCompletionStatus] = useState<Record<string, boolean>>({});
+  const [incidentId, setIncidentId] = useState<number | null>(null);
+  const [evidenceCategories, setEvidenceCategories] = useState<EvidenceCategory[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
 
-  // Fetch investigation and questionnaire
-  const { data: investigationData, isLoading } = useQuery({
-    queryKey: ['/api/investigations', investigationId, 'questionnaire'],
-    enabled: !!investigationId
-  });
-
+  // Extract incident ID from URL parameters
   useEffect(() => {
-    if (investigationData?.questionnaire) {
-      setQuestionnaire(investigationData.questionnaire);
-      setEvidenceData(investigationData.investigation?.evidenceData || {});
-      setCompleteness(parseFloat(investigationData.investigation?.evidenceCompleteness || "0"));
-      
-      // Set first section as current
-      const sections = [...new Set(investigationData.questionnaire.map((q: any) => q.section))];
-      if (sections.length > 0) {
-        setCurrentSection(sections[0]);
-      }
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('incident');
+    if (id) {
+      setIncidentId(parseInt(id));
     }
-  }, [investigationData]);
+  }, []);
 
-  // Update evidence mutation
-  const updateEvidenceMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest(`/api/investigations/${investigationId}/evidence`, {
+  // Fetch incident details
+  const { data: incident, isLoading } = useQuery({
+    queryKey: ['/api/incidents', incidentId],
+    enabled: !!incidentId,
+  });
+
+  // Generate evidence collection categories
+  const generateCategoriesMutation = useMutation({
+    mutationFn: async (incidentData: Incident) => {
+      return apiRequest(`/api/incidents/${incidentData.id}/generate-evidence-categories`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          equipmentGroup: incidentData.equipmentGroup,
+          equipmentType: incidentData.equipmentType,
+          evidenceChecklist: incidentData.evidenceChecklist,
+        }),
       });
-      return await response.json();
     },
     onSuccess: (data) => {
-      setCompleteness(data.completeness);
-      if (data.canProceedToAnalysis) {
-        toast({
-          title: "Evidence Complete",
-          description: "You can now proceed to AI analysis."
-        });
+      setEvidenceCategories(data.categories);
+      if (data.categories.length > 0) {
+        setActiveCategory(data.categories[0].id);
       }
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update evidence. Please try again.",
-        variant: "destructive"
-      });
-    }
   });
 
-  // Proceed to analysis mutation
-  const proceedToAnalysisMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest(`/api/investigations/${investigationId}/analyze`, {
-        method: 'POST'
-      });
-      return await response.json();
+  // File upload mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async (data: { file: File; categoryId: string; description?: string }) => {
+      const formData = new FormData();
+      formData.append('file', data.file);
+      formData.append('categoryId', data.categoryId);
+      formData.append('incidentId', incidentId!.toString());
+      if (data.description) {
+        formData.append('description', data.description);
+      }
+
+      return fetch(`/api/incidents/${incidentId}/upload-evidence`, {
+        method: 'POST',
+        body: formData,
+      }).then(res => res.json());
     },
-    onSuccess: (data) => {
-      toast({
-        title: "Analysis Complete",
-        description: "Your investigation analysis is ready."
-      });
-      setLocation(`/investigation/${investigationId}`);
+    onSuccess: (data, variables) => {
+      // Update the category with the new file
+      setEvidenceCategories(prev => 
+        prev.map(category => 
+          category.id === variables.categoryId 
+            ? { ...category, files: [...category.files, data.file] }
+            : category
+        )
+      );
+      setIsUploading(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Failed to perform analysis. Please ensure evidence is complete.",
-        variant: "destructive"
-      });
-    }
   });
 
-  const handleFieldChange = (questionId: string, value: any) => {
-    const updatedData = {
-      ...evidenceData,
-      [questionId]: value
-    };
-    setEvidenceData(updatedData);
-    
-    // Mark field as completed if it has a meaningful value
-    if (value !== undefined && value !== null && value !== '') {
-      setFieldCompletionStatus(prev => ({ ...prev, [questionId]: true }));
-    } else {
-      setFieldCompletionStatus(prev => ({ ...prev, [questionId]: false }));
+  // Generate categories when incident loads
+  useEffect(() => {
+    if (incident && evidenceCategories.length === 0) {
+      generateCategoriesMutation.mutate(incident);
     }
-    
-    // Debounce update to server
-    setTimeout(() => {
-      updateEvidenceMutation.mutate(updatedData);
-    }, 500);
+  }, [incident]);
+
+  // Calculate completion percentage
+  useEffect(() => {
+    if (evidenceCategories.length > 0) {
+      const requiredCategories = evidenceCategories.filter(cat => cat.required);
+      const completedRequired = requiredCategories.filter(cat => cat.files.length > 0);
+      const optionalCategories = evidenceCategories.filter(cat => !cat.required);
+      const completedOptional = optionalCategories.filter(cat => cat.files.length > 0);
+      
+      // 70% weight for required, 30% for optional
+      const requiredScore = requiredCategories.length > 0 ? (completedRequired.length / requiredCategories.length) * 70 : 70;
+      const optionalScore = optionalCategories.length > 0 ? (completedOptional.length / optionalCategories.length) * 30 : 30;
+      
+      setCompletionPercentage(Math.round(requiredScore + optionalScore));
+    }
+  }, [evidenceCategories]);
+
+  const handleFileUpload = (files: File[], categoryId: string, description?: string) => {
+    files.forEach(file => {
+      setIsUploading(true);
+      uploadFileMutation.mutate({ file, categoryId, description });
+    });
   };
 
-  const getSelectOptions = (question: any) => {
-    // Handle equipment subcategory
-    if (question.id === 'equipment_subcategory') {
-      const selectedCategory = evidenceData['equipment_category'];
-      if (!selectedCategory || !EQUIPMENT_TYPES[selectedCategory]?.subcategories) return [];
-      return Object.keys(EQUIPMENT_TYPES[selectedCategory].subcategories);
-    }
-    
-    // Handle equipment type
-    if (question.id === 'equipment_type') {
-      const selectedCategory = evidenceData['equipment_category'];
-      const selectedSubcategory = evidenceData['equipment_subcategory'];
-      if (!selectedCategory || !selectedSubcategory || !EQUIPMENT_TYPES[selectedCategory]?.subcategories?.[selectedSubcategory]) return [];
-      return EQUIPMENT_TYPES[selectedCategory].subcategories[selectedSubcategory].types || [];
-    }
-    
-    return question.options || [];
+  const handleRemoveFile = (categoryId: string, fileId: string) => {
+    setEvidenceCategories(prev => 
+      prev.map(category => 
+        category.id === categoryId 
+          ? { ...category, files: category.files.filter(f => f.id !== fileId) }
+          : category
+      )
+    );
   };
 
-  const renderQuestionField = (question: any) => {
-    const value = evidenceData[question.id] || "";
+  const canProceed = evidenceCategories.filter(cat => cat.required).every(cat => cat.files.length > 0);
 
-    switch (question.type) {
-      case 'select':
-        const options = getSelectOptions(question);
-        return (
-          <Select
-            value={value}
-            onValueChange={(newValue) => handleFieldChange(question.id, newValue)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select an option" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-
-      case 'textarea':
-        return (
-          <Textarea
-            value={value}
-            onChange={(e) => handleFieldChange(question.id, e.target.value)}
-            placeholder="Provide detailed information..."
-            rows={3}
-            className="min-h-[100px]"
-          />
-        );
-
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(question.id, e.target.value)}
-            placeholder="Enter numeric value"
-          />
-        );
-
-      case 'date':
-        return (
-          <Input
-            type="date"
-            value={value}
-            onChange={(e) => handleFieldChange(question.id, e.target.value)}
-          />
-        );
-
-      case 'datetime':
-        return (
-          <Input
-            type="datetime-local"
-            value={value}
-            onChange={(e) => handleFieldChange(question.id, e.target.value)}
-          />
-        );
-
-      case 'boolean':
-        return (
-          <div className="flex items-center space-x-4">
-            <Button
-              type="button"
-              variant={value === true ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleFieldChange(question.id, true)}
-              className={`px-6 py-2 ${
-                value === true 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              YES
-            </Button>
-            <Button
-              type="button"
-              variant={value === false ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleFieldChange(question.id, false)}
-              className={`px-6 py-2 ${
-                value === false 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              NO
-            </Button>
-          </div>
-        );
-
-      default:
-        return (
-          <Input
-            value={value}
-            onChange={(e) => handleFieldChange(question.id, e.target.value)}
-            placeholder="Enter information..."
-          />
-        );
+  const handleProceedToAnalysis = () => {
+    if (incidentId) {
+      setLocation(`/ai-analysis?incident=${incidentId}`);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !incident) {
     return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading evidence collection...</p>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Brain className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading incident details...</p>
         </div>
       </div>
     );
   }
 
-  if (!investigationData?.investigation) {
-    return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Investigation not found or investigation type not set. Please start from the beginning.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  const investigation = investigationData.investigation;
-  const sections = [...new Set(questionnaire.map(q => q.section))];
-  
-  // Filter questions based on conditional logic
-  const shouldShowQuestion = (question: any) => {
-    if (!question.conditionalLogic) return true;
-    
-    const { dependsOn, condition } = question.conditionalLogic;
-    const dependentValue = evidenceData[dependsOn];
-    
-    if (condition === true) {
-      return dependentValue === true;
-    } else if (condition === false) {
-      return dependentValue === false;
-    } else if (condition === "any") {
-      return dependentValue !== undefined && dependentValue !== null && dependentValue !== '';
-    }
-    
-    return dependentValue === condition;
-  };
-  
-  const currentSectionQuestions = questionnaire
-    .filter(q => q.section === currentSection)
-    .filter(shouldShowQuestion);
-  const canProceedToAnalysis = completeness >= 80;
+  const activeCategoryData = evidenceCategories.find(cat => cat.id === activeCategory);
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Evidence Collection
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Step 3 of 4: {investigation.investigationType === 'safety_environmental' ? 'ECFA' : 'Fault Tree'} Evidence Gathering
-        </p>
-      </div>
-
-      {/* Progress Indicator */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Evidence Completeness</CardTitle>
-            <Badge variant={canProceedToAnalysis ? "default" : "secondary"}>
-              {completeness.toFixed(1)}% Complete
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card shadow-sm border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => setLocation('/')}
+              >
+                ← Back to Home
+              </Button>
+              <div className="flex items-center space-x-2">
+                <Upload className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-bold">Step 4: Evidence Collection</h1>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-sm">
+              Incident #{incident.id}
             </Badge>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Progress value={completeness} className="mb-4" />
-          <div className="flex items-center gap-2 text-sm">
-            {canProceedToAnalysis ? (
-              <>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-green-700 dark:text-green-400">
-                  Ready for AI Analysis (80% minimum requirement met)
-                </span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4 text-amber-500" />
-                <span className="text-amber-700 dark:text-amber-400">
-                  {(80 - completeness).toFixed(1)}% more evidence needed for analysis
-                </span>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </header>
 
-      {/* Smart Progress Overview */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-blue-600" />
-            AI-Assisted Evidence Collection
-            <Badge variant={completeness >= 80 ? "default" : "secondary"}>
-              {completeness.toFixed(1)}% Complete
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Progress value={completeness} className="mb-4" />
-          <div className="text-sm text-gray-600">
-            AI assistant will guide you through each field with context, examples, and smart suggestions.
-            Click on any field to get personalized help.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Progress Overview */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {incident.title}
+                </CardTitle>
+                <CardDescription>
+                  Equipment: {incident.equipmentGroup} → {incident.equipmentType} ({incident.equipmentId})
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-primary">{completionPercentage}%</div>
+                <div className="text-sm text-muted-foreground">Evidence Collected</div>
+              </div>
+            </div>
+            <Progress value={completionPercentage} className="mt-4" />
+          </CardHeader>
+        </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
-        {/* Section Navigation */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Sections</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {sections.map((section) => {
-                const sectionQuestions = questionnaire.filter(q => q.section === section);
-                const answeredQuestions = sectionQuestions.filter(q => {
-                  const answer = evidenceData[q.id];
-                  return answer !== undefined && answer !== null && answer !== '';
-                });
-                const sectionProgress = sectionQuestions.length > 0 
-                  ? (answeredQuestions.length / sectionQuestions.length) * 100 
-                  : 0;
-
-                return (
-                  <Button
-                    key={section}
-                    variant={currentSection === section ? "default" : "ghost"}
-                    className="w-full justify-between text-left h-auto p-3"
-                    onClick={() => setCurrentSection(section)}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Evidence Categories Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Evidence Categories</CardTitle>
+                <CardDescription>
+                  {evidenceCategories.filter(cat => cat.required).length} required, {evidenceCategories.filter(cat => !cat.required).length} optional
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {evidenceCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      activeCategory === category.id 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
                   >
-                    <div>
-                      <div className="font-medium">{section}</div>
-                      <div className="text-xs opacity-70">
-                        {answeredQuestions.length}/{sectionQuestions.length} completed
-                      </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{category.name}</span>
+                      {category.files.length > 0 ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : category.required ? (
+                        <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      ) : (
+                        <div className="h-4 w-4" />
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${sectionProgress}%` }}
-                        />
-                      </div>
-                      <ChevronRight className="h-4 w-4" />
+                      <Badge 
+                        variant={category.required ? "destructive" : "secondary"}
+                        className="text-xs"
+                      >
+                        {category.required ? "Required" : "Optional"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {category.files.length}/{category.maxFiles} files
+                      </span>
                     </div>
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Questions Form */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                {currentSection}
-              </CardTitle>
-              <CardDescription>
-                {investigation.investigationType === 'safety_environmental' 
-                  ? 'ECFA evidence collection for safety/environmental incident'
-                  : 'Fault Tree Analysis evidence collection with ISO 14224 taxonomy'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {currentSectionQuestions.map((question) => (
-                <div key={question.id} className="space-y-4">
-                  <div 
-                    className="space-y-2"
-                    onFocus={() => setCurrentFieldQuestion(question)}
-                    onClick={() => setCurrentFieldQuestion(question)}
-                  >
-                    <Label htmlFor={question.id} className="text-base font-medium">
-                      {question.question}
-                      {question.required && <span className="text-red-500 ml-1">*</span>}
-                      {question.unit && (
-                        <span className="text-sm text-gray-500 ml-2">({question.unit})</span>
-                      )}
-                    </Label>
-                    {renderQuestionField(question)}
+          {/* Evidence Upload Area */}
+          <div className="lg:col-span-3">
+            {activeCategoryData && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {activeCategoryData.name}
+                        <Badge variant={activeCategoryData.required ? "destructive" : "secondary"}>
+                          {activeCategoryData.required ? "Required" : "Optional"}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        {activeCategoryData.description}
+                      </CardDescription>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {activeCategoryData.files.length} / {activeCategoryData.maxFiles} files
+                    </div>
                   </div>
-                  
-                  {/* AI Assistant for current field */}
-                  {currentFieldQuestion?.id === question.id && (
-                    <IntelligentAIAssistant
-                      currentQuestion={question}
-                      currentValue={evidenceData[question.id]}
-                      evidenceData={evidenceData}
-                      onSuggestion={(value) => handleFieldChange(question.id, value)}
-                      onFieldComplete={() => setCurrentFieldQuestion(null)}
-                      completedSections={sections.slice(0, sections.indexOf(currentSection))}
-                      investigationType={investigationData?.investigationType}
-                    />
-                  )}
-                </div>
-              ))}
-
-              {currentSectionQuestions.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No questions available for this section.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Action Buttons */}
-          <div className="mt-6 flex justify-between">
-            <div>
-              {sections.indexOf(currentSection) > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const currentIndex = sections.indexOf(currentSection);
-                    setCurrentSection(sections[currentIndex - 1]);
-                  }}
-                >
-                  Previous Section
-                </Button>
-              )}
-            </div>
-            
-            <div className="space-x-4">
-              {sections.indexOf(currentSection) < sections.length - 1 ? (
-                <Button
-                  onClick={() => {
-                    const currentIndex = sections.indexOf(currentSection);
-                    setCurrentSection(sections[currentIndex + 1]);
-                  }}
-                >
-                  Next Section
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : canProceedToAnalysis ? (
-                <Button
-                  onClick={() => {
-                    if (completeness < 80) {
-                      toast({
-                        title: "More Evidence Needed",
-                        description: "Please complete more fields before proceeding to analysis. The AI assistant will guide you.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-                    proceedToAnalysisMutation.mutate();
-                  }}
-                  disabled={proceedToAnalysisMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                >
-                  {proceedToAnalysisMutation.isPending ? (
-                    "Generating Analysis..."
-                  ) : (
-                    <>
-                      <Brain className="h-4 w-4 mr-2" />
-                      Proceed to AI Analysis
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Alert className="inline-block">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Complete more evidence to unlock AI analysis
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+                </CardHeader>
+                <CardContent>
+                  <EvidenceUploadZone 
+                    category={activeCategoryData}
+                    onFileUpload={handleFileUpload}
+                    onRemoveFile={handleRemoveFile}
+                    isUploading={isUploading}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation(`/evidence-checklist?incident=${incidentId}`)}
+          >
+            ← Back to Evidence Checklist
+          </Button>
+          <Button 
+            onClick={handleProceedToAnalysis}
+            disabled={!canProceed}
+            className="flex items-center gap-2"
+          >
+            Proceed to AI Analysis
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Requirements Alert */}
+        {!canProceed && evidenceCategories.length > 0 && (
+          <Alert className="mt-4 border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Requirements:</strong> Upload at least one file to each required evidence category to proceed.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
+    </div>
+  );
+}
+
+function EvidenceUploadZone({ 
+  category, 
+  onFileUpload, 
+  onRemoveFile, 
+  isUploading 
+}: { 
+  category: EvidenceCategory;
+  onFileUpload: (files: File[], categoryId: string, description?: string) => void;
+  onRemoveFile: (categoryId: string, fileId: string) => void;
+  isUploading: boolean;
+}) {
+  const [fileDescription, setFileDescription] = useState("");
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        onFileUpload(acceptedFiles, category.id, fileDescription);
+        setFileDescription("");
+      }
+    },
+    accept: category.acceptedTypes.reduce((acc, type) => ({
+      ...acc,
+      [type]: []
+    }), {}),
+    maxFiles: category.maxFiles - category.files.length,
+    disabled: category.files.length >= category.maxFiles || isUploading,
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* File Upload Area */}
+      {category.files.length < category.maxFiles && (
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+            isDragActive 
+              ? 'border-primary bg-primary/5' 
+              : 'border-border hover:border-primary/50'
+          } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <input {...getInputProps()} />
+          <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <div className="space-y-2">
+            <p className="text-lg font-medium">
+              {isDragActive ? 'Drop files here' : 'Drag files here or click to browse'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Accepted: {category.acceptedTypes.join(', ')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Max {category.maxFiles} files, {category.files.length} uploaded
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* File Description */}
+      {category.files.length < category.maxFiles && (
+        <div>
+          <Label htmlFor="file-description" className="text-sm font-medium">
+            Optional Description
+          </Label>
+          <Textarea
+            id="file-description"
+            placeholder="Describe what this evidence shows..."
+            value={fileDescription}
+            onChange={(e) => setFileDescription(e.target.value)}
+            className="mt-1"
+            rows={2}
+          />
+        </div>
+      )}
+
+      {/* Uploaded Files */}
+      {category.files.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm">Uploaded Files</h4>
+          {category.files.map((file) => (
+            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-sm">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                  </p>
+                  {file.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{file.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a href={file.url} download>
+                    <Download className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onRemoveFile(category.id, file.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Category Full Message */}
+      {category.files.length >= category.maxFiles && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            This category is complete! You've uploaded the maximum number of files ({category.maxFiles}).
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

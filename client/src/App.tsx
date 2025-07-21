@@ -9,11 +9,13 @@ import AnalysisDetail from "@/pages/analysis-detail";
 import AdminSettings from "@/pages/admin-settings";
 import NewInvestigation from "@/pages/new-investigation";
 import InvestigationType from "@/pages/investigation-type";
-import EvidenceCollection from "@/pages/evidence-collection";
+import EvidenceCollectionOld from "@/pages/evidence-collection";
 import EvidenceLibraryAdmin from "@/pages/evidence-library-admin";
 import EvidenceLibraryManagement from "@/pages/evidence-library-management";
 import IncidentReporting from "@/pages/incident-reporting";
 import EquipmentSelection from "@/pages/equipment-selection";
+import EvidenceChecklist from "@/pages/evidence-checklist";
+import EvidenceCollection from "@/pages/evidence-collection";
 import NotFound from "@/pages/not-found";
 
 
@@ -23,7 +25,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/new" component={NewInvestigation} />
       <Route path="/investigation/:id/type" component={InvestigationType} />
-      <Route path="/investigation/:id/evidence" component={EvidenceCollection} />
+      <Route path="/investigation/:id/evidence" component={EvidenceCollectionOld} />
       <Route path="/investigation/:id" component={AnalysisDetail} />
       <Route path="/admin" component={AdminSettings} />
       <Route path="/admin-settings" component={AdminSettings} />
@@ -32,7 +34,9 @@ function Router() {
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library" component={EvidenceLibraryManagement} />
       <Route path="/incident-reporting" component={IncidentReporting} />
-      <Route path="/rca-investigation/:id/equipment-selection" component={EquipmentSelection} />
+      <Route path="/equipment-selection" component={EquipmentSelection} />
+      <Route path="/evidence-checklist" component={EvidenceChecklist} />
+      <Route path="/evidence-collection" component={EvidenceCollection} />
       <Route component={NotFound} />
     </Switch>
   );
