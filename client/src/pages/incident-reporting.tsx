@@ -127,13 +127,16 @@ export default function IncidentReporting() {
         headers: { "Content-Type": "application/json" },
       });
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
+      console.log('Incident created successfully:', response);
       toast({
         title: "Incident Reported",
         description: "Moving to equipment selection and symptom input...",
       });
       // Navigate to the next step with the incident ID
-      setLocation(`/equipment-selection?incident=${response.id}`);
+      const incidentId = response?.id || response;
+      console.log('Navigating to equipment selection with ID:', incidentId);
+      setLocation(`/equipment-selection?incident=${incidentId}`);
     },
     onError: (error: any) => {
       toast({

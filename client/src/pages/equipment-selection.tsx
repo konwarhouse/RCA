@@ -40,9 +40,13 @@ export default function EquipmentSelection() {
     const id = params.get('incident');
     console.log('URL params:', window.location.search, 'extracted ID:', id);
     if (id) {
-      setIncidentId(parseInt(id));
+      const parsedId = parseInt(id);
+      console.log('Parsed incident ID:', parsedId);
+      setIncidentId(parsedId);
+    } else {
+      console.log('No incident ID in URL');
     }
-  }, []);
+  }, [window.location.search]);
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   
