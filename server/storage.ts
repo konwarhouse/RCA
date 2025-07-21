@@ -19,7 +19,7 @@ import {
   type InsertIncident,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, and, or } from "drizzle-orm";
+import { eq, like, and, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 // Storage interface for investigations
@@ -267,20 +267,26 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
 
   async searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]> {
     const searchPattern = `%${searchTerm.toLowerCase()}%`;
-    return await db
+    console.log('Searching evidence library for:', searchTerm, 'with pattern:', searchPattern);
+    
+    const results = await db
       .select()
       .from(evidenceLibrary)
       .where(
         and(
           eq(evidenceLibrary.isActive, true),
           or(
-            like(evidenceLibrary.equipmentType, searchPattern),
-            like(evidenceLibrary.componentFailureMode, searchPattern),
-            like(evidenceLibrary.equipmentCode, searchPattern),
-            like(evidenceLibrary.subtypeExample, searchPattern)
+            sql`LOWER(${evidenceLibrary.equipmentType}) LIKE ${searchPattern}`,
+            sql`LOWER(${evidenceLibrary.componentFailureMode}) LIKE ${searchPattern}`,
+            sql`LOWER(${evidenceLibrary.equipmentCode}) LIKE ${searchPattern}`,
+            sql`LOWER(${evidenceLibrary.subtypeExample}) LIKE ${searchPattern}`,
+            sql`LOWER(${evidenceLibrary.equipmentGroup}) LIKE ${searchPattern}`
           )
         )
       );
+    
+    console.log('Evidence library search results:', results.length, 'items found');
+    return results;
   }
 
   async bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]> {

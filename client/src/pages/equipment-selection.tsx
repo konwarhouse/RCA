@@ -76,11 +76,15 @@ export default function EquipmentSelection() {
   const { data: libraryItems = [] } = useQuery({
     queryKey: [`/api/evidence-library/by-equipment`, incident?.equipmentGroup, incident?.equipmentType],
     queryFn: async () => {
-      if (!incident?.equipmentGroup) return [];
-      const searchQuery = `${incident.equipmentGroup} ${incident.equipmentType || ''}`.trim();
+      if (!incident?.equipmentType) return [];
+      // Search for equipment type only (e.g., "CENTRIFUGAL PUMP" -> "Centrifugal Pump")
+      const searchQuery = incident.equipmentType;
+      console.log('Searching evidence library for equipment type:', searchQuery);
       const response = await fetch(`/api/evidence-library/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) return [];
-      return response.json();
+      const results = await response.json();
+      console.log('Evidence library results:', results.length, 'items');
+      return results;
     },
     enabled: !!incident?.equipmentGroup,
   });
