@@ -147,12 +147,12 @@ export default function IncidentReporting() {
         description: "Moving to equipment selection and symptom input...",
       });
       
-      // Use client-side navigation with delay for toast
+      // Navigate immediately after toast
       const navigationUrl = `/equipment-selection?incident=${incidentId}`;
       console.log('Navigating to:', navigationUrl);
-      setTimeout(() => {
-        setLocation(navigationUrl);
-      }, 500);
+      console.log('About to call setLocation with:', navigationUrl);
+      setLocation(navigationUrl);
+      console.log('setLocation called successfully');
     },
     onError: (error: any) => {
       toast({

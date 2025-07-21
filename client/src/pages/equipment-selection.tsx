@@ -145,11 +145,15 @@ export default function EquipmentSelection() {
   };
 
   if (!incidentId) {
+    console.log('SHOWING NO INCIDENT ID ERROR - URL:', window.location.href);
+    console.log('URL Search:', window.location.search);
+    console.log('Incident ID parsed as:', incidentId);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg font-medium text-red-600">Error: No Incident ID</div>
           <div className="text-sm text-slate-600 mt-2">Please access this page from the incident reporting workflow.</div>
+          <div className="text-xs text-slate-400 mt-4">Debug: URL = {window.location.href}</div>
         </div>
       </div>
     );
