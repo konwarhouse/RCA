@@ -11,6 +11,9 @@ import {
   riskRankings,
   type RiskRanking,
   type InsertRiskRanking,
+  aiSettings,
+  type AiSettings,
+  type InsertAiSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or } from "drizzle-orm";
@@ -265,7 +268,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             like(evidenceLibrary.equipmentType, searchPattern),
             like(evidenceLibrary.componentFailureMode, searchPattern),
             like(evidenceLibrary.equipmentCode, searchPattern),
-            like(evidenceLibrary.subtype, searchPattern)
+            like(evidenceLibrary.subtypeExample, searchPattern)
           )
         )
       );
@@ -283,22 +286,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       .returning();
   }
 
-  // AI Settings operations
-  async getAllAiSettings(): Promise<any[]> {
-    return await db.select().from(aiSettings);
-  }
 
-  async saveAiSettings(data: any): Promise<any> {
-    const [result] = await db
-      .insert(aiSettings)
-      .values(data)
-      .returning();
-    return result;
-  }
-
-  async deleteAiSettings(id: number): Promise<void> {
-    await db.delete(aiSettings).where(eq(aiSettings.id, id));
-  }
 
   // Equipment Groups operations
   async getAllEquipmentGroups(): Promise<EquipmentGroup[]> {
