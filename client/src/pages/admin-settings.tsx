@@ -106,7 +106,7 @@ export default function AdminSettings() {
     onSuccess: () => {
       toast({ title: "Equipment Group Created", description: "Equipment group added successfully" });
       setNewEquipmentGroup({ name: "" });
-      queryClient.invalidateQueries(["/api/equipment-groups"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-groups"] });
     },
     onError: (error) => {
       toast({
@@ -128,7 +128,7 @@ export default function AdminSettings() {
     onSuccess: () => {
       toast({ title: "Equipment Group Updated", description: "Equipment group updated successfully" });
       setEditingEquipmentGroup(null);
-      queryClient.invalidateQueries(["/api/equipment-groups"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-groups"] });
     },
     onError: (error) => {
       toast({
@@ -145,7 +145,7 @@ export default function AdminSettings() {
     },
     onSuccess: () => {
       toast({ title: "Equipment Group Deleted", description: "Equipment group deleted successfully" });
-      queryClient.invalidateQueries(["/api/equipment-groups"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-groups"] });
     },
     onError: () => {
       toast({
@@ -168,7 +168,7 @@ export default function AdminSettings() {
     onSuccess: () => {
       toast({ title: "Risk Ranking Created", description: "Risk ranking added successfully" });
       setNewRiskRanking({ label: "" });
-      queryClient.invalidateQueries(["/api/risk-rankings"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/risk-rankings"] });
     },
     onError: (error) => {
       toast({
@@ -190,7 +190,7 @@ export default function AdminSettings() {
     onSuccess: () => {
       toast({ title: "Risk Ranking Updated", description: "Risk ranking updated successfully" });
       setEditingRiskRanking(null);
-      queryClient.invalidateQueries(["/api/risk-rankings"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/risk-rankings"] });
     },
     onError: (error) => {
       toast({
@@ -207,7 +207,7 @@ export default function AdminSettings() {
     },
     onSuccess: () => {
       toast({ title: "Risk Ranking Deleted", description: "Risk ranking deleted successfully" });
-      queryClient.invalidateQueries(["/api/risk-rankings"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/risk-rankings"] });
     },
     onError: () => {
       toast({
@@ -241,7 +241,7 @@ export default function AdminSettings() {
         title: "Import Completed",
         description: `Imported ${data.imported} equipment groups${data.errors > 0 ? `, ${data.errors} errors` : ''}`,
       });
-      queryClient.invalidateQueries(['/api/equipment-groups']);
+      queryClient.invalidateQueries({ queryKey: ['/api/equipment-groups'] });
     },
     onError: (error) => {
       toast({
@@ -300,7 +300,7 @@ export default function AdminSettings() {
         title: "Import Completed",
         description: `Imported ${data.imported} risk rankings${data.errors > 0 ? `, ${data.errors} errors` : ''}`,
       });
-      queryClient.invalidateQueries(['/api/risk-rankings']);
+      queryClient.invalidateQueries({ queryKey: ['/api/risk-rankings'] });
     },
     onError: (error) => {
       toast({
@@ -751,13 +751,13 @@ export default function AdminSettings() {
                         <TableCell>
                           {editingEquipmentGroup?.id === group.id ? (
                             <Input
-                              value={editingEquipmentGroup.name}
-                              onChange={(e) => setEditingEquipmentGroup({ ...editingEquipmentGroup, name: e.target.value })}
+                              value={editingEquipmentGroup?.name || ''}
+                              onChange={(e) => editingEquipmentGroup && setEditingEquipmentGroup({ ...editingEquipmentGroup, name: e.target.value })}
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                   updateEquipmentGroupMutation.mutate({
                                     id: group.id,
-                                    data: { name: editingEquipmentGroup.name, isActive: group.isActive }
+                                    data: { name: editingEquipmentGroup?.name || '', isActive: group.isActive }
                                   });
                                 }
                               }}
