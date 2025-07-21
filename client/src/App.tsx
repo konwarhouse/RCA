@@ -14,6 +14,7 @@ import EvidenceLibraryAdmin from "@/pages/evidence-library-admin";
 import EvidenceLibraryManagement from "@/pages/evidence-library-management";
 import IncidentReporting from "@/pages/incident-reporting";
 import EquipmentSelection from "@/pages/equipment-selection";
+import EquipmentSelectionTest from "@/pages/equipment-selection-test";
 import EvidenceChecklist from "@/pages/evidence-checklist";
 import EvidenceCollection from "@/pages/evidence-collection";
 import AIAnalysis from "@/pages/ai-analysis";
@@ -36,7 +37,7 @@ function Router() {
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library" component={EvidenceLibraryManagement} />
       <Route path="/incident-reporting" component={IncidentReporting} />
-      <Route path="/equipment-selection" component={EquipmentSelection} />
+      <Route path="/equipment-selection" component={EquipmentSelectionTest} />
       <Route path="/evidence-checklist" component={EvidenceChecklist} />
       <Route path="/evidence-collection" component={EvidenceCollection} />
       <Route path="/ai-analysis" component={AIAnalysis} />
