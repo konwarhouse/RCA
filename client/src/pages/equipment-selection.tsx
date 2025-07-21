@@ -38,6 +38,7 @@ export default function EquipmentSelection() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('incident');
+    console.log('URL params:', window.location.search, 'extracted ID:', id);
     if (id) {
       setIncidentId(parseInt(id));
     }
