@@ -65,6 +65,11 @@ export default function EvidenceLibraryManagement() {
   const [selectedItem, setSelectedItem] = useState<EvidenceLibrary | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Filter states
+  const [selectedEquipmentGroups, setSelectedEquipmentGroups] = useState<string[]>([]);
+  const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<string[]>([]);
+  const [selectedSubtypes, setSelectedSubtypes] = useState<string[]>([]);
 
   const form = useForm<EvidenceLibraryForm>({
     resolver: zodResolver(evidenceLibrarySchema),
@@ -99,6 +104,38 @@ export default function EvidenceLibraryManagement() {
       return response.json();
     },
   });
+
+  // Get unique filter values from data
+  const uniqueEquipmentGroups = [...new Set(evidenceItems.map(item => item.equipmentGroup))].filter(Boolean).sort();
+  const uniqueEquipmentTypes = [...new Set(evidenceItems.map(item => item.equipmentType))].filter(Boolean).sort();
+  const uniqueSubtypes = [...new Set(evidenceItems.map(item => item.subtypeExample).filter(Boolean))].sort();
+
+  // Filter evidence items based on selected filters and search term
+  const filteredItems = evidenceItems.filter(item => {
+    const matchesSearch = !searchTerm || 
+      Object.values(item).some(value => 
+        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    
+    const matchesEquipmentGroup = selectedEquipmentGroups.length === 0 || 
+      selectedEquipmentGroups.includes(item.equipmentGroup);
+    
+    const matchesEquipmentType = selectedEquipmentTypes.length === 0 || 
+      selectedEquipmentTypes.includes(item.equipmentType);
+    
+    const matchesSubtype = selectedSubtypes.length === 0 || 
+      (item.subtypeExample && selectedSubtypes.includes(item.subtypeExample));
+
+    return matchesSearch && matchesEquipmentGroup && matchesEquipmentType && matchesSubtype;
+  });
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setSelectedEquipmentGroups([]);
+    setSelectedEquipmentTypes([]);
+    setSelectedSubtypes([]);
+  };
 
   // Create mutation
   const createMutation = useMutation({
@@ -323,52 +360,185 @@ export default function EvidenceLibraryManagement() {
         {/* Controls */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
-              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <Input
-                    placeholder="Search equipment types, failure modes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+            <div className="space-y-4">
+              {/* Search and Actions Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <Input
+                      placeholder="Search equipment types, failure modes..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={clearAllFilters}
+                    disabled={!searchTerm && selectedEquipmentGroups.length === 0 && selectedEquipmentTypes.length === 0 && selectedSubtypes.length === 0}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImport}
+                    className="hidden"
                   />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={importMutation.isPending}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import CSV
+                  </Button>
+                  <Button variant="outline" onClick={handleExport}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        onClick={() => {
+                          setSelectedItem(null);
+                          form.reset();
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
                 </div>
               </div>
-              
-              <div className="flex space-x-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={importMutation.isPending}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </Button>
-                <Button variant="outline" onClick={handleExport}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      onClick={() => {
-                        setSelectedItem(null);
-                        form.reset();
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Item
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+
+              {/* Filter Dropdowns Row */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Select 
+                    value={selectedEquipmentGroups.length > 0 ? selectedEquipmentGroups[0] : ""} 
+                    onValueChange={(value) => {
+                      if (value && !selectedEquipmentGroups.includes(value)) {
+                        setSelectedEquipmentGroups([value]);
+                      } else if (!value) {
+                        setSelectedEquipmentGroups([]);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={`Equipment Group (${uniqueEquipmentGroups.length} available)`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueEquipmentGroups.map((group) => (
+                        <SelectItem key={group} value={group}>
+                          {group}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1">
+                  <Select 
+                    value={selectedEquipmentTypes.length > 0 ? selectedEquipmentTypes[0] : ""} 
+                    onValueChange={(value) => {
+                      if (value && !selectedEquipmentTypes.includes(value)) {
+                        setSelectedEquipmentTypes([value]);
+                      } else if (!value) {
+                        setSelectedEquipmentTypes([]);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={`Equipment Type (${uniqueEquipmentTypes.length} available)`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueEquipmentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1">
+                  <Select 
+                    value={selectedSubtypes.length > 0 ? selectedSubtypes[0] : ""} 
+                    onValueChange={(value) => {
+                      if (value && !selectedSubtypes.includes(value)) {
+                        setSelectedSubtypes([value]);
+                      } else if (!value) {
+                        setSelectedSubtypes([]);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={`Subtype (${uniqueSubtypes.length} available)`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueSubtypes.map((subtype) => (
+                        <SelectItem key={subtype} value={subtype}>
+                          {subtype}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {(selectedEquipmentGroups.length > 0 || selectedEquipmentTypes.length > 0 || selectedSubtypes.length > 0) && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedEquipmentGroups.map((group) => (
+                    <Badge key={group} variant="secondary" className="flex items-center gap-1">
+                      Equipment Group: {group}
+                      <button 
+                        onClick={() => setSelectedEquipmentGroups(prev => prev.filter(g => g !== group))}
+                        className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                  {selectedEquipmentTypes.map((type) => (
+                    <Badge key={type} variant="secondary" className="flex items-center gap-1">
+                      Equipment Type: {type}
+                      <button 
+                        onClick={() => setSelectedEquipmentTypes(prev => prev.filter(t => t !== type))}
+                        className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                  {selectedSubtypes.map((subtype) => (
+                    <Badge key={subtype} variant="secondary" className="flex items-center gap-1">
+                      Subtype: {subtype}
+                      <button 
+                        onClick={() => setSelectedSubtypes(prev => prev.filter(s => s !== subtype))}
+                        className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dialog for Adding/Editing Items */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {selectedItem ? "Edit Evidence Item" : "Add Evidence Item"}
@@ -421,7 +591,7 @@ export default function EvidenceLibraryManagement() {
                             name="subtypeExample"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Subtype / Example</FormLabel>
+                                <FormLabel>Subtype</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="e.g., Centrifugal, Reciprocating" />
                                 </FormControl>
@@ -631,26 +801,24 @@ export default function EvidenceLibraryManagement() {
                       </form>
                     </Form>
                   </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </Dialog>
 
         {/* Evidence Library Table */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
-              Evidence Library ({Array.isArray(evidenceItems) ? evidenceItems.length : 0} items)
+              Evidence Library ({Array.isArray(filteredItems) ? filteredItems.length : 0} of {Array.isArray(evidenceItems) ? evidenceItems.length : 0} items)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-8">Loading evidence library...</div>
-            ) : !Array.isArray(evidenceItems) || evidenceItems.length === 0 ? (
+            ) : !Array.isArray(filteredItems) || filteredItems.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No evidence items found. Add some items to get started.
+                {(searchTerm || selectedEquipmentGroups.length > 0 || selectedEquipmentTypes.length > 0 || selectedSubtypes.length > 0)
+                  ? "No evidence items match your current filters. Try adjusting your search or filters."
+                  : "No evidence items found. Add some items to get started."}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -659,7 +827,7 @@ export default function EvidenceLibraryManagement() {
                     <TableRow>
                       <TableHead>Equipment Group</TableHead>
                       <TableHead>Equipment Type</TableHead>
-                      <TableHead>Subtype / Example</TableHead>
+                      <TableHead>Subtype</TableHead>
                       <TableHead>Component / Failure Mode</TableHead>
                       <TableHead>Equipment Code</TableHead>
                       <TableHead>Failure Code</TableHead>
@@ -675,7 +843,7 @@ export default function EvidenceLibraryManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(Array.isArray(evidenceItems) ? evidenceItems : []).map((item) => (
+                    {(Array.isArray(filteredItems) ? filteredItems : []).map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{item.equipmentGroup}</TableCell>
                         <TableCell>{item.equipmentType}</TableCell>
