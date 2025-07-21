@@ -28,6 +28,7 @@ function Router() {
       <Route path="/admin/evidence-library" component={EvidenceLibraryAdmin} />
       <Route path="/admin/evidence-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
+      <Route path="/evidence-library" component={EvidenceLibraryManagement} />
       <Route component={NotFound} />
     </Switch>
   );
