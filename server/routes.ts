@@ -317,7 +317,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new incident (Step 1)
   app.post("/api/incidents", async (req, res) => {
     try {
-      const incident = await investigationStorage.createIncident(req.body);
+      console.log("[RCA] Creating incident with data:", req.body);
+      
+      // Convert incidentDateTime to proper Date object
+      const incidentData = {
+        ...req.body,
+        incidentDateTime: req.body.incidentDateTime ? new Date(req.body.incidentDateTime) : new Date(),
+      };
+      
+      const incident = await investigationStorage.createIncident(incidentData);
       res.json(incident);
     } catch (error) {
       console.error("[RCA] Error creating incident:", error);

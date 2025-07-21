@@ -406,8 +406,20 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   }
 
   // Incident operations - New RCA workflow
-  async createIncident(data: Partial<InsertIncident>): Promise<Incident> {
+  async createIncident(data: any): Promise<Incident> {
     try {
+      console.log("[DatabaseInvestigationStorage] Creating incident with data:", data);
+      
+      // Ensure incidentDateTime is a proper Date object
+      let incidentDateTime = new Date();
+      if (data.incidentDateTime) {
+        if (data.incidentDateTime instanceof Date) {
+          incidentDateTime = data.incidentDateTime;
+        } else {
+          incidentDateTime = new Date(data.incidentDateTime);
+        }
+      }
+      
       const [incident] = await db
         .insert(incidents)
         .values({
@@ -418,7 +430,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           equipmentId: data.equipmentId || '',
           location: data.location || '',
           reportedBy: data.reportedBy || '',
-          incidentDateTime: data.incidentDateTime || new Date(),
+          incidentDateTime: incidentDateTime,
           priority: data.priority || 'Medium',
           immediateActions: data.immediateActions,
           safetyImplications: data.safetyImplications,

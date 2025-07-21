@@ -95,13 +95,13 @@ export default function EvidenceChecklist() {
   useEffect(() => {
     if (incident && evidenceItems.length === 0) {
       setIsGenerating(true);
-      generateChecklistMutation.mutate(incident);
+      generateChecklistMutation.mutate(incident as Incident);
     }
   }, [incident]);
 
   // Calculate completion percentage
   useEffect(() => {
-    if (evidenceItems.length > 0) {
+    if (evidenceItems && evidenceItems.length > 0) {
       const completed = evidenceItems.filter(item => item.completed).length;
       const percentage = Math.round((completed / evidenceItems.length) * 100);
       setCompletionPercentage(percentage);
@@ -137,10 +137,10 @@ export default function EvidenceChecklist() {
     }
   };
 
-  const criticalItems = evidenceItems.filter(item => item.priority === "Critical");
-  const highItems = evidenceItems.filter(item => item.priority === "High");
-  const mediumItems = evidenceItems.filter(item => item.priority === "Medium");
-  const lowItems = evidenceItems.filter(item => item.priority === "Low");
+  const criticalItems = evidenceItems?.filter(item => item.priority === "Critical") || [];
+  const highItems = evidenceItems?.filter(item => item.priority === "High") || [];
+  const mediumItems = evidenceItems?.filter(item => item.priority === "Medium") || [];
+  const lowItems = evidenceItems?.filter(item => item.priority === "Low") || [];
 
   const canProceed = criticalItems.every(item => item.completed) && 
                    highItems.filter(item => item.completed).length >= Math.ceil(highItems.length * 0.8);
@@ -175,7 +175,7 @@ export default function EvidenceChecklist() {
               </div>
             </div>
             <Badge variant="outline" className="text-sm">
-              Incident #{incident.id}
+              Incident #{(incident as Incident)?.id}
             </Badge>
           </div>
         </div>
@@ -189,10 +189,10 @@ export default function EvidenceChecklist() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  {incident.title}
+                  {(incident as Incident)?.title}
                 </CardTitle>
                 <CardDescription>
-                  Equipment: {incident.equipmentGroup} → {incident.equipmentType} ({incident.equipmentId})
+                  Equipment: {(incident as Incident)?.equipmentGroup} → {(incident as Incident)?.equipmentType} ({(incident as Incident)?.equipmentId})
                 </CardDescription>
               </div>
               <div className="text-right">
@@ -218,8 +218,8 @@ export default function EvidenceChecklist() {
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Lightbulb className="h-4 w-4" />
             <AlertDescription>
-              <strong>AI Generated Checklist:</strong> Based on your equipment type ({incident.equipmentType}) and reported symptoms, 
-              our AI has identified {evidenceItems.length} evidence items. Focus on completing all Critical items and at least 80% of High priority items.
+              <strong>AI Generated Checklist:</strong> Based on your equipment type ({(incident as Incident)?.equipmentType}) and reported symptoms, 
+              our AI has identified {evidenceItems?.length || 0} evidence items. Focus on completing all Critical items and at least 80% of High priority items.
             </AlertDescription>
           </Alert>
         )}
