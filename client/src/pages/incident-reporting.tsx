@@ -147,12 +147,10 @@ export default function IncidentReporting() {
         description: "Moving to equipment selection and symptom input...",
       });
       
-      // Small delay to ensure toast shows before navigation
-      setTimeout(() => {
-        const navigationUrl = `/equipment-selection?incident=${incidentId}`;
-        console.log('Navigating to:', navigationUrl);
-        setLocation(navigationUrl);
-      }, 100);
+      // Navigate immediately - use window.location for full page navigation
+      const navigationUrl = `/equipment-selection?incident=${incidentId}`;
+      console.log('Navigating to:', navigationUrl);
+      window.location.href = navigationUrl;
     },
     onError: (error: any) => {
       toast({
