@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload, Home, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload, Home, ArrowLeft, FileUp, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import type { AiSettings, InsertAiSettings, EquipmentGroup, RiskRanking } from "@shared/schema";
 
@@ -28,6 +28,10 @@ export default function AdminSettings() {
   const [newRiskRanking, setNewRiskRanking] = useState({ label: "" });
   const [editingEquipmentGroup, setEditingEquipmentGroup] = useState<{id: number, name: string} | null>(null);
   const [editingRiskRanking, setEditingRiskRanking] = useState<{id: number, label: string} | null>(null);
+  
+  // File upload references
+  const [equipmentGroupsFileRef, setEquipmentGroupsFileRef] = useState<HTMLInputElement | null>(null);
+  const [riskRankingsFileRef, setRiskRankingsFileRef] = useState<HTMLInputElement | null>(null);
   const [showAddEquipmentForm, setShowAddEquipmentForm] = useState(false);
   const [newEquipmentType, setNewEquipmentType] = useState({
     equipmentType: "",
@@ -204,6 +208,108 @@ export default function AdminSettings() {
       });
     },
   });
+
+  // Equipment Groups Import/Export mutations
+  const importEquipmentGroupsMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return await apiRequest('/api/equipment-groups/import', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Import Completed",
+        description: `Imported ${data.imported} equipment groups${data.errors > 0 ? `, ${data.errors} errors` : ''}`,
+      });
+      queryClient.invalidateQueries(['/api/equipment-groups']);
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import equipment groups",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const exportEquipmentGroups = async () => {
+    try {
+      const response = await fetch('/api/equipment-groups/export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'equipment-groups.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Export Successful",
+        description: "Equipment groups exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export equipment groups",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Risk Rankings Import/Export mutations
+  const importRiskRankingsMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return await apiRequest('/api/risk-rankings/import', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Import Completed",
+        description: `Imported ${data.imported} risk rankings${data.errors > 0 ? `, ${data.errors} errors` : ''}`,
+      });
+      queryClient.invalidateQueries(['/api/risk-rankings']);
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import risk rankings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const exportRiskRankings = async () => {
+    try {
+      const response = await fetch('/api/risk-rankings/export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'risk-rankings.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Export Successful",
+        description: "Risk rankings exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export risk rankings",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Save AI settings mutation
   const saveSettingsMutation = useMutation({
@@ -569,6 +675,38 @@ export default function AdminSettings() {
                 </Button>
               </div>
 
+              {/* Import/Export Controls */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={() => equipmentGroupsFileRef?.click()}
+                  disabled={importEquipmentGroupsMutation.isPending}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {importEquipmentGroupsMutation.isPending ? "Importing..." : "Import CSV"}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={exportEquipmentGroups}
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  style={{ display: 'none' }}
+                  ref={setEquipmentGroupsFileRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      importEquipmentGroupsMutation.mutate(file);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
+
               {/* Equipment Groups Table */}
               {equipmentGroupsLoading ? (
                 <div className="text-center py-8">Loading equipment groups...</div>
@@ -697,6 +835,38 @@ export default function AdminSettings() {
                   <Plus className="w-4 h-4 mr-2" />
                   Add Ranking
                 </Button>
+              </div>
+
+              {/* Import/Export Controls */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={() => riskRankingsFileRef?.click()}
+                  disabled={importRiskRankingsMutation.isPending}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {importRiskRankingsMutation.isPending ? "Importing..." : "Import CSV"}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={exportRiskRankings}
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  style={{ display: 'none' }}
+                  ref={setRiskRankingsFileRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      importRiskRankingsMutation.mutate(file);
+                      e.target.value = '';
+                    }
+                  }}
+                />
               </div>
 
               {/* Risk Rankings Table */}

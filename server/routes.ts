@@ -678,6 +678,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Equipment Groups Import/Export
+  app.post("/api/equipment-groups/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const Papa = require('papaparse');
+      const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+      
+      if (parsed.errors.length > 0) {
+        return res.status(400).json({ message: "CSV parsing error", errors: parsed.errors });
+      }
+
+      const groups = parsed.data.map((row: any) => ({
+        name: row.name || row.Name,
+        isActive: row.isActive === 'true' || row.isActive === true || row.isActive === 'TRUE'
+      })).filter((group: any) => group.name && group.name.trim());
+
+      if (groups.length === 0) {
+        return res.status(400).json({ message: "No valid equipment groups found in file" });
+      }
+
+      // Import groups one by one to handle duplicates
+      const imported = [];
+      const errors = [];
+      
+      for (const group of groups) {
+        try {
+          const created = await investigationStorage.createEquipmentGroup(group);
+          imported.push(created);
+        } catch (error: any) {
+          if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+            errors.push(`Equipment group "${group.name}" already exists`);
+          } else {
+            errors.push(`Failed to create "${group.name}": ${error.message}`);
+          }
+        }
+      }
+
+      res.json({ 
+        message: "Import completed", 
+        imported: imported.length,
+        errors: errors.length,
+        details: errors
+      });
+    } catch (error) {
+      console.error("[RCA] Error importing equipment groups:", error);
+      res.status(500).json({ message: "Failed to import equipment groups: " + error.message });
+    }
+  });
+
+  app.get("/api/equipment-groups/export", async (req, res) => {
+    try {
+      const groups = await investigationStorage.getAllEquipmentGroups();
+      const Papa = require('papaparse');
+      
+      const csvData = Papa.unparse(groups.map(group => ({
+        name: group.name,
+        isActive: group.isActive,
+        createdAt: group.createdAt?.toISOString(),
+        updatedAt: group.updatedAt?.toISOString()
+      })));
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=equipment-groups.csv');
+      res.send(csvData);
+    } catch (error) {
+      console.error("[RCA] Error exporting equipment groups:", error);
+      res.status(500).json({ message: "Failed to export equipment groups" });
+    }
+  });
+
   // Risk Rankings routes
   app.get("/api/risk-rankings", async (req, res) => {
     try {
@@ -743,6 +817,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[RCA] Error deleting risk ranking:", error);
       res.status(500).json({ message: "Failed to delete risk ranking" });
+    }
+  });
+
+  // Risk Rankings Import/Export
+  app.post("/api/risk-rankings/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const Papa = require('papaparse');
+      const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+      
+      if (parsed.errors.length > 0) {
+        return res.status(400).json({ message: "CSV parsing error", errors: parsed.errors });
+      }
+
+      const rankings = parsed.data.map((row: any) => ({
+        label: row.label || row.Label,
+        isActive: row.isActive === 'true' || row.isActive === true || row.isActive === 'TRUE'
+      })).filter((ranking: any) => ranking.label && ranking.label.trim());
+
+      if (rankings.length === 0) {
+        return res.status(400).json({ message: "No valid risk rankings found in file" });
+      }
+
+      // Import rankings one by one to handle duplicates
+      const imported = [];
+      const errors = [];
+      
+      for (const ranking of rankings) {
+        try {
+          const created = await investigationStorage.createRiskRanking(ranking);
+          imported.push(created);
+        } catch (error: any) {
+          if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+            errors.push(`Risk ranking "${ranking.label}" already exists`);
+          } else {
+            errors.push(`Failed to create "${ranking.label}": ${error.message}`);
+          }
+        }
+      }
+
+      res.json({ 
+        message: "Import completed", 
+        imported: imported.length,
+        errors: errors.length,
+        details: errors
+      });
+    } catch (error) {
+      console.error("[RCA] Error importing risk rankings:", error);
+      res.status(500).json({ message: "Failed to import risk rankings: " + error.message });
+    }
+  });
+
+  app.get("/api/risk-rankings/export", async (req, res) => {
+    try {
+      const rankings = await investigationStorage.getAllRiskRankings();
+      const Papa = require('papaparse');
+      
+      const csvData = Papa.unparse(rankings.map(ranking => ({
+        label: ranking.label,
+        isActive: ranking.isActive,
+        createdAt: ranking.createdAt?.toISOString(),
+        updatedAt: ranking.updatedAt?.toISOString()
+      })));
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=risk-rankings.csv');
+      res.send(csvData);
+    } catch (error) {
+      console.error("[RCA] Error exporting risk rankings:", error);
+      res.status(500).json({ message: "Failed to export risk rankings" });
     }
   });
 
