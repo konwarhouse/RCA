@@ -36,6 +36,9 @@ export default function EquipmentSelection() {
   // Extract incident ID directly from URL parameters
   const params = new URLSearchParams(window.location.search);
   const incidentId = params.get('incident') ? parseInt(params.get('incident')!) : null;
+  console.log('DEBUG: Current URL:', window.location.href);
+  console.log('DEBUG: Search params:', window.location.search);
+  console.log('DEBUG: Extracted incident ID:', incidentId);
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   

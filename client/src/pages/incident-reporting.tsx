@@ -136,7 +136,9 @@ export default function IncidentReporting() {
       // Navigate to the next step with the incident ID
       const incidentId = response?.id || response;
       console.log('Navigating to equipment selection with ID:', incidentId);
-      setLocation(`/equipment-selection?incident=${incidentId}`);
+      const navigationUrl = `/equipment-selection?incident=${incidentId}`;
+      console.log('Full navigation URL:', navigationUrl);
+      setLocation(navigationUrl);
     },
     onError: (error: any) => {
       toast({
