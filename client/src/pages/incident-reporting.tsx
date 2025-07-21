@@ -129,7 +129,21 @@ export default function IncidentReporting() {
     },
     onSuccess: (response: any) => {
       console.log('Incident created successfully:', response);
-      const incidentId = response?.id || response;
+      console.log('Full response object:', JSON.stringify(response, null, 2));
+      let incidentId;
+      
+      // Handle different response formats
+      if (typeof response === 'object' && response.id) {
+        incidentId = response.id;
+      } else if (typeof response === 'number') {
+        incidentId = response;
+      } else if (typeof response === 'string') {
+        incidentId = parseInt(response);
+      } else {
+        console.error('Unexpected response format:', response);
+        incidentId = null;
+      }
+      
       console.log('Extracted incident ID for navigation:', incidentId, 'Type:', typeof incidentId);
       
       if (!incidentId) {
