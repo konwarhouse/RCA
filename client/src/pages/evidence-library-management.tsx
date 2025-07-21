@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle } from "lucide-react";
+import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle, Home, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -288,6 +289,27 @@ export default function EvidenceLibraryManagement() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
+        {/* Navigation Header */}
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center space-x-4">
+            <Link href="/">
+              <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Home</span>
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                <Home className="w-4 h-4" />
+                <span>Dashboard</span>
+              </Button>
+            </Link>
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Evidence Library Management
+          </div>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
