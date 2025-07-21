@@ -20,16 +20,18 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 const evidenceLibrarySchema = z.object({
   equipmentGroup: z.string().min(1, "Equipment group is required"),
   equipmentType: z.string().min(1, "Equipment type is required"),
-  subtype: z.string().optional(),
+  subtypeExample: z.string().optional(),
   componentFailureMode: z.string().min(1, "Failure mode is required"),
   equipmentCode: z.string().min(1, "Equipment code is required"),
   failureCode: z.string().min(1, "Failure code is required"),
   riskRanking: z.enum(["High", "Medium", "Low"]),
-  requiredTrendData: z.string().min(1, "Required trend data is required"),
-  aiQuestions: z.string().min(1, "AI questions are required"),
-  attachmentsRequired: z.string().min(1, "Attachments required is required"),
+  requiredTrendDataEvidence: z.string().min(1, "Required trend data is required"),
+  aiOrInvestigatorQuestions: z.string().min(1, "AI questions are required"),
+  attachmentsEvidenceRequired: z.string().min(1, "Attachments required is required"),
   rootCauseLogic: z.string().min(1, "Root cause logic is required"),
-  notes: z.string().optional(),
+  blankColumn1: z.string().optional(),
+  blankColumn2: z.string().optional(),
+  blankColumn3: z.string().optional(),
   updatedBy: z.string().optional(),
 });
 
@@ -39,19 +41,21 @@ interface EvidenceLibrary {
   id: number;
   equipmentGroup: string;
   equipmentType: string;
-  subtype?: string;
+  subtypeExample?: string;
   componentFailureMode: string;
   equipmentCode: string;
   failureCode: string;
   riskRanking: string;
-  requiredTrendData: string;
-  aiQuestions: string;
-  attachmentsRequired: string;
+  requiredTrendDataEvidence: string;
+  aiOrInvestigatorQuestions: string;
+  attachmentsEvidenceRequired: string;
   rootCauseLogic: string;
+  blankColumn1?: string;
+  blankColumn2?: string;
+  blankColumn3?: string;
   isActive: boolean;
   lastUpdated: string;
   updatedBy?: string;
-  notes?: string;
 }
 
 export default function EvidenceLibraryManagement() {
@@ -66,16 +70,18 @@ export default function EvidenceLibraryManagement() {
     defaultValues: {
       equipmentGroup: "",
       equipmentType: "",
-      subtype: "",
+      subtypeExample: "",
       componentFailureMode: "",
       equipmentCode: "",
       failureCode: "",
       riskRanking: "Medium",
-      requiredTrendData: "",
-      aiQuestions: "",
-      attachmentsRequired: "",
+      requiredTrendDataEvidence: "",
+      aiOrInvestigatorQuestions: "",
+      attachmentsEvidenceRequired: "",
       rootCauseLogic: "",
-      notes: "",
+      blankColumn1: "",
+      blankColumn2: "",
+      blankColumn3: "",
       updatedBy: "admin",
     },
   });
@@ -201,16 +207,18 @@ export default function EvidenceLibraryManagement() {
     form.reset({
       equipmentGroup: item.equipmentGroup,
       equipmentType: item.equipmentType,
-      subtype: item.subtype || "",
+      subtypeExample: item.subtypeExample || "",
       componentFailureMode: item.componentFailureMode,
       equipmentCode: item.equipmentCode,
       failureCode: item.failureCode,
       riskRanking: item.riskRanking as "High" | "Medium" | "Low",
-      requiredTrendData: item.requiredTrendData,
-      aiQuestions: item.aiQuestions,
-      attachmentsRequired: item.attachmentsRequired,
+      requiredTrendDataEvidence: item.requiredTrendDataEvidence,
+      aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
+      attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
       rootCauseLogic: item.rootCauseLogic,
-      notes: item.notes || "",
+      blankColumn1: item.blankColumn1 || "",
+      blankColumn2: item.blankColumn2 || "",
+      blankColumn3: item.blankColumn3 || "",
       updatedBy: "admin",
     });
     setIsDialogOpen(true);
@@ -224,20 +232,22 @@ export default function EvidenceLibraryManagement() {
 
   const handleExport = () => {
     const csv = [
-      "Equipment Group,Equipment Type,Subtype / Example,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Notes",
+      "Equipment Group,Equipment Type,Subtype / Example,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Blank Column 1,Blank Column 2,Blank Column 3",
       ...evidenceItems.map(item => [
         item.equipmentGroup,
         item.equipmentType,
-        item.subtype || "",
+        item.subtypeExample || "",
         item.componentFailureMode,
         item.equipmentCode,
         item.failureCode,
         item.riskRanking,
-        item.requiredTrendData,
-        item.aiQuestions,
-        item.attachmentsRequired,
+        item.requiredTrendDataEvidence,
+        item.aiOrInvestigatorQuestions,
+        item.attachmentsEvidenceRequired,
         item.rootCauseLogic,
-        item.notes || ""
+        item.blankColumn1 || "",
+        item.blankColumn2 || "",
+        item.blankColumn3 || ""
       ].map(field => `"${field.replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
@@ -386,10 +396,10 @@ export default function EvidenceLibraryManagement() {
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="subtype"
+                            name="subtypeExample"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Subtype</FormLabel>
+                                <FormLabel>Subtype / Example</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="e.g., Centrifugal, Reciprocating" />
                                 </FormControl>
@@ -465,10 +475,10 @@ export default function EvidenceLibraryManagement() {
 
                         <FormField
                           control={form.control}
-                          name="requiredTrendData"
+                          name="requiredTrendDataEvidence"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Required Trend Data</FormLabel>
+                              <FormLabel>Required Trend Data / Evidence</FormLabel>
                               <FormControl>
                                 <Textarea 
                                   {...field} 
@@ -483,10 +493,10 @@ export default function EvidenceLibraryManagement() {
 
                         <FormField
                           control={form.control}
-                          name="aiQuestions"
+                          name="aiOrInvestigatorQuestions"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>AI Questions</FormLabel>
+                              <FormLabel>AI or Investigator Questions</FormLabel>
                               <FormControl>
                                 <Textarea 
                                   {...field} 
@@ -501,10 +511,10 @@ export default function EvidenceLibraryManagement() {
 
                         <FormField
                           control={form.control}
-                          name="attachmentsRequired"
+                          name="attachmentsEvidenceRequired"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Required Attachments</FormLabel>
+                              <FormLabel>Attachments / Evidence Required</FormLabel>
                               <FormControl>
                                 <Textarea 
                                   {...field} 
@@ -535,19 +545,47 @@ export default function EvidenceLibraryManagement() {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="notes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Notes (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} rows={2} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <div className="grid grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="blankColumn1"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Blank Column 1</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Optional field" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="blankColumn2"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Blank Column 2</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Optional field" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="blankColumn3"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Blank Column 3</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Optional field" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
                         <div className="flex justify-end space-x-2 pt-4">
                           <Button 
@@ -614,8 +652,8 @@ export default function EvidenceLibraryManagement() {
                             <div className="font-medium">
                               {item.equipmentGroup} - {item.equipmentType}
                             </div>
-                            {item.subtype && (
-                              <div className="text-sm text-gray-500">{item.subtype}</div>
+                            {item.subtypeExample && (
+                              <div className="text-sm text-gray-500">{item.subtypeExample}</div>
                             )}
                           </div>
                         </TableCell>
@@ -632,7 +670,7 @@ export default function EvidenceLibraryManagement() {
                           </Badge>
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="truncate">{item.requiredTrendData}</div>
+                          <div className="truncate">{item.requiredTrendDataEvidence}</div>
                         </TableCell>
                         <TableCell className="max-w-xs">
                           <div className="truncate">{item.rootCauseLogic}</div>

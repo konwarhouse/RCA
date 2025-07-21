@@ -39,25 +39,27 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Evidence Library table for comprehensive RCA templates
+// Evidence Library table - EXACT CSV column mapping: Equipment Group, Equipment Type, Subtype / Example, Component / Failure Mode, Equipment Code, Failure Code, Risk Ranking, Required Trend Data / Evidence, AI or Investigator Questions, Attachments / Evidence Required, Root Cause Logic, Blank Column 1, Blank Column 2, Blank Column 3
 export const evidenceLibrary = pgTable("evidence_library", {
   id: serial("id").primaryKey(),
-  equipmentGroup: varchar("equipment_group").notNull(), // Rotating, Static, Electrical, etc.
-  equipmentType: varchar("equipment_type").notNull(), // Pumps, Compressors, Turbines, etc.
-  subtype: varchar("subtype"), // Centrifugal, Reciprocating, etc.
-  componentFailureMode: varchar("component_failure_mode").notNull(), // Seal Leak, Bearing Failure, etc.
-  equipmentCode: varchar("equipment_code").notNull().unique(), // PMP-CEN-001, etc.
-  failureCode: varchar("failure_code").notNull(), // F-001, etc.
-  riskRanking: varchar("risk_ranking").notNull(), // High, Medium, Low
-  requiredTrendData: text("required_trend_data"), // Vibration, Seal Pot Level, etc.
-  aiQuestions: text("ai_questions"), // When did leak start? etc.
-  attachmentsRequired: text("attachments_required"), // Vibration plot, leak photo, etc.
-  rootCauseLogic: text("root_cause_logic"), // Root: Seal aged/damaged, etc.
+  equipmentGroup: varchar("equipment_group").notNull(), // Equipment Group 
+  equipmentType: varchar("equipment_type").notNull(), // Equipment Type
+  subtypeExample: varchar("subtype_example"), // Subtype / Example
+  componentFailureMode: varchar("component_failure_mode").notNull(), // Component / Failure Mode
+  equipmentCode: varchar("equipment_code").notNull().unique(), // Equipment Code
+  failureCode: varchar("failure_code").notNull(), // Failure Code
+  riskRanking: varchar("risk_ranking").notNull(), // Risk Ranking
+  requiredTrendDataEvidence: text("required_trend_data_evidence"), // Required Trend Data / Evidence
+  aiOrInvestigatorQuestions: text("ai_or_investigator_questions"), // AI or Investigator Questions
+  attachmentsEvidenceRequired: text("attachments_evidence_required"), // Attachments / Evidence Required
+  rootCauseLogic: text("root_cause_logic"), // Root Cause Logic
+  blankColumn1: varchar("blank_column_1"), // Blank Column 1
+  blankColumn2: varchar("blank_column_2"), // Blank Column 2
+  blankColumn3: varchar("blank_column_3"), // Blank Column 3
   isActive: boolean("is_active").default(true),
   lastUpdated: timestamp("last_updated").defaultNow(),
   updatedBy: varchar("updated_by"),
   createdAt: timestamp("created_at").defaultNow(),
-  notes: text("notes"),
 });
 
 export const insertEvidenceLibrarySchema = createInsertSchema(evidenceLibrary).omit({
