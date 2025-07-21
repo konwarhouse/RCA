@@ -1,6 +1,13 @@
-import { investigations, type Investigation, type InsertInvestigation } from "@shared/schema";
+import { 
+  investigations, 
+  type Investigation, 
+  type InsertInvestigation,
+  evidenceLibrary,
+  type EvidenceLibrary,
+  type InsertEvidenceLibrary,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, like, and, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 // Storage interface for investigations
@@ -15,6 +22,15 @@ export interface IInvestigationStorage {
   // Evidence operations
   updateEvidence(id: number, evidenceData: any): Promise<Investigation>;
   validateEvidenceCompleteness(id: number): Promise<{ completeness: number, isValid: boolean }>;
+  
+  // Evidence Library operations
+  getAllEvidenceLibrary(): Promise<EvidenceLibrary[]>;
+  getEvidenceLibraryById(id: number): Promise<EvidenceLibrary | undefined>;
+  createEvidenceLibrary(data: InsertEvidenceLibrary): Promise<EvidenceLibrary>;
+  updateEvidenceLibrary(id: number, data: Partial<EvidenceLibrary>): Promise<EvidenceLibrary>;
+  deleteEvidenceLibrary(id: number): Promise<void>;
+  searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]>;
+  bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   
   // AI Settings operations
   getAllAiSettings(): Promise<any[]>;
@@ -166,6 +182,83 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
 
   async deleteAiSettings(id: number): Promise<void> {
     this.aiSettings = this.aiSettings.filter(setting => setting.id !== id);
+  }
+
+  // Evidence Library operations
+  async getAllEvidenceLibrary(): Promise<EvidenceLibrary[]> {
+    return await db
+      .select()
+      .from(evidenceLibrary)
+      .where(eq(evidenceLibrary.isActive, true))
+      .orderBy(evidenceLibrary.equipmentGroup, evidenceLibrary.equipmentType);
+  }
+
+  async getEvidenceLibraryById(id: number): Promise<EvidenceLibrary | undefined> {
+    const [item] = await db
+      .select()
+      .from(evidenceLibrary)
+      .where(eq(evidenceLibrary.id, id));
+    return item;
+  }
+
+  async createEvidenceLibrary(data: InsertEvidenceLibrary): Promise<EvidenceLibrary> {
+    const [item] = await db
+      .insert(evidenceLibrary)
+      .values({
+        ...data,
+        lastUpdated: new Date(),
+      })
+      .returning();
+    return item;
+  }
+
+  async updateEvidenceLibrary(id: number, data: Partial<EvidenceLibrary>): Promise<EvidenceLibrary> {
+    const [item] = await db
+      .update(evidenceLibrary)
+      .set({
+        ...data,
+        lastUpdated: new Date(),
+      })
+      .where(eq(evidenceLibrary.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteEvidenceLibrary(id: number): Promise<void> {
+    await db
+      .update(evidenceLibrary)
+      .set({ isActive: false, lastUpdated: new Date() })
+      .where(eq(evidenceLibrary.id, id));
+  }
+
+  async searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]> {
+    const searchPattern = `%${searchTerm.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(evidenceLibrary)
+      .where(
+        and(
+          eq(evidenceLibrary.isActive, true),
+          or(
+            like(evidenceLibrary.equipmentType, searchPattern),
+            like(evidenceLibrary.componentFailureMode, searchPattern),
+            like(evidenceLibrary.equipmentCode, searchPattern),
+            like(evidenceLibrary.subtype, searchPattern)
+          )
+        )
+      );
+  }
+
+  async bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]> {
+    const items = data.map(item => ({
+      ...item,
+      lastUpdated: new Date(),
+    }));
+    
+    return await db
+      .insert(evidenceLibrary)
+      .values(items)
+      .returning();
   }
 }
 

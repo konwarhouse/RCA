@@ -39,6 +39,36 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+// Evidence Library table for comprehensive RCA templates
+export const evidenceLibrary = pgTable("evidence_library", {
+  id: serial("id").primaryKey(),
+  equipmentGroup: varchar("equipment_group").notNull(), // Rotating, Static, Electrical, etc.
+  equipmentType: varchar("equipment_type").notNull(), // Pumps, Compressors, Turbines, etc.
+  subtype: varchar("subtype"), // Centrifugal, Reciprocating, etc.
+  componentFailureMode: varchar("component_failure_mode").notNull(), // Seal Leak, Bearing Failure, etc.
+  equipmentCode: varchar("equipment_code").notNull().unique(), // PMP-CEN-001, etc.
+  failureCode: varchar("failure_code").notNull(), // F-001, etc.
+  riskRanking: varchar("risk_ranking").notNull(), // High, Medium, Low
+  requiredTrendData: text("required_trend_data"), // Vibration, Seal Pot Level, etc.
+  aiQuestions: text("ai_questions"), // When did leak start? etc.
+  attachmentsRequired: text("attachments_required"), // Vibration plot, leak photo, etc.
+  rootCauseLogic: text("root_cause_logic"), // Root: Seal aged/damaged, etc.
+  isActive: boolean("is_active").default(true),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  notes: text("notes"),
+});
+
+export const insertEvidenceLibrarySchema = createInsertSchema(evidenceLibrary).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export type InsertEvidenceLibrary = z.infer<typeof insertEvidenceLibrarySchema>;
+export type EvidenceLibrary = typeof evidenceLibrary.$inferSelect;
+
 // RCA Investigations table - supports both ECFA and Fault Tree Analysis
 export const investigations = pgTable("investigations", {
   id: serial("id").primaryKey(),

@@ -483,6 +483,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .map(([cause, count]) => ({ cause, count }));
   }
 
+  // Evidence Library Management Routes
+  
+  // Get all evidence library items
+  app.get("/api/evidence-library", async (req, res) => {
+    try {
+      const items = await investigationStorage.getAllEvidenceLibrary();
+      res.json(items);
+    } catch (error) {
+      console.error("[RCA] Error fetching evidence library:", error);
+      res.status(500).json({ message: "Failed to fetch evidence library" });
+    }
+  });
+
+  // Search evidence library
+  app.get("/api/evidence-library/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      const items = await investigationStorage.searchEvidenceLibrary(q);
+      res.json(items);
+    } catch (error) {
+      console.error("[RCA] Error searching evidence library:", error);
+      res.status(500).json({ message: "Failed to search evidence library" });
+    }
+  });
+
+  // Get single evidence library item
+  app.get("/api/evidence-library/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await investigationStorage.getEvidenceLibraryById(id);
+      if (!item) {
+        return res.status(404).json({ message: "Evidence item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("[RCA] Error fetching evidence item:", error);
+      res.status(500).json({ message: "Failed to fetch evidence item" });
+    }
+  });
+
+  // Create evidence library item
+  app.post("/api/evidence-library", async (req, res) => {
+    try {
+      const item = await investigationStorage.createEvidenceLibrary(req.body);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("[RCA] Error creating evidence item:", error);
+      res.status(500).json({ message: "Failed to create evidence item" });
+    }
+  });
+
+  // Update evidence library item
+  app.put("/api/evidence-library/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await investigationStorage.updateEvidenceLibrary(id, req.body);
+      res.json(item);
+    } catch (error) {
+      console.error("[RCA] Error updating evidence item:", error);
+      res.status(500).json({ message: "Failed to update evidence item" });
+    }
+  });
+
+  // Delete evidence library item
+  app.delete("/api/evidence-library/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await investigationStorage.deleteEvidenceLibrary(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("[RCA] Error deleting evidence item:", error);
+      res.status(500).json({ message: "Failed to delete evidence item" });
+    }
+  });
+
+  // Import CSV data
+  app.post("/api/evidence-library/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const lines = csvData.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      const items = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        if (values.length >= 11) { // Minimum required fields
+          items.push({
+            equipmentGroup: values[0],
+            equipmentType: values[1],
+            subtype: values[2] || null,
+            componentFailureMode: values[3],
+            equipmentCode: values[4],
+            failureCode: values[5],
+            riskRanking: values[6],
+            requiredTrendData: values[7],
+            aiQuestions: values[8],
+            attachmentsRequired: values[9],
+            rootCauseLogic: values[10],
+            notes: values[11] || null,
+            updatedBy: "admin-import",
+          });
+        }
+      }
+
+      if (items.length === 0) {
+        return res.status(400).json({ message: "No valid data found in CSV" });
+      }
+
+      const importedItems = await investigationStorage.bulkImportEvidenceLibrary(items);
+      res.json({ 
+        message: "Import successful", 
+        imported: importedItems.length,
+        items: importedItems 
+      });
+    } catch (error) {
+      console.error("[RCA] Error importing CSV:", error);
+      res.status(500).json({ message: "Failed to import CSV: " + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
