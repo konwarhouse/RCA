@@ -425,58 +425,25 @@ export default function AdminSettings() {
                 </Button>
               </div>
 
-              {/* Add Equipment Form */}
+              {/* Add Evidence Library Item Form - 14 Column CSV Template */}
               {showAddEquipmentForm && (
                 <Card className="border-primary/20">
                   <CardHeader>
-                    <CardTitle className="text-base">Add New Equipment Type</CardTitle>
+                    <CardTitle className="text-base">Add New Evidence Library Item (14-Column CSV Template)</CardTitle>
+                    <p className="text-sm text-muted-foreground">Add equipment failure modes exactly matching your CSV template structure</p>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Equipment Type Name</Label>
-                        <Input
-                          placeholder="e.g., Heat Exchangers"
-                          value={newEquipmentType.equipmentType}
-                          onChange={(e) => setNewEquipmentType(prev => ({ ...prev, equipmentType: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>ISO 14224 Code</Label>
-                        <Input
-                          placeholder="e.g., HE-003"
-                          value={newEquipmentType.iso14224Code}
-                          onChange={(e) => setNewEquipmentType(prev => ({ ...prev, iso14224Code: e.target.value }))}
-                        />
-                      </div>
+                  <CardContent>
+                    <Button variant="outline" size="sm" asChild className="mb-4">
+                      <Link href="/evidence-library-management">
+                        Use Full Evidence Library Management →
+                      </Link>
+                    </Button>
+                    <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                      <p className="font-medium">Note:</p>
+                      <p>For complete evidence library management with all 14 columns (Equipment Group, Equipment Type, Subtype/Example, Component/Failure Mode, Equipment Code, Failure Code, Risk Ranking, Required Trend Data/Evidence, AI Questions, Attachments Required, Root Cause Logic, plus 3 blank columns), please use the dedicated Evidence Library Management page.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Subtypes (comma-separated)</Label>
-                      <Input
-                        placeholder="e.g., Shell and Tube, Plate, Air Cooled"
-                        value={newEquipmentType.subtypes}
-                        onChange={(e) => setNewEquipmentType(prev => ({ ...prev, subtypes: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        placeholder="Brief description of equipment type and its applications"
-                        value={newEquipmentType.description}
-                        onChange={(e) => setNewEquipmentType(prev => ({ ...prev, description: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => addEquipmentMutation.mutate(newEquipmentType)}
-                        disabled={addEquipmentMutation.isPending || !newEquipmentType.equipmentType || !newEquipmentType.iso14224Code}
-                      >
-                        {addEquipmentMutation.isPending ? "Adding..." : "Add Equipment Type"}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setShowAddEquipmentForm(false)}
-                      >
+                    <div className="flex gap-2 mt-4">
+                      <Button variant="outline" onClick={() => setShowAddEquipmentForm(false)}>
                         Cancel
                       </Button>
                     </div>

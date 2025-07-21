@@ -642,13 +642,13 @@ export default function EvidenceLibraryManagement() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
-              Evidence Library ({evidenceItems.length} items)
+              Evidence Library ({Array.isArray(evidenceItems) ? evidenceItems.length : 0} items)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-8">Loading evidence library...</div>
-            ) : evidenceItems.length === 0 ? (
+            ) : !Array.isArray(evidenceItems) || evidenceItems.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No evidence items found. Add some items to get started.
               </div>
@@ -675,7 +675,7 @@ export default function EvidenceLibraryManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {evidenceItems.map((item) => (
+                    {(Array.isArray(evidenceItems) ? evidenceItems : []).map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{item.equipmentGroup}</TableCell>
                         <TableCell>{item.equipmentType}</TableCell>
