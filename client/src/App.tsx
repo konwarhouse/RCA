@@ -24,6 +24,7 @@ import DebugRoutes from "@/pages/debug-routes";
 
 
 function Router() {
+  console.log('Current route:', window.location.pathname);
   return (
     <Switch>
       <Route path="/" component={Home} />

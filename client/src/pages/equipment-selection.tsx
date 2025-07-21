@@ -193,6 +193,7 @@ export default function EquipmentSelection() {
   }
 
   console.log('RENDERING MAIN CONTENT - incident:', incident?.title, 'ID:', incidentId);
+  console.log('Current location:', window.location.pathname, window.location.search);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
