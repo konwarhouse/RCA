@@ -32,21 +32,10 @@ type EquipmentSymptomForm = z.infer<typeof equipmentSymptomSchema>;
 export default function EquipmentSelection() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [incidentId, setIncidentId] = useState<number | null>(null);
-
-  // Extract incident ID from URL parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('incident');
-    console.log('URL params:', window.location.search, 'extracted ID:', id);
-    if (id) {
-      const parsedId = parseInt(id);
-      console.log('Parsed incident ID:', parsedId);
-      setIncidentId(parsedId);
-    } else {
-      console.log('No incident ID in URL');
-    }
-  }, []);
+  
+  // Extract incident ID directly from URL parameters
+  const params = new URLSearchParams(window.location.search);
+  const incidentId = params.get('incident') ? parseInt(params.get('incident')!) : null;
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   
@@ -135,15 +124,12 @@ export default function EquipmentSelection() {
     updateIncidentMutation.mutate(payload);
   };
 
-  console.log('Render check - incidentId:', incidentId, 'isLoadingIncident:', isLoadingIncident, 'incident exists:', !!incident);
-
   if (!incidentId) {
-    console.log('No incident ID - showing loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg font-medium text-slate-900">Loading investigation...</div>
-          <div className="text-sm text-slate-600 mt-2">Please wait while we retrieve the incident details.</div>
+          <div className="text-lg font-medium text-red-600">Error: No Incident ID</div>
+          <div className="text-sm text-slate-600 mt-2">Please access this page from the incident reporting workflow.</div>
         </div>
       </div>
     );
