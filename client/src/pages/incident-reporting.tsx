@@ -78,7 +78,7 @@ export default function IncidentReporting() {
         description: "Moving to equipment selection and symptom input...",
       });
       // Navigate to the next step with the incident ID
-      setLocation(`/rca-investigation/${response.id}/equipment-selection`);
+      setLocation(`/equipment-selection?incident=${response.id}`);
     },
     onError: (error: any) => {
       toast({

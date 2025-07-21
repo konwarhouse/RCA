@@ -16,8 +16,19 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
+### Critical Bug Fixes - Navigation & Database Issues RESOLVED (LATEST)
+- **Date**: January 21, 2025 (Latest Update)
+- **Changes**: Fixed critical workflow navigation and database timestamp issues preventing incident creation and workflow progression
+  - **Navigation Bug Fix**: Corrected equipment-selection route pattern mismatch - incident-reporting now properly navigates to `/equipment-selection?incident={id}` instead of invalid `/rca-investigation/{id}/equipment-selection` pattern
+  - **Database Timestamp Fix**: Resolved "value.toISOString is not a function" error in incident creation by implementing proper Date object conversion in storage layer
+  - **Evidence Checklist Fix**: Added null checks and proper type casting to prevent filter crashes when evidenceItems is undefined
+  - **API Route Validation**: Updated routes.ts to handle timestamp conversion at API level before database insertion
+  - **Type Safety**: Enhanced equipment-selection page to extract incident ID from URL parameters correctly using URLSearchParams
+- **Testing Results**: Successfully created incidents (IDs 2, 3, 4, 5) with proper timestamp handling and confirmed navigation flow works end-to-end
+- **Impact**: Complete 8-step RCA workflow now fully operational without blocking errors. Users can create incidents and navigate through all workflow phases seamlessly.
+
 ### Complete 8-Step RCA Workflow Implementation (FINAL)
-- **Date**: January 21, 2025 (Latest)  
+- **Date**: January 21, 2025 (Previous Implementation)  
 - **Changes**: Successfully implemented the complete 8-step enterprise RCA workflow with all phases operational
   - **Steps 1-2**: ✅ Incident Reporting & Equipment Selection - Complete with comprehensive forms and library integration
   - **Steps 3-4**: ✅ AI Evidence Checklist & Collection - Dynamic AI-generated checklists with professional file management system

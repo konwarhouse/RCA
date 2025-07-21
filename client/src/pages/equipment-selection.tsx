@@ -32,8 +32,16 @@ type EquipmentSymptomForm = z.infer<typeof equipmentSymptomSchema>;
 export default function EquipmentSelection() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/rca-investigation/:id/equipment-selection");
-  const incidentId = params?.id;
+  const [incidentId, setIncidentId] = useState<number | null>(null);
+
+  // Extract incident ID from URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('incident');
+    if (id) {
+      setIncidentId(parseInt(id));
+    }
+  }, []);
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   
