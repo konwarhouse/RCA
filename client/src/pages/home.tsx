@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brain, Activity, Users, Search, ArrowRight, Database, Settings } from "lucide-react";
+import { Brain, Activity, Users, Search, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,23 +74,7 @@ function NewAnalysisSection() {
             </Link>
           </div>
 
-          {/* Quick Access Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t">
-            <Link href="/admin/evidence-library">
-              <Button variant="outline" className="w-full flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Evidence Library Admin
-                <ArrowRight className="h-3 w-3 ml-auto" />
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant="outline" className="w-full flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                System Administration
-                <ArrowRight className="h-3 w-3 ml-auto" />
-              </Button>
-            </Link>
-          </div>
+
           
           <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
             <p className="font-medium mb-1">What makes this better?</p>
