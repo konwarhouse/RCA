@@ -1098,6 +1098,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Three-level cascading dropdown endpoints
+  app.get("/api/cascading/equipment-groups", async (req, res) => {
+    try {
+      const groups = await investigationStorage.getCascadingEquipmentGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching cascading equipment groups:", error);
+      res.status(500).json({ message: "Failed to fetch equipment groups" });
+    }
+  });
+
+  // NEW: Get equipment types for a specific group
+  app.get("/api/cascading/equipment-types/:groupName", async (req, res) => {
+    try {
+      const { groupName } = req.params;
+      const types = await investigationStorage.getCascadingEquipmentTypes(groupName);
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching cascading equipment types:", error);
+      res.status(500).json({ message: "Failed to fetch equipment types" });
+    }
+  });
+
+  // NEW: Get equipment subtypes for a specific group and type
+  app.get("/api/cascading/equipment-subtypes/:groupName/:typeName", async (req, res) => {
+    try {
+      const { groupName, typeName } = req.params;
+      const subtypes = await investigationStorage.getCascadingEquipmentSubtypes(groupName, typeName);
+      res.json(subtypes);
+    } catch (error) {
+      console.error("Error fetching cascading equipment subtypes:", error);
+      res.status(500).json({ message: "Failed to fetch equipment subtypes" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

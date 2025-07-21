@@ -70,6 +70,11 @@ export interface IInvestigationStorage {
   getIncident(id: number): Promise<Incident | undefined>;
   updateIncident(id: number, data: Partial<Incident>): Promise<Incident>;
   getAllIncidents(): Promise<Incident[]>;
+  
+  // Cascading dropdown operations
+  getCascadingEquipmentGroups(): Promise<string[]>;
+  getCascadingEquipmentTypes(groupName: string): Promise<string[]>;
+  getCascadingEquipmentSubtypes(groupName: string, typeName: string): Promise<string[]>;
 }
 
 export class DatabaseInvestigationStorage implements IInvestigationStorage {
@@ -489,6 +494,41 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       console.error("[DatabaseInvestigationStorage] Error getting all incidents:", error);
       throw error;
     }
+  }
+
+  // Cascading dropdown operations - Implementation
+  async getCascadingEquipmentGroups(): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ equipmentGroup: evidenceLibrary.equipmentGroup })
+      .from(evidenceLibrary)
+      .orderBy(evidenceLibrary.equipmentGroup);
+    
+    return results.map(r => r.equipmentGroup);
+  }
+
+  async getCascadingEquipmentTypes(groupName: string): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ equipmentType: evidenceLibrary.equipmentType })
+      .from(evidenceLibrary)
+      .where(eq(evidenceLibrary.equipmentGroup, groupName))
+      .orderBy(evidenceLibrary.equipmentType);
+    
+    return results.map(r => r.equipmentType);
+  }
+
+  async getCascadingEquipmentSubtypes(groupName: string, typeName: string): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ subtypeExample: evidenceLibrary.subtypeExample })
+      .from(evidenceLibrary)
+      .where(
+        and(
+          eq(evidenceLibrary.equipmentGroup, groupName),
+          eq(evidenceLibrary.equipmentType, typeName)
+        )
+      )
+      .orderBy(evidenceLibrary.subtypeExample);
+    
+    return results.map(r => r.subtypeExample);
   }
 }
 

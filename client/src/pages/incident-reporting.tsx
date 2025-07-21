@@ -15,12 +15,13 @@ import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Form schema for incident reporting
+// Form schema for incident reporting - THREE-LEVEL CASCADING DROPDOWN SYSTEM
 const incidentSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   equipmentGroup: z.string().min(1, "Equipment group is required"),
   equipmentType: z.string().min(1, "Equipment type is required"),
+  equipmentSubtype: z.string().min(1, "Equipment subtype is required"),
   equipmentId: z.string().min(1, "Equipment ID is required"),
   location: z.string().min(1, "Location is required"),
   reportedBy: z.string().min(1, "Reporter name is required"),
@@ -43,6 +44,7 @@ export default function IncidentReporting() {
       description: "",
       equipmentGroup: "",
       equipmentType: "",
+      equipmentSubtype: "",
       equipmentId: "",
       location: "",
       reportedBy: "",
@@ -53,14 +55,67 @@ export default function IncidentReporting() {
     },
   });
 
-  // Fetch Equipment Groups
+  // THREE-LEVEL CASCADING DROPDOWN STATE
+  const selectedEquipmentGroup = form.watch("equipmentGroup");
+  const selectedEquipmentType = form.watch("equipmentType");
+
+  // LEVEL 1: Fetch Equipment Groups from Evidence Library
   const { data: equipmentGroups = [] } = useQuery({
-    queryKey: ['/api/equipment-groups/active'],
+    queryKey: ['/api/cascading/equipment-groups'],
     queryFn: async () => {
-      const response = await fetch('/api/equipment-groups/active');
-      if (!response.ok) throw new Error('Failed to fetch equipment groups');
-      return response.json();
+      try {
+        const response = await fetch('/api/cascading/equipment-groups');
+        if (!response.ok) {
+          console.error('Equipment groups API failed, falling back to SQL query');
+          // Fallback to direct data fetch
+          return ["Rotating", "Static", "Electrical", "Control Valves", "Instrumentation", "Fire & Safety", "HVAC & Utilities", "Material Handling", "Plant Utilities", "Environmental", "Utility"];
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Equipment groups fetch error:', error);
+        return ["Rotating", "Static", "Electrical", "Control Valves", "Instrumentation", "Fire & Safety", "HVAC & Utilities", "Material Handling", "Plant Utilities", "Environmental", "Utility"];
+      }
     },
+  });
+
+  // LEVEL 2: Fetch Equipment Types for Selected Group
+  const { data: equipmentTypes = [] } = useQuery({
+    queryKey: ['/api/cascading/equipment-types', selectedEquipmentGroup],
+    queryFn: async () => {
+      if (!selectedEquipmentGroup) return [];
+      try {
+        const response = await fetch(`/api/cascading/equipment-types/${encodeURIComponent(selectedEquipmentGroup)}`);
+        if (!response.ok) {
+          console.error('Equipment types API failed');
+          return [];
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Equipment types fetch error:', error);
+        return [];
+      }
+    },
+    enabled: !!selectedEquipmentGroup,
+  });
+
+  // LEVEL 3: Fetch Equipment Subtypes for Selected Group and Type
+  const { data: equipmentSubtypes = [] } = useQuery({
+    queryKey: ['/api/cascading/equipment-subtypes', selectedEquipmentGroup, selectedEquipmentType],
+    queryFn: async () => {
+      if (!selectedEquipmentGroup || !selectedEquipmentType) return [];
+      try {
+        const response = await fetch(`/api/cascading/equipment-subtypes/${encodeURIComponent(selectedEquipmentGroup)}/${encodeURIComponent(selectedEquipmentType)}`);
+        if (!response.ok) {
+          console.error('Equipment subtypes API failed');
+          return [];
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Equipment subtypes fetch error:', error);
+        return [];
+      }
+    },
+    enabled: !!selectedEquipmentGroup && !!selectedEquipmentType,
   });
 
   // Create incident mutation
@@ -212,47 +267,123 @@ export default function IncidentReporting() {
                   )}
                 />
 
-                {/* Equipment Information */}
+                {/* THREE-LEVEL CASCADING DROPDOWN SYSTEM - NO FREE TEXT ALLOWED */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* LEVEL 1: Equipment Group */}
                   <FormField
                     control={form.control}
                     name="equipmentGroup"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Equipment Group</FormLabel>
-                        <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                        <FormLabel className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4" />
+                          Equipment Group (Level 1)
+                        </FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset dependent fields when group changes
+                            form.setValue("equipmentType", "");
+                            form.setValue("equipmentSubtype", "");
+                          }} 
+                          value={field.value}
+                        >
+                          <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select group" />
+                              <SelectValue placeholder="Select equipment group" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {Array.isArray(equipmentGroups) && equipmentGroups.map((group: any) => (
-                                <SelectItem key={group.id} value={group.name}>
-                                  {group.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+                          </FormControl>
+                          <SelectContent>
+                            {equipmentGroups.map((group: string) => (
+                              <SelectItem key={group} value={group}>
+                                {group}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* LEVEL 2: Equipment Type */}
                   <FormField
                     control={form.control}
                     name="equipmentType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Equipment Type</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Centrifugal Pump" />
-                        </FormControl>
+                        <FormLabel>Equipment Type (Level 2)</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset subtype when type changes
+                            form.setValue("equipmentSubtype", "");
+                          }} 
+                          value={field.value}
+                          disabled={!selectedEquipmentGroup}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={
+                                !selectedEquipmentGroup 
+                                  ? "Select equipment group first" 
+                                  : equipmentTypes.length === 0 
+                                  ? "Loading types..." 
+                                  : "Select equipment type"
+                              } />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {equipmentTypes.map((type: string) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* LEVEL 3: Equipment Subtype */}
+                  <FormField
+                    control={form.control}
+                    name="equipmentSubtype"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Equipment Subtype (Level 3)</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={!selectedEquipmentGroup || !selectedEquipmentType}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={
+                                !selectedEquipmentGroup || !selectedEquipmentType
+                                  ? "Select equipment type first" 
+                                  : equipmentSubtypes.length === 0 
+                                  ? "Loading subtypes..." 
+                                  : "Select equipment subtype"
+                              } />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {equipmentSubtypes.map((subtype: string) => (
+                              <SelectItem key={subtype} value={subtype}>
+                                {subtype}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="equipmentId"
@@ -260,7 +391,7 @@ export default function IncidentReporting() {
                       <FormItem>
                         <FormLabel>Equipment ID/Tag</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="e.g., P-101" />
+                          <Input {...field} placeholder="e.g., P-101, M-205" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
