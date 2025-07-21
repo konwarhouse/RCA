@@ -133,6 +133,30 @@ export const insertAiSettingsSchema = createInsertSchema(aiSettings);
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
 
+// Legacy Analyses table for backward compatibility
+export const analyses = pgTable("analyses", {
+  id: serial("id").primaryKey(),
+  investigationId: varchar("investigation_id"),
+  filename: varchar("filename"),
+  analysisType: varchar("analysis_type"),
+  equipmentType: varchar("equipment_type"),
+  equipmentSubtype: varchar("equipment_subtype"),
+  site: varchar("site"),
+  location: varchar("location"),
+  priority: varchar("priority"),
+  status: varchar("status").default("completed"),
+  rootCause: text("root_cause"),
+  contributingFactors: jsonb("contributing_factors"),
+  recommendations: jsonb("recommendations"),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAnalysisSchema = createInsertSchema(analyses);
+export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
+export type Analysis = typeof analyses.$inferSelect;
+
 // ISO 14224 Equipment Taxonomy  
 export const ISO14224_EQUIPMENT_TYPES = {
   rotating: {
