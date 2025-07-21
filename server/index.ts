@@ -7,7 +7,8 @@ const app = express();
 // Only apply JSON parsing to non-multipart requests
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
-  if (contentType.includes('multipart/form-data')) {
+  // Skip JSON parsing for multipart form data AND file upload routes
+  if (contentType.includes('multipart/form-data') || req.path.includes('/import')) {
     return next();
   }
   return express.json({ limit: "10mb" })(req, res, next);

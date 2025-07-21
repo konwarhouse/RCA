@@ -214,10 +214,18 @@ export default function AdminSettings() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return await apiRequest('/api/equipment-groups/import', {
+      
+      const response = await fetch('/api/equipment-groups/import', {
         method: 'POST',
         body: formData,
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Import failed');
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -265,10 +273,18 @@ export default function AdminSettings() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return await apiRequest('/api/risk-rankings/import', {
+      
+      const response = await fetch('/api/risk-rankings/import', {
         method: 'POST',
         body: formData,
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Import failed');
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
