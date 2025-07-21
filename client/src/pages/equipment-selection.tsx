@@ -46,7 +46,7 @@ export default function EquipmentSelection() {
     } else {
       console.log('No incident ID in URL');
     }
-  }, [window.location.search]);
+  }, []);
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   
@@ -175,9 +175,17 @@ export default function EquipmentSelection() {
   }
 
   console.log('Rendering main equipment selection content!');
+  console.log('About to render JSX with incident:', incident?.title);
 
+  console.log('JSX RENDER: Incident title:', incident?.title, 'Equipment Group:', incident?.equipmentGroup);
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      {/* DEBUG: This should be visible */}
+      <div style={{backgroundColor: 'red', color: 'white', padding: '20px', fontSize: '24px', zIndex: 9999, position: 'relative'}}>
+        DEBUG: Equipment Selection Page Rendered Successfully - Incident: {incident?.title}
+      </div>
+      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
