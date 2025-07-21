@@ -59,12 +59,15 @@ export default function EquipmentSelection() {
   });
 
   // Fetch incident details
-  const { data: incident } = useQuery({
+  const { data: incident, isLoading: isLoadingIncident, error: incidentError } = useQuery({
     queryKey: [`/api/incidents/${incidentId}`],
     queryFn: async () => {
+      console.log('Fetching incident:', incidentId);
       const response = await fetch(`/api/incidents/${incidentId}`);
       if (!response.ok) throw new Error('Failed to fetch incident');
-      return response.json();
+      const data = await response.json();
+      console.log('Incident data:', data);
+      return data;
     },
     enabled: !!incidentId,
   });
@@ -126,12 +129,25 @@ export default function EquipmentSelection() {
     );
   }
 
-  if (!incident) {
+  if (incidentError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium text-red-600">Error loading incident</div>
+          <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
+          <div className="text-sm text-red-500 mt-1">{incidentError.message}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoadingIncident || !incident) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg font-medium text-slate-900">Loading incident data...</div>
           <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
+          {isLoadingIncident && <div className="text-sm text-blue-600 mt-1">Fetching from server...</div>}
         </div>
       </div>
     );
