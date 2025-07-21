@@ -24,12 +24,17 @@ export default function AnalysisDetail() {
   
   const analysisId = params?.id;
 
+  // Determine if this is an incident or investigation based on ID format
+  const isIncident = analysisId?.startsWith('INC-');
+  const actualId = isIncident ? analysisId.replace('INC-', '') : analysisId;
+  const apiEndpoint = isIncident ? `/api/incidents/${actualId}` : `/api/investigations/${analysisId}`;
+
   const { data: analysis, isLoading, error } = useQuery<Analysis>({
-    queryKey: [`/api/investigations/${analysisId}`],
+    queryKey: [apiEndpoint],
     enabled: !!analysisId,
     queryFn: async () => {
-      const response = await fetch(`/api/investigations/${analysisId}`);
-      if (!response.ok) throw new Error("Failed to fetch analysis");
+      const response = await fetch(apiEndpoint);
+      if (!response.ok) throw new Error(`Failed to fetch ${isIncident ? 'incident' : 'analysis'}`);
       return response.json();
     },
   });
@@ -50,6 +55,9 @@ export default function AnalysisDetail() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load analysis</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {isIncident ? `Incident ID: ${analysisId}` : `Investigation ID: ${analysisId}`}
+          </p>
           <Button onClick={() => window.history.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back

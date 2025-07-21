@@ -16,22 +16,23 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Equipment Selection Loading Issue COMPLETELY RESOLVED - CONFIRMED WORKING (LATEST)
+### Analysis History & Incident Detail Integration COMPLETELY RESOLVED (LATEST)
 - **Date**: January 21, 2025 (Latest Update)
-- **Changes**: Successfully resolved critical equipment selection page loading issue with comprehensive debugging and fixes
-  - **Root Cause Identified**: Multiple issues including TypeScript navigation error, React component conditional logic, and browser caching of loading states
-  - **Navigation Fix**: Fixed incident creation response handling in incident-reporting.tsx - corrected `response.id` type issue preventing navigation
-  - **Component Logic Fix**: Corrected conditional rendering logic flow in equipment-selection.tsx preventing main content display
-  - **AI Configuration**: Added OpenAI API key configuration resolving AI-powered evidence library search functionality
-  - **Debug Process**: Comprehensive console logging confirmed all API calls successful and React rendering working correctly
-  - **Visual Confirmation**: User confirmed full equipment selection interface now displays correctly with red debug banner test
-- **Testing Results**: Incident #18 successfully loads complete equipment selection interface showing:
-  - ✅ Equipment Selection & Symptom Input header (Step 2 of 8)
-  - ✅ Progress indicator with completed Step 1 (Incident Reported)
-  - ✅ Equipment Library Selection for Rotating - Pumps
-  - ✅ Pump library items (Seal Leak, Centrifugal) with High priority classification
-  - ✅ All form fields and functionality accessible
-- **Impact**: **CRITICAL WORKFLOW RESTORED** - Complete 8-step RCA workflow now fully operational. Users can create incidents, navigate seamlessly to equipment selection, view incident details, access equipment library (12 pump items), select specific parts, input symptoms, and proceed to evidence collection. No loading screen blocks. System ready for production use.
+- **Changes**: Successfully integrated new 8-step incident workflow with existing analysis history system and fixed incident detail loading
+  - **Analysis History Integration**: Updated `/api/analyses` endpoint to pull from both legacy investigations system AND new incidents system
+  - **Incident Filtering**: Added logic to include incidents that have completed AI analysis (Step 6+) in analysis history
+  - **Data Transformation**: Proper mapping of incident data to analysis history format with correct status, confidence, and equipment details
+  - **Detail Page Fix**: Fixed analysis detail page to handle both investigation IDs and incident IDs (INC-30 format) by detecting ID format and routing to correct API endpoint
+  - **API Routing**: Incidents with `INC-` prefix now correctly route to `/api/incidents/{id}` instead of `/api/investigations/{id}`
+- **Testing Results**: Heat exchanger incident #30 now successfully appears in analysis history with:
+  - ✅ Title: "EXCHANGER TUBRE LEAK AND SHELL GASKET LEAK"
+  - ✅ Investigation ID: INC-30  
+  - ✅ Status: analysis_complete
+  - ✅ Confidence: 85% from AI analysis
+  - ✅ Equipment Type: Heat Exchangers
+  - ✅ Location: UNI7
+  - ✅ Detailed view accessible from analysis history
+- **Impact**: **COMPLETE SYSTEM INTEGRATION** - Analysis history now seamlessly combines both legacy investigation system and new 8-step incident workflow. Users get unified view of all RCA activities with proper detailed views for both incident types. System maintains full audit trail and analysis visibility across both workflows.
 
 ### Equipment Selection Navigation Issue FINAL RESOLUTION (LATEST)
 - **Date**: January 21, 2025 (Final Resolution)
