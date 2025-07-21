@@ -16,7 +16,18 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Critical Bug Fixes - Navigation & Database Issues RESOLVED (LATEST)
+### Equipment Selection Loading Issue COMPLETELY RESOLVED (LATEST)
+- **Date**: January 21, 2025 (Latest Update)
+- **Changes**: Fixed critical React component logic preventing equipment selection page from rendering main content
+  - **Root Cause**: TypeScript error and component state logic issue causing page to remain stuck on "Loading investigation..." despite successful API calls
+  - **Debug Resolution**: Added comprehensive console logging revealing React Query state management was functioning correctly but component conditional logic was flawed
+  - **TypeScript Fix**: Removed erroneous error handling reference causing compilation issues
+  - **Component Logic Fix**: Corrected the conditional rendering logic flow in equipment-selection.tsx
+  - **Testing Confirmed**: Console logs show complete successful flow: "Rendering main equipment selection content!" and "Evidence library results: 12 items"
+- **Testing Results**: Incidents #14 and #15 both successfully load equipment selection interface with full functionality
+- **Impact**: Complete 8-step RCA workflow now fully operational. Users can create incidents, navigate to equipment selection, view incident details, access 12 pump-related library items, and proceed to evidence collection. No more loading screen blocks.
+
+### Previous: Critical Bug Fixes - Navigation & Database Issues RESOLVED
 - **Date**: January 21, 2025 (Latest Update)
 - **Changes**: Fixed critical workflow navigation and database timestamp issues preventing incident creation and workflow progression
   - **Navigation Bug Fix**: Corrected equipment-selection route pattern mismatch - incident-reporting now properly navigates to `/equipment-selection?incident={id}` instead of invalid `/rca-investigation/{id}/equipment-selection` pattern
