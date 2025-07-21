@@ -45,6 +45,12 @@ export default function AdminSettings() {
     queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
   });
 
+  // Fetch evidence library data
+  const { data: evidenceLibrary, isLoading: evidenceLoading } = useQuery({
+    queryKey: ['/api/evidence-library'],
+    queryFn: () => apiRequest('/api/evidence-library'),
+  });
+
   // Test API key mutation
   const testKeyMutation = useMutation({
     mutationFn: async (data: { provider: string; apiKey: string }) => {
@@ -219,14 +225,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex items-center space-x-2">
-        <Shield className="w-6 h-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">System Administration</h1>
-          <p className="text-muted-foreground">Manage AI providers, Evidence Library, and system settings</p>
-        </div>
-      </div>
+
 
       <Tabs defaultValue="ai-settings" className="space-y-6">
         <TabsList className="grid w-fit grid-cols-2">
@@ -548,16 +547,94 @@ export default function AdminSettings() {
               {/* Quick Actions */}
               <div className="flex gap-2 pt-4 border-t">
                 <Button variant="outline" size="sm" asChild>
-                  <a href="/admin/evidence-library">
+                  <Link href="/evidence-library-management">
                     <Database className="w-4 h-4 mr-2" />
-                    Manage Evidence Requirements
-                  </a>
+                    Manage Evidence Library
+                  </Link>
                 </Button>
                 <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export Library
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Evidence Library Data */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Evidence Library Data ({Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} items)
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Complete evidence requirements database with 14-column CSV template structure
+              </p>
+            </CardHeader>
+            <CardContent>
+              {evidenceLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading evidence library...</div>
+              ) : !evidenceLibrary || evidenceLibrary.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No evidence library data found. Import your CSV template to get started.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} evidence requirements from CSV template
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/evidence-library-management">
+                        View Full Library →
+                      </Link>
+                    </Button>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Equipment Group</TableHead>
+                          <TableHead>Equipment Type</TableHead>
+                          <TableHead>Component / Failure Mode</TableHead>
+                          <TableHead>Risk Ranking</TableHead>
+                          <TableHead>Required Evidence</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(Array.isArray(evidenceLibrary) ? evidenceLibrary : []).slice(0, 5).map((item: any) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.equipmentGroup}</TableCell>
+                            <TableCell>{item.equipmentType}</TableCell>
+                            <TableCell>{item.componentFailureMode}</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                item.riskRanking === 'High' ? 'bg-red-100 text-red-800' :
+                                item.riskRanking === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }>
+                                {item.riskRanking}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">{item.requiredTrendDataEvidence}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {Array.isArray(evidenceLibrary) && evidenceLibrary.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/evidence-library-management">
+                          View all {Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} items →
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
