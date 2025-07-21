@@ -610,6 +610,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Equipment Groups routes
+  app.get("/api/equipment-groups", async (req, res) => {
+    try {
+      const groups = await investigationStorage.getAllEquipmentGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error("[RCA] Error fetching equipment groups:", error);
+      res.status(500).json({ message: "Failed to fetch equipment groups" });
+    }
+  });
+
+  app.get("/api/equipment-groups/active", async (req, res) => {
+    try {
+      const groups = await investigationStorage.getActiveEquipmentGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error("[RCA] Error fetching active equipment groups:", error);
+      res.status(500).json({ message: "Failed to fetch active equipment groups" });
+    }
+  });
+
+  app.post("/api/equipment-groups", async (req, res) => {
+    try {
+      const { name, isActive = true } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const group = await investigationStorage.createEquipmentGroup({ name, isActive });
+      res.json(group);
+    } catch (error) {
+      console.error("[RCA] Error creating equipment group:", error);
+      if (error.message.includes("unique")) {
+        res.status(409).json({ message: "Equipment group name already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to create equipment group" });
+      }
+    }
+  });
+
+  app.put("/api/equipment-groups/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, isActive } = req.body;
+      
+      const group = await investigationStorage.updateEquipmentGroup(parseInt(id), { name, isActive });
+      res.json(group);
+    } catch (error) {
+      console.error("[RCA] Error updating equipment group:", error);
+      if (error.message.includes("unique")) {
+        res.status(409).json({ message: "Equipment group name already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to update equipment group" });
+      }
+    }
+  });
+
+  app.delete("/api/equipment-groups/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await investigationStorage.deleteEquipmentGroup(parseInt(id));
+      res.json({ message: "Equipment group deleted successfully" });
+    } catch (error) {
+      console.error("[RCA] Error deleting equipment group:", error);
+      res.status(500).json({ message: "Failed to delete equipment group" });
+    }
+  });
+
+  // Risk Rankings routes
+  app.get("/api/risk-rankings", async (req, res) => {
+    try {
+      const rankings = await investigationStorage.getAllRiskRankings();
+      res.json(rankings);
+    } catch (error) {
+      console.error("[RCA] Error fetching risk rankings:", error);
+      res.status(500).json({ message: "Failed to fetch risk rankings" });
+    }
+  });
+
+  app.get("/api/risk-rankings/active", async (req, res) => {
+    try {
+      const rankings = await investigationStorage.getActiveRiskRankings();
+      res.json(rankings);
+    } catch (error) {
+      console.error("[RCA] Error fetching active risk rankings:", error);
+      res.status(500).json({ message: "Failed to fetch active risk rankings" });
+    }
+  });
+
+  app.post("/api/risk-rankings", async (req, res) => {
+    try {
+      const { label, isActive = true } = req.body;
+      if (!label) {
+        return res.status(400).json({ message: "Label is required" });
+      }
+      
+      const ranking = await investigationStorage.createRiskRanking({ label, isActive });
+      res.json(ranking);
+    } catch (error) {
+      console.error("[RCA] Error creating risk ranking:", error);
+      if (error.message.includes("unique")) {
+        res.status(409).json({ message: "Risk ranking label already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to create risk ranking" });
+      }
+    }
+  });
+
+  app.put("/api/risk-rankings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { label, isActive } = req.body;
+      
+      const ranking = await investigationStorage.updateRiskRanking(parseInt(id), { label, isActive });
+      res.json(ranking);
+    } catch (error) {
+      console.error("[RCA] Error updating risk ranking:", error);
+      if (error.message.includes("unique")) {
+        res.status(409).json({ message: "Risk ranking label already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to update risk ranking" });
+      }
+    }
+  });
+
+  app.delete("/api/risk-rankings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await investigationStorage.deleteRiskRanking(parseInt(id));
+      res.json({ message: "Risk ranking deleted successfully" });
+    } catch (error) {
+      console.error("[RCA] Error deleting risk ranking:", error);
+      res.status(500).json({ message: "Failed to delete risk ranking" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

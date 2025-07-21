@@ -5,6 +5,12 @@ import {
   evidenceLibrary,
   type EvidenceLibrary,
   type InsertEvidenceLibrary,
+  equipmentGroups,
+  type EquipmentGroup,
+  type InsertEquipmentGroup,
+  riskRankings,
+  type RiskRanking,
+  type InsertRiskRanking,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or } from "drizzle-orm";
@@ -36,6 +42,22 @@ export interface IInvestigationStorage {
   getAllAiSettings(): Promise<any[]>;
   saveAiSettings(data: any): Promise<any>;
   deleteAiSettings(id: number): Promise<void>;
+  
+  // Equipment Groups operations
+  getAllEquipmentGroups(): Promise<EquipmentGroup[]>;
+  getActiveEquipmentGroups(): Promise<EquipmentGroup[]>;
+  createEquipmentGroup(data: InsertEquipmentGroup): Promise<EquipmentGroup>;
+  updateEquipmentGroup(id: number, data: Partial<EquipmentGroup>): Promise<EquipmentGroup>;
+  deleteEquipmentGroup(id: number): Promise<void>;
+  toggleEquipmentGroupStatus(id: number): Promise<EquipmentGroup>;
+  
+  // Risk Rankings operations
+  getAllRiskRankings(): Promise<RiskRanking[]>;
+  getActiveRiskRankings(): Promise<RiskRanking[]>;
+  createRiskRanking(data: InsertRiskRanking): Promise<RiskRanking>;
+  updateRiskRanking(id: number, data: Partial<RiskRanking>): Promise<RiskRanking>;
+  deleteRiskRanking(id: number): Promise<void>;
+  toggleRiskRankingStatus(id: number): Promise<RiskRanking>;
 }
 
 export class DatabaseInvestigationStorage implements IInvestigationStorage {
@@ -259,6 +281,131 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       .insert(evidenceLibrary)
       .values(items)
       .returning();
+  }
+
+  // AI Settings operations
+  async getAllAiSettings(): Promise<any[]> {
+    return await db.select().from(aiSettings);
+  }
+
+  async saveAiSettings(data: any): Promise<any> {
+    const [result] = await db
+      .insert(aiSettings)
+      .values(data)
+      .returning();
+    return result;
+  }
+
+  async deleteAiSettings(id: number): Promise<void> {
+    await db.delete(aiSettings).where(eq(aiSettings.id, id));
+  }
+
+  // Equipment Groups operations
+  async getAllEquipmentGroups(): Promise<EquipmentGroup[]> {
+    return await db.select().from(equipmentGroups).orderBy(equipmentGroups.name);
+  }
+
+  async getActiveEquipmentGroups(): Promise<EquipmentGroup[]> {
+    return await db.select()
+      .from(equipmentGroups)
+      .where(eq(equipmentGroups.isActive, true))
+      .orderBy(equipmentGroups.name);
+  }
+
+  async createEquipmentGroup(data: InsertEquipmentGroup): Promise<EquipmentGroup> {
+    const [result] = await db
+      .insert(equipmentGroups)
+      .values({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return result;
+  }
+
+  async updateEquipmentGroup(id: number, data: Partial<EquipmentGroup>): Promise<EquipmentGroup> {
+    const [result] = await db
+      .update(equipmentGroups)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(equipmentGroups.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteEquipmentGroup(id: number): Promise<void> {
+    await db.delete(equipmentGroups).where(eq(equipmentGroups.id, id));
+  }
+
+  async toggleEquipmentGroupStatus(id: number): Promise<EquipmentGroup> {
+    const [current] = await db.select().from(equipmentGroups).where(eq(equipmentGroups.id, id));
+    if (!current) throw new Error("Equipment group not found");
+    
+    const [result] = await db
+      .update(equipmentGroups)
+      .set({
+        isActive: !current.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(equipmentGroups.id, id))
+      .returning();
+    return result;
+  }
+
+  // Risk Rankings operations
+  async getAllRiskRankings(): Promise<RiskRanking[]> {
+    return await db.select().from(riskRankings).orderBy(riskRankings.label);
+  }
+
+  async getActiveRiskRankings(): Promise<RiskRanking[]> {
+    return await db.select()
+      .from(riskRankings)
+      .where(eq(riskRankings.isActive, true))
+      .orderBy(riskRankings.label);
+  }
+
+  async createRiskRanking(data: InsertRiskRanking): Promise<RiskRanking> {
+    const [result] = await db
+      .insert(riskRankings)
+      .values({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return result;
+  }
+
+  async updateRiskRanking(id: number, data: Partial<RiskRanking>): Promise<RiskRanking> {
+    const [result] = await db
+      .update(riskRankings)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(riskRankings.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteRiskRanking(id: number): Promise<void> {
+    await db.delete(riskRankings).where(eq(riskRankings.id, id));
+  }
+
+  async toggleRiskRankingStatus(id: number): Promise<RiskRanking> {
+    const [current] = await db.select().from(riskRankings).where(eq(riskRankings.id, id));
+    if (!current) throw new Error("Risk ranking not found");
+    
+    const [result] = await db
+      .update(riskRankings)
+      .set({
+        isActive: !current.isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(riskRankings.id, id))
+      .returning();
+    return result;
   }
 }
 

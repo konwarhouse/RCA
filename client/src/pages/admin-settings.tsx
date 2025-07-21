@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload, Home, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
-import type { AiSettings, InsertAiSettings } from "@shared/schema";
+import type { AiSettings, InsertAiSettings, EquipmentGroup, RiskRanking } from "@shared/schema";
 
 export default function AdminSettings() {
   const [showApiKey, setShowApiKey] = useState(false);
@@ -24,13 +24,10 @@ export default function AdminSettings() {
     createdBy: 1, // Mock admin user ID
     testStatus: null
   });
-  const [newEquipmentType, setNewEquipmentType] = useState({
-    equipmentType: "",
-    iso14224Code: "",
-    subtypes: "",
-    description: ""
-  });
-  const [showAddEquipmentForm, setShowAddEquipmentForm] = useState(false);
+  const [newEquipmentGroup, setNewEquipmentGroup] = useState({ name: "" });
+  const [newRiskRanking, setNewRiskRanking] = useState({ label: "" });
+  const [editingEquipmentGroup, setEditingEquipmentGroup] = useState<{id: number, name: string} | null>(null);
+  const [editingRiskRanking, setEditingRiskRanking] = useState<{id: number, label: string} | null>(null);
   const { toast } = useToast();
 
   // Fetch current AI settings
@@ -39,16 +36,16 @@ export default function AdminSettings() {
     retry: false,
   });
 
-  // Fetch equipment types for Evidence Library management
-  const { data: equipmentTypes, isLoading: equipmentLoading } = useQuery({
-    queryKey: ['/api/evidence-library/equipment-types'],
-    queryFn: () => apiRequest('/api/evidence-library/equipment-types'),
+  // Fetch equipment groups
+  const { data: equipmentGroups, isLoading: equipmentGroupsLoading } = useQuery({
+    queryKey: ['/api/equipment-groups'],
+    queryFn: () => apiRequest('/api/equipment-groups'),
   });
 
-  // Fetch evidence library data
-  const { data: evidenceLibrary, isLoading: evidenceLoading } = useQuery({
-    queryKey: ['/api/evidence-library'],
-    queryFn: () => apiRequest('/api/evidence-library'),
+  // Fetch risk rankings
+  const { data: riskRankings, isLoading: riskRankingsLoading } = useQuery({
+    queryKey: ['/api/risk-rankings'],
+    queryFn: () => apiRequest('/api/risk-rankings'),
   });
 
   // Test API key mutation
@@ -74,6 +71,130 @@ export default function AdminSettings() {
         variant: "destructive",
       });
       setFormData(prev => ({ ...prev, testStatus: "failed" }));
+    },
+  });
+
+  // Equipment Groups mutations
+  const createEquipmentGroupMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      return await apiRequest("/api/equipment-groups", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Equipment Group Created", description: "Equipment group added successfully" });
+      setNewEquipmentGroup({ name: "" });
+      queryClient.invalidateQueries(["/api/equipment-groups"]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message.includes("already exists") ? "Equipment group name already exists" : "Failed to create equipment group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEquipmentGroupMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { name: string; isActive: boolean } }) => {
+      return await apiRequest(`/api/equipment-groups/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Equipment Group Updated", description: "Equipment group updated successfully" });
+      setEditingEquipmentGroup(null);
+      queryClient.invalidateQueries(["/api/equipment-groups"]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message.includes("already exists") ? "Equipment group name already exists" : "Failed to update equipment group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEquipmentGroupMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/equipment-groups/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast({ title: "Equipment Group Deleted", description: "Equipment group deleted successfully" });
+      queryClient.invalidateQueries(["/api/equipment-groups"]);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete equipment group. It may be in use.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Risk Rankings mutations
+  const createRiskRankingMutation = useMutation({
+    mutationFn: async (data: { label: string }) => {
+      return await apiRequest("/api/risk-rankings", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Risk Ranking Created", description: "Risk ranking added successfully" });
+      setNewRiskRanking({ label: "" });
+      queryClient.invalidateQueries(["/api/risk-rankings"]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message.includes("already exists") ? "Risk ranking label already exists" : "Failed to create risk ranking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateRiskRankingMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { label: string; isActive: boolean } }) => {
+      return await apiRequest(`/api/risk-rankings/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Risk Ranking Updated", description: "Risk ranking updated successfully" });
+      setEditingRiskRanking(null);
+      queryClient.invalidateQueries(["/api/risk-rankings"]);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message.includes("already exists") ? "Risk ranking label already exists" : "Failed to update risk ranking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteRiskRankingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/risk-rankings/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast({ title: "Risk Ranking Deleted", description: "Risk ranking deleted successfully" });
+      queryClient.invalidateQueries(["/api/risk-rankings"]);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete risk ranking. It may be in use.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -228,10 +349,18 @@ export default function AdminSettings() {
 
 
       <Tabs defaultValue="ai-settings" className="space-y-6">
-        <TabsList className="grid w-fit grid-cols-2">
+        <TabsList className="grid w-fit grid-cols-4">
           <TabsTrigger value="ai-settings" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
             AI Settings
+          </TabsTrigger>
+          <TabsTrigger value="equipment-groups" className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Equipment Groups
+          </TabsTrigger>
+          <TabsTrigger value="risk-rankings" className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Risk Rankings
           </TabsTrigger>
           <TabsTrigger value="evidence-library" className="flex items-center gap-2">
             <Database className="w-4 h-4" />
@@ -397,6 +526,266 @@ export default function AdminSettings() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Equipment Groups Tab */}
+        <TabsContent value="equipment-groups" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Equipment Groups Manager
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage equipment groups for the Evidence Library dropdown selection
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add New Equipment Group */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter equipment group name..."
+                  value={newEquipmentGroup.name}
+                  onChange={(e) => setNewEquipmentGroup({ name: e.target.value })}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && newEquipmentGroup.name.trim()) {
+                      createEquipmentGroupMutation.mutate(newEquipmentGroup);
+                    }
+                  }}
+                />
+                <Button 
+                  onClick={() => createEquipmentGroupMutation.mutate(newEquipmentGroup)}
+                  disabled={!newEquipmentGroup.name.trim() || createEquipmentGroupMutation.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Group
+                </Button>
+              </div>
+
+              {/* Equipment Groups Table */}
+              {equipmentGroupsLoading ? (
+                <div className="text-center py-8">Loading equipment groups...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.isArray(equipmentGroups) && equipmentGroups.map((group: any) => (
+                      <TableRow key={group.id}>
+                        <TableCell>
+                          {editingEquipmentGroup?.id === group.id ? (
+                            <Input
+                              value={editingEquipmentGroup.name}
+                              onChange={(e) => setEditingEquipmentGroup({ ...editingEquipmentGroup, name: e.target.value })}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateEquipmentGroupMutation.mutate({
+                                    id: group.id,
+                                    data: { name: editingEquipmentGroup.name, isActive: group.isActive }
+                                  });
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="font-medium">{group.name}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={group.isActive ? "default" : "secondary"}>
+                            {group.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(group.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {editingEquipmentGroup?.id === group.id ? (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => {
+                                    updateEquipmentGroupMutation.mutate({
+                                      id: group.id,
+                                      data: { name: editingEquipmentGroup.name, isActive: group.isActive }
+                                    });
+                                  }}
+                                  disabled={updateEquipmentGroupMutation.isPending}
+                                >
+                                  Save
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setEditingEquipmentGroup(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => setEditingEquipmentGroup({ id: group.id, name: group.name })}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => deleteEquipmentGroupMutation.mutate(group.id)}
+                                  disabled={deleteEquipmentGroupMutation.isPending}
+                                >
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Risk Rankings Tab */}
+        <TabsContent value="risk-rankings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Risk Rankings Manager
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage risk ranking labels for the Evidence Library dropdown selection
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add New Risk Ranking */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter risk ranking label..."
+                  value={newRiskRanking.label}
+                  onChange={(e) => setNewRiskRanking({ label: e.target.value })}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && newRiskRanking.label.trim()) {
+                      createRiskRankingMutation.mutate(newRiskRanking);
+                    }
+                  }}
+                />
+                <Button 
+                  onClick={() => createRiskRankingMutation.mutate(newRiskRanking)}
+                  disabled={!newRiskRanking.label.trim() || createRiskRankingMutation.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Ranking
+                </Button>
+              </div>
+
+              {/* Risk Rankings Table */}
+              {riskRankingsLoading ? (
+                <div className="text-center py-8">Loading risk rankings...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Label</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.isArray(riskRankings) && riskRankings.map((ranking: any) => (
+                      <TableRow key={ranking.id}>
+                        <TableCell>
+                          {editingRiskRanking?.id === ranking.id ? (
+                            <Input
+                              value={editingRiskRanking.label}
+                              onChange={(e) => setEditingRiskRanking({ ...editingRiskRanking, label: e.target.value })}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateRiskRankingMutation.mutate({
+                                    id: ranking.id,
+                                    data: { label: editingRiskRanking.label, isActive: ranking.isActive }
+                                  });
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="font-medium">{ranking.label}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={ranking.isActive ? "default" : "secondary"}>
+                            {ranking.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(ranking.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {editingRiskRanking?.id === ranking.id ? (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => {
+                                    updateRiskRankingMutation.mutate({
+                                      id: ranking.id,
+                                      data: { label: editingRiskRanking.label, isActive: ranking.isActive }
+                                    });
+                                  }}
+                                  disabled={updateRiskRankingMutation.isPending}
+                                >
+                                  Save
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setEditingRiskRanking(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => setEditingRiskRanking({ id: ranking.id, label: ranking.label })}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => deleteRiskRankingMutation.mutate(ranking.id)}
+                                  disabled={deleteRiskRankingMutation.isPending}
+                                >
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Evidence Library Tab */}

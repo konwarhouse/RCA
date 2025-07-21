@@ -133,6 +133,42 @@ export const insertAiSettingsSchema = createInsertSchema(aiSettings);
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
 
+// Equipment Groups table - Admin editable dropdown values
+export const equipmentGroups = pgTable("equipment_groups", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentGroupSchema = createInsertSchema(equipmentGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEquipmentGroup = z.infer<typeof insertEquipmentGroupSchema>;
+export type EquipmentGroup = typeof equipmentGroups.$inferSelect;
+
+// Risk Rankings table - Admin editable dropdown values
+export const riskRankings = pgTable("risk_rankings", {
+  id: serial("id").primaryKey(),
+  label: varchar("label").notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRiskRankingSchema = createInsertSchema(riskRankings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRiskRanking = z.infer<typeof insertRiskRankingSchema>;
+export type RiskRanking = typeof riskRankings.$inferSelect;
+
 // Legacy Analyses table for backward compatibility
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
