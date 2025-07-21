@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brain, Activity, Users, Search, ArrowRight } from "lucide-react";
+import { Brain, Activity, Users, Search, ArrowRight, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,10 +65,17 @@ function NewAnalysisSection() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/new" className="flex-1">
+            <Link href="/incident-reporting" className="flex-1">
               <Button className="w-full flex items-center gap-2" size="lg">
+                <FileText className="h-5 w-5" />
+                Report New Incident
+                <ArrowRight className="h-4 w-4 ml-auto" />
+              </Button>
+            </Link>
+            <Link href="/new" className="flex-1">
+              <Button variant="outline" className="w-full flex items-center gap-2" size="lg">
                 <Search className="h-5 w-5" />
-                Start New RCA Analysis
+                Legacy Analysis Upload
                 <ArrowRight className="h-4 w-4 ml-auto" />
               </Button>
             </Link>

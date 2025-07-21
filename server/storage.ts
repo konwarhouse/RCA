@@ -14,6 +14,9 @@ import {
   aiSettings,
   type AiSettings,
   type InsertAiSettings,
+  incidents,
+  type Incident,
+  type InsertIncident,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or } from "drizzle-orm";
@@ -61,6 +64,12 @@ export interface IInvestigationStorage {
   updateRiskRanking(id: number, data: Partial<RiskRanking>): Promise<RiskRanking>;
   deleteRiskRanking(id: number): Promise<void>;
   toggleRiskRankingStatus(id: number): Promise<RiskRanking>;
+  
+  // Incident operations - New RCA workflow
+  createIncident(data: Partial<InsertIncident>): Promise<Incident>;
+  getIncident(id: number): Promise<Incident | undefined>;
+  updateIncident(id: number, data: Partial<Incident>): Promise<Incident>;
+  getAllIncidents(): Promise<Incident[]>;
 }
 
 export class DatabaseInvestigationStorage implements IInvestigationStorage {
@@ -394,6 +403,74 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       .where(eq(riskRankings.id, id))
       .returning();
     return result;
+  }
+
+  // Incident operations - New RCA workflow
+  async createIncident(data: Partial<InsertIncident>): Promise<Incident> {
+    try {
+      const [incident] = await db
+        .insert(incidents)
+        .values({
+          title: data.title || '',
+          description: data.description || '',
+          equipmentGroup: data.equipmentGroup || '',
+          equipmentType: data.equipmentType || '',
+          equipmentId: data.equipmentId || '',
+          location: data.location || '',
+          reportedBy: data.reportedBy || '',
+          incidentDateTime: data.incidentDateTime || new Date(),
+          priority: data.priority || 'Medium',
+          immediateActions: data.immediateActions,
+          safetyImplications: data.safetyImplications,
+          currentStep: 1,
+          workflowStatus: "incident_reported",
+        })
+        .returning();
+      
+      console.log("[DatabaseInvestigationStorage] Created incident:", incident.id);
+      return incident;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error creating incident:", error);
+      throw error;
+    }
+  }
+
+  async getIncident(id: number): Promise<Incident | undefined> {
+    try {
+      const [incident] = await db.select().from(incidents).where(eq(incidents.id, id));
+      return incident;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting incident:", error);
+      throw error;
+    }
+  }
+
+  async updateIncident(id: number, data: Partial<Incident>): Promise<Incident> {
+    try {
+      const [incident] = await db
+        .update(incidents)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(incidents.id, id))
+        .returning();
+      
+      console.log("[DatabaseInvestigationStorage] Updated incident:", incident.id);
+      return incident;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error updating incident:", error);
+      throw error;
+    }
+  }
+
+  async getAllIncidents(): Promise<Incident[]> {
+    try {
+      return await db.select().from(incidents).orderBy(incidents.createdAt);
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting all incidents:", error);
+      throw error;
+    }
   }
 }
 

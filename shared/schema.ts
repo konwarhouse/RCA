@@ -169,6 +169,64 @@ export const insertRiskRankingSchema = createInsertSchema(riskRankings).omit({
 export type InsertRiskRanking = z.infer<typeof insertRiskRankingSchema>;
 export type RiskRanking = typeof riskRankings.$inferSelect;
 
+// Incidents table - New RCA workflow starting point
+export const incidents = pgTable("incidents", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  equipmentGroup: varchar("equipment_group").notNull(),
+  equipmentType: varchar("equipment_type").notNull(),
+  equipmentId: varchar("equipment_id").notNull(),
+  location: varchar("location").notNull(),
+  reportedBy: varchar("reported_by").notNull(),
+  incidentDateTime: timestamp("incident_date_time").notNull(),
+  priority: varchar("priority").notNull(),
+  immediateActions: text("immediate_actions"),
+  safetyImplications: text("safety_implications"),
+  
+  // Equipment selection & symptoms (Step 2)
+  specificPart: varchar("specific_part"),
+  symptomDescription: text("symptom_description"),
+  operatingConditions: text("operating_conditions"),
+  whenObserved: varchar("when_observed"),
+  frequency: varchar("frequency"),
+  severity: varchar("severity"),
+  contextualFactors: text("contextual_factors"),
+  equipmentLibraryId: integer("equipment_library_id"),
+  
+  // Evidence checklist & collection (Steps 3-5)
+  evidenceChecklist: jsonb("evidence_checklist"), // AI-generated questions
+  evidenceResponses: jsonb("evidence_responses"), // User answers & uploads
+  evidenceCompleteness: decimal("evidence_completeness", { precision: 5, scale: 2 }), // Percentage
+  
+  // AI Analysis (Steps 6-7)
+  aiAnalysis: jsonb("ai_analysis"), // Root causes, contributing factors, recommendations
+  analysisConfidence: decimal("analysis_confidence", { precision: 5, scale: 2 }),
+  
+  // Engineer review (Step 8)
+  engineerReview: jsonb("engineer_review"), // Engineer insights and modifications
+  finalizedAt: timestamp("finalized_at"),
+  finalizedBy: varchar("finalized_by"),
+  
+  // Workflow tracking
+  currentStep: integer("current_step").default(1), // 1-8 step tracking
+  workflowStatus: varchar("workflow_status").default("incident_reported"), // incident_reported, equipment_selected, evidence_collected, ai_analyzed, finalized
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Incident = typeof incidents.$inferSelect;
+export type InsertIncident = typeof incidents.$inferInsert;
+
+export const insertIncidentSchema = createInsertSchema(incidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  currentStep: true,
+  workflowStatus: true,
+});
+
 // Legacy Analyses table for backward compatibility
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),

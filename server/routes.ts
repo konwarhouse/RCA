@@ -313,6 +313,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // INCIDENT ROUTES - New RCA workflow
+  // Create new incident (Step 1)
+  app.post("/api/incidents", async (req, res) => {
+    try {
+      const incident = await investigationStorage.createIncident(req.body);
+      res.json(incident);
+    } catch (error) {
+      console.error("[RCA] Error creating incident:", error);
+      res.status(500).json({ message: "Failed to create incident" });
+    }
+  });
+
+  // Get incident by ID
+  app.get("/api/incidents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(id);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      res.json(incident);
+    } catch (error) {
+      console.error("[RCA] Error fetching incident:", error);
+      res.status(500).json({ message: "Failed to fetch incident" });
+    }
+  });
+
+  // Update incident equipment/symptoms (Step 2)
+  app.put("/api/incidents/:id/equipment-symptoms", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = {
+        ...req.body,
+        currentStep: 2,
+        workflowStatus: "equipment_selected",
+      };
+      
+      const incident = await investigationStorage.updateIncident(id, updateData);
+      res.json(incident);
+    } catch (error) {
+      console.error("[RCA] Error updating incident equipment/symptoms:", error);
+      res.status(500).json({ message: "Failed to update incident" });
+    }
+  });
+
   // Get analytics for dashboard
   app.get("/api/analytics", async (req, res) => {
     try {

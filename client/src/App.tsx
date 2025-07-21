@@ -12,6 +12,8 @@ import InvestigationType from "@/pages/investigation-type";
 import EvidenceCollection from "@/pages/evidence-collection";
 import EvidenceLibraryAdmin from "@/pages/evidence-library-admin";
 import EvidenceLibraryManagement from "@/pages/evidence-library-management";
+import IncidentReporting from "@/pages/incident-reporting";
+import EquipmentSelection from "@/pages/equipment-selection";
 import NotFound from "@/pages/not-found";
 
 
@@ -29,6 +31,8 @@ function Router() {
       <Route path="/admin/evidence-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library" component={EvidenceLibraryManagement} />
+      <Route path="/incident-reporting" component={IncidentReporting} />
+      <Route path="/rca-investigation/:id/equipment-selection" component={EquipmentSelection} />
       <Route component={NotFound} />
     </Switch>
   );
