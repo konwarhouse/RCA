@@ -1139,75 +1139,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 // Helper functions for evidence generation
 async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string) {
-  // Generate equipment-specific evidence checklist
-  const evidenceItems = [
-    {
-      id: "vibration-trends",
-      category: "Operational Data",
-      title: "Vibration Trend Data",
-      description: "Historical vibration measurements showing patterns before failure",
-      priority: "Critical" as const,
-      required: true,
-      aiGenerated: true,
-      specificToEquipment: true,
-      examples: [
-        "CSV files with vibration readings over time",
-        "Condition monitoring system exports",
-        "Handheld vibration analyzer data"
-      ],
-      completed: false
-    },
-    {
-      id: "maintenance-records",
-      category: "Maintenance History",
-      title: "Maintenance Records",
-      description: "Recent maintenance activities and findings",
-      priority: "High" as const,
-      required: true,
-      aiGenerated: true,
-      specificToEquipment: true,
-      examples: [
-        "Work order completion reports",
-        "PM inspection checklists",
-        "Previous repair documentation"
-      ],
-      completed: false
-    },
-    {
-      id: "operating-conditions",
-      category: "Process Data",
-      title: "Operating Conditions",
-      description: "Process parameters during incident",
-      priority: "High" as const,
-      required: true,
-      aiGenerated: true,
-      specificToEquipment: true,
-      examples: [
-        "DCS trend data",
-        "Process parameter logs",
-        "Alarm history"
-      ],
-      completed: false
-    },
-    {
-      id: "inspection-photos",
-      category: "Visual Evidence",
-      title: "Equipment Inspection Photos",
-      description: "Visual documentation of equipment condition",
-      priority: "Medium" as const,
-      required: false,
-      aiGenerated: true,
-      specificToEquipment: true,
-      examples: [
-        "Before/after failure photos",
-        "Component wear patterns",
-        "Environmental conditions"
-      ],
-      completed: false
-    }
-  ];
+  // Generate equipment-specific evidence checklist based on equipment type
+  
+  // Equipment-specific evidence templates
+  const equipmentTemplates = {
+    // Heat Exchangers - thermal/corrosion focused
+    "Heat Exchangers": [
+      {
+        id: "thermal-performance",
+        category: "Thermal Data",
+        title: "Heat Transfer Performance Data",
+        description: "Temperature differentials and heat duty measurements showing degradation patterns",
+        priority: "Critical" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Inlet/outlet temperature trends",
+          "Heat duty calculations over time",
+          "Thermal efficiency measurements"
+        ],
+        completed: false
+      },
+      {
+        id: "corrosion-inspection",
+        category: "Corrosion Analysis",
+        title: "Corrosion Inspection Reports",
+        description: "Ultrasonic thickness measurements and corrosion rate data",
+        priority: "Critical" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "UT thickness measurements",
+          "Corrosion rate calculations",
+          "Material degradation photos"
+        ],
+        completed: false
+      },
+      {
+        id: "pressure-drop",
+        category: "Process Data",
+        title: "Pressure Drop Trends",
+        description: "Fouling indicators through pressure differential monitoring",
+        priority: "High" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Differential pressure trends",
+          "Fouling factor calculations",
+          "Cleaning frequency records"
+        ],
+        completed: false
+      },
+      {
+        id: "tube-gasket-inspection",
+        category: "Visual Evidence",
+        title: "Tube and Gasket Inspection",
+        description: "Physical inspection of tubes, gaskets, and sealing surfaces",
+        priority: "High" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Tube bundle condition photos",
+          "Gasket surface inspection",
+          "Shell and tube sheet examination"
+        ],
+        completed: false
+      }
+    ],
+    
+    // Pumps - vibration/mechanical focused
+    "Pumps": [
+      {
+        id: "vibration-trends",
+        category: "Mechanical Data",
+        title: "Vibration Trend Data",
+        description: "Historical vibration measurements showing bearing and alignment patterns",
+        priority: "Critical" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Bearing vibration trends",
+          "Pump alignment data",
+          "Motor coupling vibration"
+        ],
+        completed: false
+      },
+      {
+        id: "seal-inspection",
+        category: "Mechanical Components",
+        title: "Mechanical Seal Inspection",
+        description: "Seal leak rates and mechanical seal condition assessment",
+        priority: "Critical" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Seal leak rate measurements",
+          "Seal face condition photos",
+          "O-ring and gasket inspection"
+        ],
+        completed: false
+      },
+      {
+        id: "pump-performance",
+        category: "Performance Data",
+        title: "Pump Performance Curves",
+        description: "Flow, head, and efficiency degradation over time",
+        priority: "High" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Flow rate trends",
+          "Discharge pressure data",
+          "Power consumption analysis"
+        ],
+        completed: false
+      }
+    ],
+    
+    // Default template for other equipment
+    "default": [
+      {
+        id: "maintenance-records",
+        category: "Maintenance History",
+        title: "Maintenance Records",
+        description: "Recent maintenance activities and findings",
+        priority: "High" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Work order completion reports",
+          "PM inspection checklists",
+          "Previous repair documentation"
+        ],
+        completed: false
+      },
+      {
+        id: "operating-conditions",
+        category: "Process Data",
+        title: "Operating Conditions",
+        description: "Process parameters during incident",
+        priority: "High" as const,
+        required: true,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "DCS trend data",
+          "Process parameter logs",
+          "Alarm history"
+        ],
+        completed: false
+      },
+      {
+        id: "inspection-photos",
+        category: "Visual Evidence",
+        title: "Equipment Inspection Photos",
+        description: "Visual documentation of equipment condition",
+        priority: "Medium" as const,
+        required: false,
+        aiGenerated: true,
+        specificToEquipment: true,
+        examples: [
+          "Before/after failure photos",
+          "Component wear patterns",
+          "Environmental conditions"
+        ],
+        completed: false
+      }
+    ]
+  };
 
-  return evidenceItems;
+  // Select appropriate template based on equipment type
+  const selectedTemplate = equipmentTemplates[equipmentType as keyof typeof equipmentTemplates] || equipmentTemplates.default;
+  
+  console.log(`[AI Evidence] Generating checklist for ${equipmentType} using ${equipmentType in equipmentTemplates ? 'specific' : 'default'} template`);
+  
+  return selectedTemplate;
 }
 
 async function generateEvidenceCategories(equipmentGroup: string, equipmentType: string, evidenceChecklist: any[]) {
