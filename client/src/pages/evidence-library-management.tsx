@@ -571,7 +571,7 @@ export default function EvidenceLibraryManagement() {
                                       <SelectValue placeholder="Select group" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {equipmentGroups.map((group: any) => (
+                                      {Array.isArray(equipmentGroups) && equipmentGroups.map((group: any) => (
                                         <SelectItem key={group.id} value={group.name}>
                                           {group.name}
                                         </SelectItem>
@@ -666,7 +666,7 @@ export default function EvidenceLibraryManagement() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {riskRankings.map((ranking: any) => (
+                                      {Array.isArray(riskRankings) && riskRankings.map((ranking: any) => (
                                         <SelectItem key={ranking.id} value={ranking.label}>
                                           {ranking.label}
                                         </SelectItem>
