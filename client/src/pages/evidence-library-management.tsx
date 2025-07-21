@@ -25,7 +25,7 @@ const evidenceLibrarySchema = z.object({
   componentFailureMode: z.string().min(1, "Failure mode is required"),
   equipmentCode: z.string().min(1, "Equipment code is required"),
   failureCode: z.string().min(1, "Failure code is required"),
-  riskRanking: z.enum(["High", "Medium", "Low"]),
+  riskRanking: z.string().min(1, "Risk ranking is required"),
   requiredTrendDataEvidence: z.string().min(1, "Required trend data is required"),
   aiOrInvestigatorQuestions: z.string().min(1, "AI questions are required"),
   attachmentsEvidenceRequired: z.string().min(1, "Attachments required is required"),
@@ -80,7 +80,7 @@ export default function EvidenceLibraryManagement() {
       componentFailureMode: "",
       equipmentCode: "",
       failureCode: "",
-      riskRanking: "Medium",
+      riskRanking: "",
       requiredTrendDataEvidence: "",
       aiOrInvestigatorQuestions: "",
       attachmentsEvidenceRequired: "",
@@ -103,6 +103,18 @@ export default function EvidenceLibraryManagement() {
       if (!response.ok) throw new Error("Failed to fetch evidence library");
       return response.json();
     },
+  });
+
+  // Fetch admin-managed Equipment Groups
+  const { data: equipmentGroups = [] } = useQuery({
+    queryKey: ['/api/equipment-groups/active'],
+    queryFn: () => apiRequest('/api/equipment-groups/active'),
+  });
+
+  // Fetch admin-managed Risk Rankings
+  const { data: riskRankings = [] } = useQuery({
+    queryKey: ['/api/risk-rankings/active'],
+    queryFn: () => apiRequest('/api/risk-rankings/active'),
   });
 
   // Get unique filter values from data
@@ -559,10 +571,11 @@ export default function EvidenceLibraryManagement() {
                                       <SelectValue placeholder="Select group" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Rotating">Rotating</SelectItem>
-                                      <SelectItem value="Static">Static</SelectItem>
-                                      <SelectItem value="Electrical">Electrical</SelectItem>
-                                      <SelectItem value="Instrumentation">Instrumentation</SelectItem>
+                                      {equipmentGroups.map((group: any) => (
+                                        <SelectItem key={group.id} value={group.name}>
+                                          {group.name}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
@@ -653,9 +666,11 @@ export default function EvidenceLibraryManagement() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="High">High</SelectItem>
-                                      <SelectItem value="Medium">Medium</SelectItem>
-                                      <SelectItem value="Low">Low</SelectItem>
+                                      {riskRankings.map((ranking: any) => (
+                                        <SelectItem key={ranking.id} value={ranking.label}>
+                                          {ranking.label}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </FormControl>

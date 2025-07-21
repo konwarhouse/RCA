@@ -5,6 +5,7 @@ import { investigationEngine } from "./investigation-engine";
 import { RCAAnalysisEngine } from "./rca-analysis-engine";
 import evidenceLibraryRoutes from "./routes/evidence-library";
 import multer from "multer";
+import Papa from "papaparse";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -686,7 +687,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const csvData = req.file.buffer.toString('utf-8');
-      const Papa = require('papaparse');
       const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
       
       if (parsed.errors.length > 0) {
@@ -734,7 +734,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/equipment-groups/export", async (req, res) => {
     try {
       const groups = await investigationStorage.getAllEquipmentGroups();
-      const Papa = require('papaparse');
       
       const csvData = Papa.unparse(groups.map(group => ({
         name: group.name,
@@ -828,7 +827,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const csvData = req.file.buffer.toString('utf-8');
-      const Papa = require('papaparse');
       const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
       
       if (parsed.errors.length > 0) {
@@ -876,7 +874,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/risk-rankings/export", async (req, res) => {
     try {
       const rankings = await investigationStorage.getAllRiskRankings();
-      const Papa = require('papaparse');
       
       const csvData = Papa.unparse(rankings.map(ranking => ({
         label: ranking.label,
