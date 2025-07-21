@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload } from "lucide-react";
+import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload, Home, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import type { AiSettings, InsertAiSettings } from "@shared/schema";
 
 export default function AdminSettings() {
@@ -197,6 +198,27 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+        <div className="flex items-center space-x-4">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Home</span>
+            </Button>
+          </Link>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+              <Home className="w-4 h-4" />
+              <span>Dashboard</span>
+            </Button>
+          </Link>
+        </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          System Administration
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center space-x-2">
         <Shield className="w-6 h-6 text-primary" />
