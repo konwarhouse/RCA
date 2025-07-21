@@ -21,6 +21,8 @@ interface Incident {
   workflowStatus: string;
   evidenceChecklist?: any[];
   evidenceFiles?: any[];
+  analysisResults?: AnalysisResults;
+  symptomDescription?: string;
 }
 
 interface RootCause {
@@ -86,7 +88,7 @@ export default function AIAnalysis() {
   // Perform AI analysis
   const performAnalysisMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
-      return apiRequest(`/api/incidents/${incidentData.id}/perform-analysis`, {
+      const response = await fetch(`/api/incidents/${incidentData.id}/perform-analysis`, {
         method: 'POST',
         body: JSON.stringify({
           equipmentGroup: incidentData.equipmentGroup,
@@ -95,22 +97,46 @@ export default function AIAnalysis() {
           evidenceChecklist: incidentData.evidenceChecklist,
           evidenceFiles: incidentData.evidenceFiles,
         }),
+        headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to perform analysis: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
+      console.log('AI Analysis completed:', data);
       setAnalysisResults(data.analysis);
       setAnalysisPhase("completed");
       setAnalysisProgress(100);
       setIsAnalyzing(false);
     },
+    onError: (error) => {
+      console.error('AI Analysis failed:', error);
+      setAnalysisPhase("error");
+      setIsAnalyzing(false);
+    },
   });
 
-  // Start analysis when incident loads
+  // Start analysis when incident loads or load existing results
   useEffect(() => {
-    if (incident && !analysisResults && !isAnalyzing) {
-      setIsAnalyzing(true);
-      simulateAnalysisProgress();
-      performAnalysisMutation.mutate(incident);
+    if (incident) {
+      // Check if analysis results already exist
+      if (incident.analysisResults) {
+        console.log('Loading existing analysis results:', incident.analysisResults);
+        setAnalysisResults(incident.analysisResults);
+        setAnalysisPhase("completed");
+        setAnalysisProgress(100);
+        setIsAnalyzing(false);
+      } else if (!analysisResults && !isAnalyzing) {
+        // Perform new analysis if none exists
+        console.log('Starting AI analysis for incident:', incident);
+        setIsAnalyzing(true);
+        simulateAnalysisProgress();
+        performAnalysisMutation.mutate(incident);
+      }
     }
   }, [incident]);
 
