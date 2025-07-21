@@ -28,6 +28,13 @@ export default function AdminSettings() {
   const [newRiskRanking, setNewRiskRanking] = useState({ label: "" });
   const [editingEquipmentGroup, setEditingEquipmentGroup] = useState<{id: number, name: string} | null>(null);
   const [editingRiskRanking, setEditingRiskRanking] = useState<{id: number, label: string} | null>(null);
+  const [showAddEquipmentForm, setShowAddEquipmentForm] = useState(false);
+  const [newEquipmentType, setNewEquipmentType] = useState({
+    equipmentType: "",
+    iso14224Code: "",
+    subtypes: "",
+    description: ""
+  });
   const { toast } = useToast();
 
   // Fetch current AI settings
@@ -841,159 +848,18 @@ export default function AdminSettings() {
               )}
 
               {/* Equipment Types Table */}
-              {equipmentLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading equipment types...</div>
-              ) : !equipmentTypes?.equipmentTypes || equipmentTypes.equipmentTypes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No equipment types configured. Add one above to get started.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Equipment Type</TableHead>
-                      <TableHead>ISO 14224 Code</TableHead>
-                      <TableHead>Subtypes</TableHead>
-                      <TableHead>Last Updated</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {equipmentTypes.equipmentTypes.map((equipment: any) => (
-                      <TableRow key={equipment.equipmentType}>
-                        <TableCell className="font-medium">
-                          {equipment.equipmentType}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{equipment.iso14224Code}</Badge>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {equipment.subtypes?.slice(0, 3).map((subtype: string, idx: number) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {subtype}
-                              </Badge>
-                            ))}
-                            {equipment.subtypes?.length > 3 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{equipment.subtypes.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {equipment.lastUpdated ? new Date(equipment.lastUpdated).toLocaleDateString() : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={`/admin/evidence-library?equipment=${equipment.equipmentType.toLowerCase().replace(/\s+/g, '_')}`}>
-                                <Edit3 className="w-4 h-4" />
-                                Edit
-                              </a>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {/* Quick Actions */}
-              <div className="flex gap-2 pt-4 border-t">
-                <Button variant="outline" size="sm" asChild>
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Equipment Types management has been moved to the dedicated Evidence Library Management page.</p>
+                <Button variant="outline" size="sm" asChild className="mt-2">
                   <Link href="/evidence-library-management">
-                    <Database className="w-4 h-4 mr-2" />
-                    Manage Evidence Library
+                    Go to Evidence Library Management →
                   </Link>
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Library
                 </Button>
               </div>
             </CardContent>
           </Card>
-
-          {/* Evidence Library Data */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="w-5 h-5" />
-                Evidence Library Data ({Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} items)
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Complete evidence requirements database with 14-column CSV template structure
-              </p>
-            </CardHeader>
-            <CardContent>
-              {evidenceLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading evidence library...</div>
-              ) : !evidenceLibrary || evidenceLibrary.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No evidence library data found. Import your CSV template to get started.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} evidence requirements from CSV template
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/evidence-library-management">
-                        View Full Library →
-                      </Link>
-                    </Button>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Equipment Group</TableHead>
-                          <TableHead>Equipment Type</TableHead>
-                          <TableHead>Component / Failure Mode</TableHead>
-                          <TableHead>Risk Ranking</TableHead>
-                          <TableHead>Required Evidence</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(Array.isArray(evidenceLibrary) ? evidenceLibrary : []).slice(0, 5).map((item: any) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.equipmentGroup}</TableCell>
-                            <TableCell>{item.equipmentType}</TableCell>
-                            <TableCell>{item.componentFailureMode}</TableCell>
-                            <TableCell>
-                              <Badge className={
-                                item.riskRanking === 'High' ? 'bg-red-100 text-red-800' :
-                                item.riskRanking === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                              }>
-                                {item.riskRanking}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-xs truncate">{item.requiredTrendDataEvidence}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  {Array.isArray(evidenceLibrary) && evidenceLibrary.length > 5 && (
-                    <div className="text-center pt-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/evidence-library-management">
-                          View all {Array.isArray(evidenceLibrary) ? evidenceLibrary.length : 0} items →
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
+
       </Tabs>
     </div>
   );

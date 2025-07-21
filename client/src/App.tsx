@@ -24,6 +24,7 @@ function Router() {
       <Route path="/investigation/:id/evidence" component={EvidenceCollection} />
       <Route path="/investigation/:id" component={AnalysisDetail} />
       <Route path="/admin" component={AdminSettings} />
+      <Route path="/admin-settings" component={AdminSettings} />
       <Route path="/admin/evidence-library" component={EvidenceLibraryAdmin} />
       <Route path="/admin/evidence-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
