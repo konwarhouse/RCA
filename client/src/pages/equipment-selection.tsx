@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRoute } from "wouter";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -95,7 +95,7 @@ export default function EquipmentSelection() {
         title: "Equipment & Symptoms Updated",
         description: "Proceeding to AI evidence checklist generation...",
       });
-      setLocation(`/rca-investigation/${incidentId}/evidence-checklist`);
+      setLocation(`/evidence-checklist?incident=${incidentId}`);
     },
     onError: (error: any) => {
       toast({
@@ -114,8 +114,8 @@ export default function EquipmentSelection() {
     updateIncidentMutation.mutate(payload);
   };
 
-  if (!match) {
-    return <div>Investigation not found</div>;
+  if (!incidentId) {
+    return <div>Loading investigation...</div>;
   }
 
   return (
@@ -124,10 +124,10 @@ export default function EquipmentSelection() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href={`/rca-investigation/${incidentId}`}>
+            <Link href="/">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                Back to Home
               </Button>
             </Link>
             <div>
