@@ -129,16 +129,30 @@ export default function IncidentReporting() {
     },
     onSuccess: (response: any) => {
       console.log('Incident created successfully:', response);
+      const incidentId = response?.id || response;
+      console.log('Extracted incident ID for navigation:', incidentId, 'Type:', typeof incidentId);
+      
+      if (!incidentId) {
+        console.error('ERROR: No incident ID in response:', response);
+        toast({
+          title: "Error",
+          description: "Failed to get incident ID for navigation",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Incident Reported",
         description: "Moving to equipment selection and symptom input...",
       });
-      // Navigate to the next step with the incident ID
-      const incidentId = response?.id || response;
-      console.log('Navigating to equipment selection with ID:', incidentId);
-      const navigationUrl = `/equipment-selection?incident=${incidentId}`;
-      console.log('Full navigation URL:', navigationUrl);
-      setLocation(navigationUrl);
+      
+      // Small delay to ensure toast shows before navigation
+      setTimeout(() => {
+        const navigationUrl = `/equipment-selection?incident=${incidentId}`;
+        console.log('Navigating to:', navigationUrl);
+        setLocation(navigationUrl);
+      }, 100);
     },
     onError: (error: any) => {
       toast({
