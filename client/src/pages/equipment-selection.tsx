@@ -158,21 +158,19 @@ export default function EquipmentSelection() {
   }
 
   if (isLoadingIncident || !incident) {
+    console.log('Still loading or no incident - isLoadingIncident:', isLoadingIncident, 'incident exists:', !!incident);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg font-medium text-slate-900">Loading incident data...</div>
           <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
           {isLoadingIncident && <div className="text-sm text-blue-600 mt-1">Fetching from server...</div>}
-          {incidentError && (
-            <div className="text-sm text-red-600 mt-2">
-              Error: {incidentError.message}
-            </div>
-          )}
         </div>
       </div>
     );
   }
+
+  console.log('Rendering main equipment selection content!');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
