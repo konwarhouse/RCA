@@ -62,17 +62,34 @@ export default function EvidenceChecklist() {
   // Generate AI evidence checklist
   const generateChecklistMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
-      return apiRequest(`/api/incidents/${incidentData.id}/generate-evidence-checklist`, {
+      const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-checklist`, {
         method: 'POST',
         body: JSON.stringify({
           equipmentGroup: incidentData.equipmentGroup,
           equipmentType: incidentData.equipmentType,
           symptoms: incidentData.symptoms,
         }),
+        headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate checklist: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
-      setEvidenceItems(data.evidenceItems);
+      console.log('Evidence checklist generated:', data);
+      if (data && data.evidenceItems && Array.isArray(data.evidenceItems)) {
+        setEvidenceItems(data.evidenceItems);
+      } else {
+        console.error('Invalid evidence items format:', data);
+        setEvidenceItems([]);
+      }
+      setIsGenerating(false);
+    },
+    onError: (error) => {
+      console.error('Failed to generate evidence checklist:', error);
       setIsGenerating(false);
     },
   });
@@ -93,7 +110,7 @@ export default function EvidenceChecklist() {
 
   // Generate evidence checklist when incident loads
   useEffect(() => {
-    if (incident && evidenceItems.length === 0) {
+    if (incident && Array.isArray(evidenceItems) && evidenceItems.length === 0) {
       setIsGenerating(true);
       generateChecklistMutation.mutate(incident as Incident);
     }
@@ -101,7 +118,7 @@ export default function EvidenceChecklist() {
 
   // Calculate completion percentage
   useEffect(() => {
-    if (evidenceItems && evidenceItems.length > 0) {
+    if (evidenceItems && Array.isArray(evidenceItems) && evidenceItems.length > 0) {
       const completed = evidenceItems.filter(item => item.completed).length;
       const percentage = Math.round((completed / evidenceItems.length) * 100);
       setCompletionPercentage(percentage);
