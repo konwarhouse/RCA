@@ -274,10 +274,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all analyses (alias for investigations for history page)
+  // Get all analyses (both investigations and incidents for history page)
   app.get("/api/analyses", async (req, res) => {
     try {
       const investigations = await investigationStorage.getAllInvestigations();
+      const incidents = await investigationStorage.getAllIncidents();
       
       // Filter for completed investigations only and transform to analysis format
       const completedAnalyses = investigations
@@ -303,10 +304,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           whenHappened: inv.whenHappened,
           evidenceData: inv.evidenceData,
           analysisResults: inv.analysisResults,
-          recommendations: inv.recommendations
+          recommendations: inv.recommendations,
+          source: 'investigation'
         }));
 
-      res.json(completedAnalyses);
+      // Add incidents that have completed AI analysis (Step 6+)
+      const completedIncidents = incidents
+        .filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created')
+        .map(inc => ({
+          id: inc.id,
+          investigationId: `INC-${inc.id}`,
+          title: inc.title || `${inc.description} - ${inc.equipmentType}`,
+          status: inc.workflowStatus === 'finalized' ? 'completed' : 'analysis_complete',
+          createdAt: inc.createdAt,
+          updatedAt: inc.updatedAt,
+          confidence: inc.analysisResults?.overallConfidence || 85,
+          equipmentType: inc.equipmentType || 'Unknown',
+          location: inc.location || 'Unknown',
+          cause: inc.analysisResults?.rootCauses?.[0]?.description || 'Root cause analysis completed',
+          priority: inc.priority?.toLowerCase() === 'critical' ? 'high' : 
+                   inc.priority?.toLowerCase() === 'high' ? 'high' :
+                   inc.priority?.toLowerCase() === 'medium' ? 'medium' : 'low',
+          investigationType: 'INCIDENT',
+          whatHappened: inc.description,
+          whereHappened: inc.location,
+          whenHappened: inc.incidentDateTime,
+          evidenceData: {
+            equipment_type: inc.equipmentType,
+            equipment_tag: inc.equipmentId,
+            operating_location: inc.location
+          },
+          analysisResults: inc.analysisResults,
+          recommendations: inc.analysisResults?.recommendations,
+          source: 'incident'
+        }));
+
+      // Combine both sources and sort by creation date (newest first)
+      const allAnalyses = [...completedAnalyses, ...completedIncidents]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      res.json(allAnalyses);
     } catch (error) {
       console.error("[RCA] Error fetching analyses:", error);
       res.status(500).json({ message: "Failed to fetch analyses" });
