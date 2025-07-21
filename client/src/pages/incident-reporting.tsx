@@ -121,11 +121,20 @@ export default function IncidentReporting() {
   // Create incident mutation
   const createIncidentMutation = useMutation({
     mutationFn: async (data: IncidentForm) => {
-      return await apiRequest("/api/incidents", {
+      console.log('Making API request to create incident...');
+      const response = await fetch("/api/incidents", {
         method: "POST",
         body: JSON.stringify(data),
         headers: { "Content-Type": "application/json" },
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create incident: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Raw API response:', result);
+      return result;
     },
     onSuccess: (response: any) => {
       console.log('Incident created successfully:', response);
