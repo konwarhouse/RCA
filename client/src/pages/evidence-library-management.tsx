@@ -108,14 +108,26 @@ export default function EvidenceLibraryManagement() {
   // Fetch admin-managed Equipment Groups
   const { data: equipmentGroups = [] } = useQuery({
     queryKey: ['/api/equipment-groups/active'],
-    queryFn: () => apiRequest('/api/equipment-groups/active'),
+    queryFn: async () => {
+      const response = await fetch('/api/equipment-groups/active');
+      if (!response.ok) throw new Error('Failed to fetch equipment groups');
+      return response.json();
+    },
   });
 
   // Fetch admin-managed Risk Rankings
   const { data: riskRankings = [] } = useQuery({
     queryKey: ['/api/risk-rankings/active'],
-    queryFn: () => apiRequest('/api/risk-rankings/active'),
+    queryFn: async () => {
+      const response = await fetch('/api/risk-rankings/active');
+      if (!response.ok) throw new Error('Failed to fetch risk rankings');
+      return response.json();
+    },
   });
+
+  // Debug logging
+  console.log('Equipment Groups data:', equipmentGroups);
+  console.log('Risk Rankings data:', riskRankings);
 
   // Get unique filter values from data
   const uniqueEquipmentGroups = [...new Set(evidenceItems.map(item => item.equipmentGroup))].filter(Boolean).sort();
