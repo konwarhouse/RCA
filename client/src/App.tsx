@@ -20,6 +20,7 @@ import EvidenceCollection from "@/pages/evidence-collection";
 import AIAnalysis from "@/pages/ai-analysis";
 import EngineerReview from "@/pages/engineer-review";
 import NotFound from "@/pages/not-found";
+import DebugRoutes from "@/pages/debug-routes";
 
 
 function Router() {
@@ -37,7 +38,8 @@ function Router() {
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library" component={EvidenceLibraryManagement} />
       <Route path="/incident-reporting" component={IncidentReporting} />
-      <Route path="/equipment-selection" component={EquipmentSelectionTest} />
+      <Route path="/debug" component={DebugRoutes} />
+      <Route path="/equipment-selection" component={EquipmentSelection} />
       <Route path="/evidence-checklist" component={EvidenceChecklist} />
       <Route path="/evidence-collection" component={EvidenceCollection} />
       <Route path="/ai-analysis" component={AIAnalysis} />

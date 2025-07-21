@@ -74,7 +74,8 @@ export default function EquipmentSelection() {
     queryKey: [`/api/evidence-library/by-equipment`, incident?.equipmentGroup, incident?.equipmentType],
     queryFn: async () => {
       if (!incident?.equipmentGroup) return [];
-      const response = await fetch(`/api/evidence-library/search?equipmentGroup=${encodeURIComponent(incident.equipmentGroup)}&equipmentType=${encodeURIComponent(incident.equipmentType || '')}`);
+      const searchQuery = `${incident.equipmentGroup} ${incident.equipmentType || ''}`.trim();
+      const response = await fetch(`/api/evidence-library/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) return [];
       return response.json();
     },
@@ -115,7 +116,25 @@ export default function EquipmentSelection() {
   };
 
   if (!incidentId) {
-    return <div>Loading investigation...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium text-slate-900">Loading investigation...</div>
+          <div className="text-sm text-slate-600 mt-2">Please wait while we retrieve the incident details.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!incident) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium text-slate-900">Loading incident data...</div>
+          <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
+        </div>
+      </div>
+    );
   }
 
   return (
