@@ -73,20 +73,36 @@ export default function EvidenceCollection() {
   // Generate evidence collection categories
   const generateCategoriesMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
-      return apiRequest(`/api/incidents/${incidentData.id}/generate-evidence-categories`, {
+      const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-categories`, {
         method: 'POST',
         body: JSON.stringify({
           equipmentGroup: incidentData.equipmentGroup,
           equipmentType: incidentData.equipmentType,
           evidenceChecklist: incidentData.evidenceChecklist,
         }),
+        headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate categories: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
-      setEvidenceCategories(data.categories);
-      if (data.categories.length > 0) {
-        setActiveCategory(data.categories[0].id);
+      console.log('Evidence categories generated:', data);
+      if (data && data.categories && Array.isArray(data.categories)) {
+        setEvidenceCategories(data.categories);
+        if (data.categories.length > 0) {
+          setActiveCategory(data.categories[0].id);
+        }
+      } else {
+        console.error('Invalid evidence categories format:', data);
+        setEvidenceCategories([]);
       }
+    },
+    onError: (error) => {
+      console.error('Failed to generate evidence categories:', error);
     },
   });
 
@@ -121,14 +137,14 @@ export default function EvidenceCollection() {
 
   // Generate categories when incident loads
   useEffect(() => {
-    if (incident && evidenceCategories.length === 0) {
+    if (incident && Array.isArray(evidenceCategories) && evidenceCategories.length === 0) {
       generateCategoriesMutation.mutate(incident);
     }
   }, [incident]);
 
   // Calculate completion percentage
   useEffect(() => {
-    if (evidenceCategories.length > 0) {
+    if (Array.isArray(evidenceCategories) && evidenceCategories.length > 0) {
       const requiredCategories = evidenceCategories.filter(cat => cat.required);
       const completedRequired = requiredCategories.filter(cat => cat.files.length > 0);
       const optionalCategories = evidenceCategories.filter(cat => !cat.required);

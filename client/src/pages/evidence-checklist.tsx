@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle, Circle, FileText, Upload, AlertTriangle, ChevronRight, Brain, Lightbulb } from "lucide-react";
+import { CheckCircle, Circle, FileText, Upload, AlertTriangle, ChevronRight, Brain, Lightbulb, X } from "lucide-react";
+import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ interface EvidenceItem {
   examples: string[];
   completed: boolean;
   notes?: string;
+  files?: File[];
 }
 
 interface Incident {
@@ -137,6 +139,29 @@ export default function EvidenceChecklist() {
     setEvidenceItems(prev => 
       prev.map(item => 
         item.id === itemId ? { ...item, notes } : item
+      )
+    );
+  };
+
+  const handleFileUpload = (itemId: string, files: File[]) => {
+    setEvidenceItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { 
+          ...item, 
+          files: [...(item.files || []), ...files],
+          completed: true // Auto-mark as completed when files are uploaded
+        } : item
+      )
+    );
+  };
+
+  const handleFileRemove = (itemId: string, fileIndex: number) => {
+    setEvidenceItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { 
+          ...item, 
+          files: (item.files || []).filter((_, index) => index !== fileIndex)
+        } : item
       )
     );
   };
@@ -261,6 +286,8 @@ export default function EvidenceChecklist() {
                     item={item}
                     onToggle={handleItemToggle}
                     onNotesUpdate={handleNotesUpdate}
+                    onFileUpload={handleFileUpload}
+                    onFileRemove={handleFileRemove}
                   />
                 ))}
               </CardContent>
@@ -286,6 +313,8 @@ export default function EvidenceChecklist() {
                     item={item}
                     onToggle={handleItemToggle}
                     onNotesUpdate={handleNotesUpdate}
+                    onFileUpload={handleFileUpload}
+                    onFileRemove={handleFileRemove}
                   />
                 ))}
               </CardContent>
@@ -311,6 +340,8 @@ export default function EvidenceChecklist() {
                     item={item}
                     onToggle={handleItemToggle}
                     onNotesUpdate={handleNotesUpdate}
+                    onFileUpload={handleFileUpload}
+                    onFileRemove={handleFileRemove}
                   />
                 ))}
               </CardContent>
@@ -336,6 +367,8 @@ export default function EvidenceChecklist() {
                     item={item}
                     onToggle={handleItemToggle}
                     onNotesUpdate={handleNotesUpdate}
+                    onFileUpload={handleFileUpload}
+                    onFileRemove={handleFileRemove}
                   />
                 ))}
               </CardContent>
@@ -387,12 +420,32 @@ export default function EvidenceChecklist() {
 function EvidenceItemCard({ 
   item, 
   onToggle, 
-  onNotesUpdate 
+  onNotesUpdate,
+  onFileUpload,
+  onFileRemove
 }: { 
   item: EvidenceItem; 
   onToggle: (id: string, completed: boolean) => void;
   onNotesUpdate: (id: string, notes: string) => void;
+  onFileUpload: (itemId: string, files: File[]) => void;
+  onFileRemove: (itemId: string, fileIndex: number) => void;
 }) {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        onFileUpload(item.id, acceptedFiles);
+      }
+    },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
+      'image/*': ['.png', '.jpg', '.jpeg'],
+      'text/plain': ['.txt']
+    },
+    maxFiles: 5
+  });
   return (
     <div className={`p-4 border rounded-lg ${item.completed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
       <div className="flex items-start gap-3">
@@ -426,6 +479,53 @@ function EvidenceItemCard({
                   <li key={idx} className="list-disc">{example}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* File Upload Zone */}
+          <div className="mb-3">
+            <Label className="text-xs font-medium">Upload Evidence Files</Label>
+            <div
+              {...getRootProps()}
+              className={`mt-1 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                isDragActive 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-gray-300 hover:border-primary/50'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+              <p className="text-xs text-gray-600">
+                {isDragActive ? 'Drop files here' : 'Drag files or click to browse'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                PDF, Excel, CSV, Images, Text files
+              </p>
+            </div>
+          </div>
+
+          {/* Uploaded Files */}
+          {item.files && item.files.length > 0 && (
+            <div className="mb-3">
+              <Label className="text-xs font-medium">Uploaded Files ({item.files.length})</Label>
+              <div className="mt-1 space-y-1">
+                {item.files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded text-xs">
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-3 w-3" />
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onFileRemove(item.id, index)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
