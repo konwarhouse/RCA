@@ -33,12 +33,29 @@ export default function EquipmentSelection() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   
-  // Extract incident ID directly from URL parameters
-  const params = new URLSearchParams(window.location.search);
-  const incidentId = params.get('incident') ? parseInt(params.get('incident')!) : null;
-  console.log('DEBUG: Current URL:', window.location.href);
+  // Extract incident ID directly from URL parameters with fallback methods
+  const urlParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+  const pathIncidentId = window.location.pathname.split('/').pop();
+  
+  let incidentId = null;
+  
+  // Try multiple methods to extract incident ID
+  if (urlParams.get('incident')) {
+    incidentId = parseInt(urlParams.get('incident')!);
+    console.log('Found incident ID in URL params:', incidentId);
+  } else if (hashParams.get('incident')) {
+    incidentId = parseInt(hashParams.get('incident')!);
+    console.log('Found incident ID in hash params:', incidentId);
+  } else if (pathIncidentId && !isNaN(parseInt(pathIncidentId))) {
+    incidentId = parseInt(pathIncidentId);
+    console.log('Found incident ID in path:', incidentId);
+  }
+  
+  console.log('DEBUG: Full URL:', window.location.href);
   console.log('DEBUG: Search params:', window.location.search);
-  console.log('DEBUG: Extracted incident ID:', incidentId);
+  console.log('DEBUG: Hash:', window.location.hash);
+  console.log('DEBUG: Final incident ID:', incidentId);
   
   const [selectedEquipmentFromLibrary, setSelectedEquipmentFromLibrary] = useState<any>(null);
   
@@ -150,24 +167,51 @@ export default function EquipmentSelection() {
     );
   }
 
-  if (isLoadingIncident || !incident) {
-    console.log('Still loading or no incident - isLoadingIncident:', isLoadingIncident, 'incident exists:', !!incident);
+  if (isLoadingIncident) {
+    console.log('Loading incident data...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg font-medium text-slate-900">Loading incident data...</div>
           <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
-          {isLoadingIncident && <div className="text-sm text-blue-600 mt-1">Fetching from server...</div>}
+          <div className="text-sm text-blue-600 mt-1">Fetching from server...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!incident && !isLoadingIncident) {
+    console.log('No incident found after loading complete');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium text-red-600">Incident Not Found</div>
+          <div className="text-sm text-slate-600 mt-2">Incident ID: {incidentId}</div>
         </div>
       </div>
     );
   }
 
-  // Equipment selection page rendering successfully
+  console.log('RENDERING MAIN CONTENT - incident:', incident?.title, 'ID:', incidentId);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-6xl mx-auto">
+      {/* FORCE VISIBLE DEBUG */}
+      <div style={{
+        position: 'fixed', 
+        top: '0', 
+        left: '0', 
+        right: '0', 
+        backgroundColor: 'green', 
+        color: 'white', 
+        padding: '10px', 
+        zIndex: 9999,
+        fontSize: '18px'
+      }}>
+        ✅ EQUIPMENT SELECTION LOADED - Incident #{incidentId}: {incident?.title}
+      </div>
+      <div style={{marginTop: '60px'}}>
+        <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -445,6 +489,7 @@ export default function EquipmentSelection() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </div>
   );
