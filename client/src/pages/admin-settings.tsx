@@ -47,19 +47,22 @@ export default function AdminSettings() {
     retry: false,
   });
 
-  // Fetch equipment groups
+  // Fetch equipment groups using the default queryFn
   const { data: equipmentGroups, isLoading: equipmentGroupsLoading } = useQuery({
     queryKey: ['/api/equipment-groups'],
-    queryFn: () => apiRequest('/api/equipment-groups'),
+    staleTime: 0,
+    refetchOnMount: true,
   });
   
   // Debug logging
   console.log('Equipment Groups:', equipmentGroups, 'Loading:', equipmentGroupsLoading);
 
-  // Fetch risk rankings
+  // Fetch risk rankings using the default queryFn
   const { data: riskRankings, isLoading: riskRankingsLoading } = useQuery({
     queryKey: ['/api/risk-rankings'],
-    queryFn: () => apiRequest('/api/risk-rankings'),
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   
   // Debug logging
