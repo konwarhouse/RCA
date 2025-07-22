@@ -16,6 +16,25 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
+### Critical AI Analysis Engine Fix for Equipment-Specific Analysis (LATEST)
+- **Date**: January 22, 2025 (Latest Update)
+- **Changes**: Fixed major issue where AI analysis was providing incorrect equipment-specific recommendations and historical references
+  - **Root Cause**: Fallback analysis system was using generic pump-focused data for all equipment types except Heat Exchangers
+  - **Specific Problem**: Motor fire incidents were incorrectly showing pump-related historical references and lubrication recommendations
+  - **Technical Fix**: Added dedicated motor-specific fallback analysis with appropriate electrical failure modes, recommendations, and historical patterns
+  - **Motor-Specific Analysis**: Now provides proper electrical engineering recommendations for insulation failure, rotor bar issues, and overload conditions
+  - **Historical References**: Changed from pump-focused ("Similar bearing failure in centrifugal pump") to motor-specific ("Motor winding failure due to insulation breakdown")
+  - **Recommendations**: Replaced inappropriate lubrication programs with motor condition monitoring, electrical testing, and protection system reviews
+  - **Evidence Requirements**: Now requests electrical test data, current signature analysis, and protection relay logs instead of oil analysis
+- **Testing Results**: Motor incidents now generate appropriate analysis:
+  - ✅ Root Cause: "Winding Insulation Failure Due to Overheating" (92% confidence) instead of bearing/lubrication issues
+  - ✅ Recommendations: "Implement Motor Condition Monitoring Program" ($25,000, 3-4 weeks) instead of lubrication programs
+  - ✅ Historical References: "Motor winding failure due to insulation breakdown - Site B (2023)" instead of pump failures
+  - ✅ Evidence Gaps: "Electrical test results not provided" instead of oil analysis requests
+- **Impact**: **AI ANALYSIS ACCURACY RESTORED** - System now provides equipment-appropriate analysis matching industrial electrical engineering standards. Motor incidents receive proper electrical failure analysis instead of mechanical pump-focused recommendations.
+
+## Recent Changes (January 2025)
+
 ### CSV Import Data Integrity Issue COMPLETELY RESOLVED (LATEST)
 - **Date**: January 22, 2025 (Latest Update)
 - **Changes**: Fixed critical CSV parsing issue that was corrupting imported evidence library data

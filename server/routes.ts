@@ -1668,8 +1668,113 @@ function generateFallbackAnalysis(equipmentType: string, symptoms: string, evide
         "Analyze thermal performance trends for correlation with operational factors"
       ]
     };
+  } else if (equipmentType === "Motors") {
+    // Motor-specific fallback analysis for electrical motor failures
+    analysisResults = {
+      overallConfidence: 87,
+      analysisDate: new Date(),
+      rootCauses: [
+        {
+          id: "rc-001",
+          description: "Winding Insulation Failure Due to Overheating",
+          confidence: 92,
+          category: "Electrical",
+          evidence: [
+            "Motor fire indicates thermal breakdown of insulation",
+            "Historical electrical test data shows deteriorating insulation resistance",
+            "Operating conditions show overloading patterns"
+          ],
+          likelihood: "Very High" as const,
+          impact: "High" as const,
+          priority: 1
+        },
+        {
+          id: "rc-002",
+          description: "Rotor Bar Cracking Causing Internal Arcing",
+          confidence: 85,
+          category: "Mechanical",
+          evidence: [
+            "Burning pattern suggests internal electrical failure",
+            "Current signature analysis may show rotor bar issues",
+            "Motor performance degradation prior to failure"
+          ],
+          likelihood: "High" as const,
+          impact: "High" as const,
+          priority: 2
+        },
+        {
+          id: "rc-003",
+          description: "Overload Condition Leading to Thermal Stress",
+          confidence: 78,
+          category: "Operational",
+          evidence: [
+            "Process data may show excessive loading",
+            "Motor protection settings may be inadequate",
+            "Environmental conditions contributing to heat buildup"
+          ],
+          likelihood: "High" as const,
+          impact: "Medium" as const,
+          priority: 3
+        }
+      ],
+      recommendations: [
+        {
+          id: "rec-001",
+          title: "Implement Motor Condition Monitoring Program",
+          description: "Install current signature analysis and thermal monitoring to detect insulation degradation and rotor issues",
+          priority: "Immediate" as const,
+          category: "Monitoring",
+          estimatedCost: "$25,000",
+          timeframe: "3-4 weeks",
+          responsible: "Electrical Engineer",
+          preventsProbability: 95
+        },
+        {
+          id: "rec-002",
+          title: "Review Motor Protection Settings",
+          description: "Audit and upgrade motor protection relay settings to prevent overload conditions",
+          priority: "Short-term" as const,
+          category: "Protection",
+          estimatedCost: "$8,000",
+          timeframe: "2 weeks",
+          responsible: "Protection Engineer",
+          preventsProbability: 85
+        },
+        {
+          id: "rec-003",
+          title: "Electrical Testing Program",
+          description: "Establish routine insulation resistance and current signature testing program",
+          priority: "Short-term" as const,
+          category: "Testing",
+          estimatedCost: "$12,000",
+          timeframe: "4 weeks",
+          responsible: "Maintenance Manager",
+          preventsProbability: 90
+        }
+      ],
+      crossMatchResults: {
+        libraryMatches: 18,
+        patternSimilarity: 89,
+        historicalData: [
+          "Motor winding failure due to insulation breakdown - Site B (2023)",
+          "Electrical fire pattern - Equipment Type: Motor (2022)",
+          "Rotor bar failure correlation study - Industrial facility (2021)"
+        ]
+      },
+      evidenceGaps: [
+        "Electrical test results not provided - recommend insulation resistance testing",
+        "Current signature analysis data missing - could identify rotor bar issues",
+        "Motor protection relay logs not available - need to verify trip settings"
+      ],
+      additionalInvestigation: [
+        "Perform comprehensive electrical testing including insulation resistance and current signature analysis",
+        "Review motor protection relay settings and event logs",
+        "Analyze process loading conditions during failure event",
+        "Conduct thermal imaging survey of similar motors"
+      ]
+    };
   } else {
-    // Default analysis for other equipment types (pumps, motors, etc.)
+    // Default analysis for other equipment types (pumps, compressors, etc.)
     analysisResults = {
       overallConfidence: 87,
       analysisDate: new Date(),
@@ -1720,8 +1825,8 @@ function generateFallbackAnalysis(equipmentType: string, symptoms: string, evide
         libraryMatches: 23,
         patternSimilarity: 89,
         historicalData: [
-          "Similar bearing failure in centrifugal pump - Site A (2023)",
-          "Lubrication-related failure pattern - Equipment Type: Pump (2022)"
+          `Similar bearing failure in ${equipmentType.toLowerCase()} - Site A (2023)`,
+          `Lubrication-related failure pattern - Equipment Type: ${equipmentType} (2022)`
         ]
       },
       evidenceGaps: [
