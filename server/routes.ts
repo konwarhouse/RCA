@@ -873,11 +873,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const csvData = req.file.buffer.toString('utf-8');
       const lines = csvData.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      // Function to properly parse CSV line with quoted fields
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        let i = 0;
+        
+        while (i < line.length) {
+          const char = line[i];
+          
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              // Handle escaped quotes
+              current += '"';
+              i += 2;
+            } else {
+              // Toggle quote state
+              inQuotes = !inQuotes;
+              i++;
+            }
+          } else if (char === ',' && !inQuotes) {
+            // Field separator outside quotes
+            result.push(current.trim());
+            current = '';
+            i++;
+          } else {
+            current += char;
+            i++;
+          }
+        }
+        
+        // Add the last field
+        result.push(current.trim());
+        return result;
+      };
+      
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/"/g, '').trim());
       
       const items = [];
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
         if (values.length >= 11) { // Minimum required fields
           items.push({
             equipmentGroup: values[0],
