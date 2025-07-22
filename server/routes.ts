@@ -519,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await investigationStorage.updateIncident(id, {
         currentStep: 6,
         workflowStatus: "analysis_complete",
-        analysisResults: analysis,
+        aiAnalysis: JSON.stringify(analysis), // Fixed: Use correct column name and stringify
       });
 
       res.json({ analysis });
@@ -539,7 +539,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
 
-      res.json(incident.analysisResults || {});
+      // Parse the analysis results from the database
+      const analysisResults = incident.aiAnalysis ? JSON.parse(incident.aiAnalysis) : {};
+      res.json(analysisResults);
     } catch (error) {
       console.error("[RCA] Error fetching analysis results:", error);
       res.status(500).json({ message: "Failed to fetch analysis results" });
@@ -552,12 +554,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const reviewData = req.body;
       
-      // Update incident with engineer review
-      const incident = await investigationStorage.updateIncident(id, {
+      // Update incident with engineer review and finalization
+      const updateData: any = {
         currentStep: 8,
-        workflowStatus: reviewData.approved ? "approved" : "under_review",
-        engineerReview: reviewData,
-      });
+        workflowStatus: reviewData.approved ? "finalized" : "under_review", // Fixed: Use "finalized" status
+        engineerReview: JSON.stringify(reviewData), // Store as string
+      };
+      
+      // If approved, set finalization data
+      if (reviewData.approved) {
+        updateData.finalizedAt = new Date();
+        updateData.finalizedBy = reviewData.reviewedBy || 'Engineer';
+      }
+      
+      const incident = await investigationStorage.updateIncident(id, updateData);
 
       res.json(incident);
     } catch (error) {
@@ -1342,14 +1352,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
+// Safe JSON parsing helper
+function parseJsonSafely(data: any, fallback: any = null) {
+  if (!data) return fallback;
+  if (typeof data === 'object') return data; // Already parsed
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch (error) {
+      console.warn(`[JSON Parse] Failed to parse: ${data}`, error);
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 // Summary Report Generation Function
 async function generateSummaryReport(incident: any) {
   console.log(`[Summary Report] Generating report for incident ${incident.id}: ${incident.title}`);
 
-  // Parse evidence files and analysis data
-  const evidenceFiles = incident.evidenceFiles ? JSON.parse(incident.evidenceFiles) : [];
-  const analysisResults = incident.analysisResults ? JSON.parse(incident.analysisResults) : null;
-  const evidenceChecklist = incident.evidenceChecklist ? JSON.parse(incident.evidenceChecklist) : [];
+  // Parse evidence files and analysis data - Fixed to handle different data types
+  const evidenceFiles = parseJsonSafely(incident.evidenceFiles, []);
+  const analysisResults = parseJsonSafely(incident.aiAnalysis, null);
+  const evidenceChecklist = parseJsonSafely(incident.evidenceChecklist, []);
 
   // Calculate impact summary
   const impactSummary = calculateImpactSummary(incident, analysisResults);

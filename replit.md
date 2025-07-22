@@ -26,6 +26,27 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 - **Dynamic Equipment Processing**: System uses `incident.equipmentGroup`, `incident.equipmentType`, `incident.equipmentSubtype` variables - works for ANY equipment combination (Electrical→Motors, Rotating→Pumps, Static→Vessels, etc.)
 - **Impact**: **CRITICAL DATA INTEGRITY FIX** - Three-level equipment classification now works correctly end-to-end from user selection through database storage to AI analysis validation
 
+### Critical Analysis Storage & Workflow Issues COMPLETELY RESOLVED (LATEST)
+- **Date**: January 22, 2025 (Latest Fix)  
+- **Root Cause Identified**: Multiple JSON parsing errors and incorrect column mapping preventing analysis storage and completion workflow
+- **Issues Fixed**: 
+  - **JSON Parsing Errors**: Fixed "[object Obj"... is not valid JSON" errors in summary report generation with safe parsing function
+  - **Analysis Storage**: Fixed incorrect column name (analysisResults vs aiAnalysis) causing analysis data to not save to database  
+  - **Workflow Status**: Fixed engineer review process to properly set "finalized" status with timestamps
+  - **Column Mapping**: Updated all API endpoints to use correct database column names (aiAnalysis, engineerReview)
+  - **Summary Reports**: Fixed "Failed to generate summary report" errors - now working correctly
+- **Technical Fixes**:
+  - Added `parseJsonSafely()` function to handle mixed object/string data types
+  - Updated storage layer to use `JSON.stringify()` for proper database insertion
+  - Fixed engineer review endpoint to set `finalizedAt` timestamp and `finalizedBy` fields
+  - Corrected workflow status progression from "analysis_complete" to "finalized"
+- **Testing Results**: Incident #44 now shows complete successful workflow:
+  - ✅ Analysis stored correctly in database (`has_analysis = true`)
+  - ✅ Summary report generation working (`200 OK` response)  
+  - ✅ Engineer review approval sets finalized status with timestamp
+  - ✅ Analysis History shows "completed" status instead of "Draft - Analysis pending"
+- **Impact**: **MAJOR WORKFLOW RESTORATION** - Complete 8-step RCA workflow now fully operational with proper data persistence, analysis storage, and finalization process. Users can complete investigations end-to-end with all results properly saved and visible in Analysis History.
+
 ### Previous: Three-Level Equipment Classification Validation 
 - **Date**: January 22, 2025 (Previous Update)
 - **Changes**: Confirmed and validated the mandatory three-level equipment classification system (Group → Type → Subtype) is optimal for analysis quality
