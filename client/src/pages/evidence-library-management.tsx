@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle, Home, ArrowLeft } from "lucide-react";
+import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle, Home, ArrowLeft, ChevronUp, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -74,6 +74,10 @@ export default function EvidenceLibraryManagement() {
   // Bulk delete states
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  
+  // Sorting states
+  const [sortField, setSortField] = useState<'equipmentGroup' | 'equipmentType' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const form = useForm<EvidenceLibraryForm>({
     resolver: zodResolver(evidenceLibrarySchema),
@@ -151,6 +155,18 @@ export default function EvidenceLibraryManagement() {
   const uniqueSubtypes = Array.from(new Set(filteredSubtypes.map(item => item.subtype).filter(Boolean))).sort();
 
   // Filter evidence items based on selected filters and search term
+  // Handle sorting
+  const handleSort = (field: 'equipmentGroup' | 'equipmentType') => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredItems = evidenceItems.filter(item => {
     const matchesSearch = !searchTerm || 
       Object.values(item).some(value => 
@@ -167,6 +183,14 @@ export default function EvidenceLibraryManagement() {
       (item.subtype && selectedSubtypes.includes(item.subtype));
 
     return matchesSearch && matchesEquipmentGroup && matchesEquipmentType && matchesSubtype;
+  }).sort((a, b) => {
+    if (!sortField) return 0;
+    
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+    
+    const comparison = aValue.localeCompare(bValue);
+    return sortDirection === 'asc' ? comparison : -comparison;
   });
 
   // Clear all filters
@@ -996,8 +1020,30 @@ export default function EvidenceLibraryManagement() {
                             className="rounded"
                           />
                         </TableHead>
-                        <TableHead className="w-32 min-w-[8rem]">Equipment Group</TableHead>
-                        <TableHead className="w-32 min-w-[8rem]">Equipment Type</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">
+                          <Button 
+                            variant="ghost" 
+                            className="h-auto p-0 font-medium hover:bg-transparent"
+                            onClick={() => handleSort('equipmentGroup')}
+                          >
+                            Equipment Group
+                            {sortField === 'equipmentGroup' && (
+                              sortDirection === 'asc' ? <ChevronUp className="ml-1 w-4 h-4" /> : <ChevronDown className="ml-1 w-4 h-4" />
+                            )}
+                          </Button>
+                        </TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">
+                          <Button 
+                            variant="ghost" 
+                            className="h-auto p-0 font-medium hover:bg-transparent"
+                            onClick={() => handleSort('equipmentType')}
+                          >
+                            Equipment Type
+                            {sortField === 'equipmentType' && (
+                              sortDirection === 'asc' ? <ChevronUp className="ml-1 w-4 h-4" /> : <ChevronDown className="ml-1 w-4 h-4" />
+                            )}
+                          </Button>
+                        </TableHead>
                         <TableHead className="w-28 min-w-[7rem]">Subtype</TableHead>
                         <TableHead className="w-40 min-w-[10rem]">Component / Failure Mode</TableHead>
                         <TableHead className="w-32 min-w-[8rem]">Equipment Code</TableHead>
