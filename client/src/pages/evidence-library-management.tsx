@@ -131,8 +131,20 @@ export default function EvidenceLibraryManagement() {
 
   // Get unique filter values from data
   const uniqueEquipmentGroups = [...new Set(evidenceItems.map(item => item.equipmentGroup))].filter(Boolean).sort();
-  const uniqueEquipmentTypes = [...new Set(evidenceItems.map(item => item.equipmentType))].filter(Boolean).sort();
-  const uniqueSubtypes = [...new Set(evidenceItems.map(item => item.subtypeExample).filter(Boolean))].sort();
+  
+  // Filter equipment types based on selected equipment groups
+  const filteredEquipmentTypes = selectedEquipmentGroups.length > 0 
+    ? evidenceItems.filter(item => selectedEquipmentGroups.includes(item.equipmentGroup))
+    : evidenceItems;
+  const uniqueEquipmentTypes = [...new Set(filteredEquipmentTypes.map(item => item.equipmentType))].filter(Boolean).sort();
+  
+  // Filter subtypes based on selected equipment groups AND types (cascading)
+  const filteredSubtypes = evidenceItems.filter(item => {
+    const matchesGroup = selectedEquipmentGroups.length === 0 || selectedEquipmentGroups.includes(item.equipmentGroup);
+    const matchesType = selectedEquipmentTypes.length === 0 || selectedEquipmentTypes.includes(item.equipmentType);
+    return matchesGroup && matchesType;
+  });
+  const uniqueSubtypes = [...new Set(filteredSubtypes.map(item => item.subtypeExample).filter(Boolean))].sort();
 
   // Filter evidence items based on selected filters and search term
   const filteredItems = evidenceItems.filter(item => {
@@ -159,6 +171,31 @@ export default function EvidenceLibraryManagement() {
     setSelectedEquipmentGroups([]);
     setSelectedEquipmentTypes([]);
     setSelectedSubtypes([]);
+  };
+
+  // Clear dependent filters when parent filter changes
+  const handleEquipmentGroupChange = (value: string) => {
+    if (value && !selectedEquipmentGroups.includes(value)) {
+      setSelectedEquipmentGroups([value]);
+      // Clear dependent filters
+      setSelectedEquipmentTypes([]);
+      setSelectedSubtypes([]);
+    } else if (!value) {
+      setSelectedEquipmentGroups([]);
+      setSelectedEquipmentTypes([]);
+      setSelectedSubtypes([]);
+    }
+  };
+
+  const handleEquipmentTypeChange = (value: string) => {
+    if (value && !selectedEquipmentTypes.includes(value)) {
+      setSelectedEquipmentTypes([value]);
+      // Clear dependent filters
+      setSelectedSubtypes([]);
+    } else if (!value) {
+      setSelectedEquipmentTypes([]);
+      setSelectedSubtypes([]);
+    }
   };
 
   // Create mutation
@@ -448,13 +485,7 @@ export default function EvidenceLibraryManagement() {
                 <div className="flex-1">
                   <Select 
                     value={selectedEquipmentGroups.length > 0 ? selectedEquipmentGroups[0] : ""} 
-                    onValueChange={(value) => {
-                      if (value && !selectedEquipmentGroups.includes(value)) {
-                        setSelectedEquipmentGroups([value]);
-                      } else if (!value) {
-                        setSelectedEquipmentGroups([]);
-                      }
-                    }}
+                    onValueChange={handleEquipmentGroupChange}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={`Equipment Group (${uniqueEquipmentGroups.length} available)`} />
@@ -472,13 +503,7 @@ export default function EvidenceLibraryManagement() {
                 <div className="flex-1">
                   <Select 
                     value={selectedEquipmentTypes.length > 0 ? selectedEquipmentTypes[0] : ""} 
-                    onValueChange={(value) => {
-                      if (value && !selectedEquipmentTypes.includes(value)) {
-                        setSelectedEquipmentTypes([value]);
-                      } else if (!value) {
-                        setSelectedEquipmentTypes([]);
-                      }
-                    }}
+                    onValueChange={handleEquipmentTypeChange}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={`Equipment Type (${uniqueEquipmentTypes.length} available)`} />
