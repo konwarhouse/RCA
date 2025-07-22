@@ -6,7 +6,7 @@ const ALGORITHM = "aes-256-cbc";
 
 export class AIService {
   // Encrypt API key for storage
-  private static encryptApiKey(apiKey: string): string {
+  static encryptApiKey(apiKey: string): string {
     const iv = crypto.randomBytes(16);
     const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);

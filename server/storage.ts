@@ -46,7 +46,9 @@ export interface IInvestigationStorage {
   
   // AI Settings operations
   getAllAiSettings(): Promise<any[]>;
+  getAiSettingsById(id: number): Promise<any>;
   saveAiSettings(data: any): Promise<any>;
+  updateAiSettingsTestStatus(id: number, success: boolean): Promise<void>;
   deleteAiSettings(id: number): Promise<void>;
   
   // Equipment Groups operations
@@ -213,29 +215,88 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   }
 
   async saveAiSettings(data: any): Promise<any> {
-    const newSetting = {
-      id: this.aiSettings.length + 1,
-      provider: data.provider,
-      isActive: data.isActive,
-      createdBy: data.createdBy,
-      createdAt: new Date(),
-      // Don't store the actual API key in memory for security
-      hasApiKey: true
-    };
-    
-    // Remove other active settings if this one is active
-    if (data.isActive) {
-      this.aiSettings.forEach(setting => {
-        setting.isActive = false;
-      });
+    try {
+      // Encrypt the API key using AIService
+      const { AIService } = await import("./ai-service");
+      const encryptedKey = (AIService as any).encryptApiKey(data.apiKey);
+      
+      // Deactivate other settings if this one is active
+      if (data.isActive) {
+        await db
+          .update(aiSettings)
+          .set({ isActive: false })
+          .where(eq(aiSettings.isActive, true));
+      }
+      
+      // Insert new setting
+      const [newSetting] = await db
+        .insert(aiSettings)
+        .values({
+          provider: data.provider,
+          encryptedApiKey: encryptedKey,
+          isActive: data.isActive,
+          createdBy: data.createdBy,
+          testStatus: 'not_tested'
+        })
+        .returning();
+      
+      return {
+        id: newSetting.id,
+        provider: newSetting.provider,
+        isActive: newSetting.isActive,
+        createdBy: newSetting.createdBy,
+        createdAt: newSetting.createdAt,
+        hasApiKey: true
+      };
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error saving AI settings:", error);
+      throw error;
     }
-    
-    this.aiSettings.push(newSetting);
-    return newSetting;
+  }
+
+  async getAiSettingsById(id: number): Promise<any> {
+    try {
+      const [setting] = await db.select().from(aiSettings).where(eq(aiSettings.id, id));
+      if (!setting) return null;
+      
+      return {
+        id: setting.id,
+        provider: setting.provider,
+        encryptedApiKey: setting.encryptedApiKey,
+        isActive: setting.isActive,
+        createdBy: setting.createdBy,
+        createdAt: setting.createdAt,
+        testStatus: setting.testStatus || 'not_tested',
+        lastTestedAt: setting.lastTestedAt
+      };
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting AI settings by ID:", error);
+      return null;
+    }
+  }
+
+  async updateAiSettingsTestStatus(id: number, success: boolean): Promise<void> {
+    try {
+      await db
+        .update(aiSettings)
+        .set({ 
+          testStatus: success ? 'success' : 'failed',
+          lastTestedAt: new Date()
+        })
+        .where(eq(aiSettings.id, id));
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error updating AI settings test status:", error);
+      throw error;
+    }
   }
 
   async deleteAiSettings(id: number): Promise<void> {
-    this.aiSettings = this.aiSettings.filter(setting => setting.id !== id);
+    try {
+      await db.delete(aiSettings).where(eq(aiSettings.id, id));
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error deleting AI settings:", error);
+      throw error;
+    }
   }
 
   // Evidence Library operations
