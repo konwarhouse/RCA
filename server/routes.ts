@@ -4,6 +4,7 @@ import { investigationStorage } from "./storage";
 import { investigationEngine } from "./investigation-engine";
 import { RCAAnalysisEngine } from "./rca-analysis-engine";
 import evidenceLibraryRoutes from "./routes/evidence-library";
+import { nlpAnalyzer } from "./nlp-analyzer";
 import multer from "multer";
 import Papa from "papaparse";
 
@@ -768,6 +769,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[RCA] Error deleting AI settings:", error);
       res.status(500).json({ message: "Failed to delete AI settings" });
+    }
+  });
+
+  // ====== NLP ANALYSIS ROUTES FOR EVIDENCE LIBRARY ======
+
+  // Analyze question patterns in Evidence Library
+  app.get("/api/nlp/analyze-questions", async (req, res) => {
+    try {
+      const analysis = await nlpAnalyzer.analyzeQuestionPatterns();
+      res.json(analysis);
+    } catch (error) {
+      console.error("[NLP] Error analyzing question patterns:", error);
+      res.status(500).json({ message: "Failed to analyze question patterns" });
+    }
+  });
+
+  // Analyze root cause logic patterns
+  app.get("/api/nlp/analyze-root-cause-logic", async (req, res) => {
+    try {
+      const analysis = await nlpAnalyzer.analyzeRootCauseLogic();
+      res.json(analysis);
+    } catch (error) {
+      console.error("[NLP] Error analyzing root cause logic:", error);
+      res.status(500).json({ message: "Failed to analyze root cause logic patterns" });
+    }
+  });
+
+  // Generate follow-up questions based on equipment and existing evidence
+  app.post("/api/nlp/generate-questions", async (req, res) => {
+    try {
+      const { equipmentType, failureMode, existingEvidence } = req.body;
+      
+      if (!equipmentType || !failureMode) {
+        return res.status(400).json({ message: "Equipment type and failure mode are required" });
+      }
+
+      const suggestions = await nlpAnalyzer.generateFollowUpQuestions(
+        equipmentType, 
+        failureMode, 
+        existingEvidence || []
+      );
+      
+      res.json(suggestions);
+    } catch (error) {
+      console.error("[NLP] Error generating follow-up questions:", error);
+      res.status(500).json({ message: "Failed to generate follow-up questions" });
     }
   });
 
