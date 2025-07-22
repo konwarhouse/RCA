@@ -18,7 +18,7 @@ export class AIService {
   }
 
   // Decrypt API key for use
-  private static decryptApiKey(encryptedKey: string): string {
+  static decryptApiKey(encryptedKey: string): string {
     const parts = encryptedKey.split(':');
     if (parts.length !== 2) {
       throw new Error('Invalid encrypted key format');

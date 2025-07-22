@@ -47,6 +47,7 @@ export interface IInvestigationStorage {
   // AI Settings operations
   getAllAiSettings(): Promise<any[]>;
   getAiSettingsById(id: number): Promise<any>;
+  getActiveAiSettings(): Promise<any>;
   saveAiSettings(data: any): Promise<any>;
   updateAiSettingsTestStatus(id: number, success: boolean): Promise<void>;
   deleteAiSettings(id: number): Promise<void>;
@@ -287,6 +288,20 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     } catch (error) {
       console.error("[DatabaseInvestigationStorage] Error updating AI settings test status:", error);
       throw error;
+    }
+  }
+
+  async getActiveAiSettings(): Promise<any> {
+    try {
+      const [activeSetting] = await db.select().from(aiSettings)
+        .where(eq(aiSettings.isActive, true))
+        .orderBy(aiSettings.createdAt)
+        .limit(1);
+      
+      return activeSetting || null;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting active AI settings:", error);
+      return null;
     }
   }
 

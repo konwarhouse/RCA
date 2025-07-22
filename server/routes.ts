@@ -707,7 +707,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test the API key  
       const { AIService } = await import("./ai-service");
-      const testResult = await AIService.testApiKey(settings.provider, settings.encryptedApiKey);
+      // Decrypt the API key before testing
+      const decryptedKey = AIService.decryptApiKey(settings.encryptedApiKey);
+      const testResult = await AIService.testApiKey(settings.provider, decryptedKey);
       
       // Update test status in database
       await investigationStorage.updateAiSettingsTestStatus(providerId, testResult.success);
