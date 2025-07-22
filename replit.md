@@ -16,8 +16,19 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Critical System Issues COMPLETELY RESOLVED (LATEST) 
-- **Date**: January 22, 2025 (Latest Update)
+### Equipment Subtype Dropdown Fix COMPLETED (LATEST)
+- **Date**: January 22, 2025 (Latest Update) 
+- **Changes**: Fixed cascading dropdown system for equipment subtype selection in incident reporting
+  - **Database Query Fix**: Resolved Drizzle ORM query issue causing "Cannot convert undefined or null to object" error
+  - **Raw SQL Implementation**: Replaced problematic ORM query with raw SQL for reliable equipment subtype retrieval
+  - **Cascading Dropdown Working**: Three-level dropdown (Equipment Group → Equipment Type → Equipment Subtype) now fully operational
+  - **Testing Results**: Confirmed "Rotating" → "Pumps" now returns correct subtypes: ["Centrifugal", "Reciprocating", "Rotary"]
+  - **Schema Alignment**: Fixed column reference from `subtypeExample` to `subtype` to match actual database schema
+  - **Error Handling**: Added proper error handling and fallback for database connection issues
+- **Impact**: **INCIDENT REPORTING WORKFLOW RESTORED** - Users can now complete the mandatory three-level equipment selection required for RCA workflow initiation. All equipment groups, types, and subtypes loading properly from Evidence Library.
+
+### Previous: Critical System Issues COMPLETELY RESOLVED
+- **Date**: January 22, 2025 (Previous Update)
 - **Changes**: Fixed three critical enterprise deployment blockers: AI analysis quality, CSV upload, and database schema alignment
   - **Equipment-Specific AI Analysis**: Completely rewrote AI analysis engine to provide equipment-appropriate recommendations
     - **Heat Exchangers**: Now generates thermal/corrosion analysis instead of vibration/bearing recommendations

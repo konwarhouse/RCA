@@ -532,18 +532,22 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   }
 
   async getCascadingEquipmentSubtypes(groupName: string, typeName: string): Promise<string[]> {
-    const results = await db
-      .selectDistinct({ subtypeExample: evidenceLibrary.subtypeExample })
-      .from(evidenceLibrary)
-      .where(
-        and(
-          eq(evidenceLibrary.equipmentGroup, groupName),
-          eq(evidenceLibrary.equipmentType, typeName)
-        )
-      )
-      .orderBy(evidenceLibrary.subtypeExample);
-    
-    return results.map(r => r.subtypeExample);
+    try {
+      // Use raw SQL to avoid Drizzle ORM issues with DISTINCT
+      const results = await db.execute(
+        sql`SELECT DISTINCT subtype FROM evidence_library 
+            WHERE equipment_group = ${groupName} 
+            AND equipment_type = ${typeName}
+            AND subtype IS NOT NULL 
+            AND subtype != ''
+            ORDER BY subtype`
+      );
+      
+      return results.rows.map((row: any) => row.subtype).filter(Boolean);
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting equipment subtypes:", error);
+      return [];
+    }
   }
 
   // AI Settings operations
