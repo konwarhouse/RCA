@@ -42,6 +42,7 @@ export interface IInvestigationStorage {
   updateEvidenceLibrary(id: number, data: Partial<EvidenceLibrary>): Promise<EvidenceLibrary>;
   deleteEvidenceLibrary(id: number): Promise<void>;
   searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]>;
+  searchEvidenceLibraryByEquipment(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<EvidenceLibrary[]>;
   bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   
   // AI Settings operations
@@ -384,6 +385,26 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       .orderBy(evidenceLibrary.equipmentGroup, evidenceLibrary.equipmentType);
     
     console.log('Evidence library search results:', results.length, 'items found');
+    return results;
+  }
+
+  async searchEvidenceLibraryByEquipment(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<EvidenceLibrary[]> {
+    console.log(`[Storage] Searching evidence library for exact match: ${equipmentGroup} -> ${equipmentType} -> ${equipmentSubtype}`);
+    
+    const results = await db
+      .select()
+      .from(evidenceLibrary)
+      .where(
+        and(
+          eq(evidenceLibrary.isActive, true),
+          eq(evidenceLibrary.equipmentGroup, equipmentGroup),
+          eq(evidenceLibrary.equipmentType, equipmentType),
+          eq(evidenceLibrary.subtype, equipmentSubtype)
+        )
+      )
+      .orderBy(evidenceLibrary.diagnosticValue, evidenceLibrary.evidencePriority);
+    
+    console.log(`[Storage] Found ${results.length} exact equipment matches for ${equipmentSubtype} ${equipmentType}`);
     return results;
   }
 

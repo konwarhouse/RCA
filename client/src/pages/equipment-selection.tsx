@@ -94,21 +94,29 @@ export default function EquipmentSelection() {
     retryDelay: 1000,
   });
 
-  // Fetch evidence library items based on the equipment group
+  // Fetch evidence library items based on the complete equipment specification (Group->Type->Subtype)
   const { data: libraryItems = [] } = useQuery({
-    queryKey: [`/api/evidence-library/by-equipment`, incident?.equipmentGroup, incident?.equipmentType],
+    queryKey: [`/api/evidence-library/by-equipment`, incident?.equipmentGroup, incident?.equipmentType, incident?.equipmentSubtype],
     queryFn: async () => {
-      if (!incident?.equipmentType) return [];
-      // Search for equipment type only (e.g., "CENTRIFUGAL PUMP" -> "Centrifugal Pump")
-      const searchQuery = incident.equipmentType;
-      console.log('Searching evidence library for equipment type:', searchQuery);
-      const response = await fetch(`/api/evidence-library/search?q=${encodeURIComponent(searchQuery)}`);
-      if (!response.ok) return [];
+      if (!incident?.equipmentGroup || !incident?.equipmentType || !incident?.equipmentSubtype) {
+        console.log('Missing equipment details - Group:', incident?.equipmentGroup, 'Type:', incident?.equipmentType, 'Subtype:', incident?.equipmentSubtype);
+        return [];
+      }
+      
+      // Use specific equipment search for exact matches
+      const url = `/api/evidence-library/search?equipmentGroup=${encodeURIComponent(incident.equipmentGroup)}&equipmentType=${encodeURIComponent(incident.equipmentType)}&equipmentSubtype=${encodeURIComponent(incident.equipmentSubtype)}`;
+      console.log('Searching evidence library with specific equipment params:', url);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error('Evidence library search failed:', response.status, response.statusText);
+        return [];
+      }
       const results = await response.json();
-      console.log('Evidence library results:', results.length, 'items');
+      console.log(`Evidence library results: ${results.length} items found for ${incident.equipmentSubtype} ${incident.equipmentType}`);
       return results;
     },
-    enabled: !!incident?.equipmentGroup,
+    enabled: !!incident?.equipmentGroup && !!incident?.equipmentType && !!incident?.equipmentSubtype,
   });
 
   // Update equipment selection mutation

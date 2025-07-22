@@ -934,9 +934,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Search evidence library
   app.get("/api/evidence-library/search", async (req, res) => {
     try {
-      const { q } = req.query;
+      const { q, equipmentGroup, equipmentType, equipmentSubtype } = req.query;
+      
+      // If specific equipment parameters provided, search by exact match
+      if (equipmentGroup && equipmentType && equipmentSubtype) {
+        console.log(`Searching evidence library for: ${equipmentSubtype} ${equipmentType} (${equipmentGroup})`);
+        const items = await investigationStorage.searchEvidenceLibraryByEquipment(
+          equipmentGroup as string, 
+          equipmentType as string, 
+          equipmentSubtype as string
+        );
+        console.log(`Found ${items.length} equipment-specific evidence items`);
+        res.json(items);
+        return;
+      }
+      
+      // Fallback to generic search
       if (!q || typeof q !== 'string') {
-        return res.status(400).json({ message: "Search query is required" });
+        return res.status(400).json({ message: "Search query or equipment parameters are required" });
       }
       const items = await investigationStorage.searchEvidenceLibrary(q);
       res.json(items);
