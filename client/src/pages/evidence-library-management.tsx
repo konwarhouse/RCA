@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle, Home, ArrowLeft, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Plus, Upload, Download, Edit, Trash2, AlertTriangle, CheckCircle, Home, ArrowLeft, ChevronUp, ChevronDown, Brain, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -557,6 +557,12 @@ export default function EvidenceLibraryManagement() {
                 </div>
                 
                 <div className="flex space-x-2">
+                  <Link href="/nlp-analysis">
+                    <Button variant="secondary" size="sm" className="flex items-center space-x-2">
+                      <Brain className="w-4 h-4" />
+                      <span>NLP Analysis</span>
+                    </Button>
+                  </Link>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1361,9 +1367,9 @@ export default function EvidenceLibraryManagement() {
                         <TableHead className="w-48 min-w-[12rem]">AI or Investigator Questions</TableHead>
                         <TableHead className="w-48 min-w-[12rem]">Attachments / Evidence Required</TableHead>
                         <TableHead className="w-48 min-w-[12rem]">Root Cause Logic</TableHead>
-                        <TableHead className="w-24 min-w-[6rem]">Blank Column 1</TableHead>
-                        <TableHead className="w-24 min-w-[6rem]">Blank Column 2</TableHead>
-                        <TableHead className="w-24 min-w-[6rem]">Blank Column 3</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Primary Root Cause</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Contributing Factor</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Confidence Level</TableHead>
                         <TableHead className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10 w-24">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1409,9 +1415,21 @@ export default function EvidenceLibraryManagement() {
                               {item.rootCauseLogic || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="truncate">{item.blankColumn1 || '-'}</TableCell>
-                          <TableCell className="truncate">{item.blankColumn2 || '-'}</TableCell>
-                          <TableCell className="truncate">{item.blankColumn3 || '-'}</TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.relatedFailureModes || ''}>
+                              {item.relatedFailureModes || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.prerequisiteEvidence || ''}>
+                              {item.prerequisiteEvidence || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.confidenceLevel === 'High' ? 'default' : item.confidenceLevel === 'Medium' ? 'secondary' : 'outline'}>
+                              {item.confidenceLevel || 'Medium'}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10">
                             <div className="flex space-x-1">
                               <Button
