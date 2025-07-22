@@ -939,42 +939,53 @@ export default function EvidenceLibraryManagement() {
                   : "No evidence items found. Add some items to get started."}
               </div>
             ) : (
-              <div className="border rounded-lg">
+              <div>
+                <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded mb-2 text-sm">
+                  ⚠️ SCROLL BAR TEST: Look for a bright RED horizontal scroll bar at the bottom of the table below
+                </div>
                 <div 
-                  className="overflow-x-scroll evidence-table-scroll"
+                  className="border rounded-lg table-container-with-scroll"
                   style={{
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: '#3B82F6 #E5E7EB',
                     overflowX: 'scroll',
-                    overflowY: 'visible'
+                    overflowY: 'visible',
+                    width: '100%'
                   }}
                 >
                   <style>{`
-                    .evidence-table-scroll {
-                      scrollbar-width: thin;
-                      scrollbar-color: #3B82F6 #E5E7EB;
-                    }
-                    .evidence-table-scroll::-webkit-scrollbar {
-                      height: 16px;
-                      background: #f8fafc;
-                    }
-                    .evidence-table-scroll::-webkit-scrollbar-track {
-                      background: #e2e8f0;
-                      border-radius: 8px;
-                      margin: 2px;
-                    }
-                    .evidence-table-scroll::-webkit-scrollbar-thumb {
-                      background: #3b82f6;
-                      border-radius: 8px;
-                      border: 2px solid #e2e8f0;
-                      min-width: 30px;
-                    }
-                    .evidence-table-scroll::-webkit-scrollbar-thumb:hover {
-                      background: #2563eb;
-                    }
+                  .table-container-with-scroll {
+                    overflow-x: scroll !important;
+                    scrollbar-width: thick !important;
+                    scrollbar-color: #DC2626 #FEF2F2 !important;
+                  }
+                  
+                  .table-container-with-scroll::-webkit-scrollbar {
+                    height: 20px !important;
+                    background: #FEF2F2 !important;
+                    border-radius: 0 !important;
+                  }
+                  
+                  .table-container-with-scroll::-webkit-scrollbar-track {
+                    background: #FEE2E2 !important;
+                    border-radius: 0 !important;
+                  }
+                  
+                  .table-container-with-scroll::-webkit-scrollbar-thumb {
+                    background: #DC2626 !important;
+                    border-radius: 0 !important;
+                    border: none !important;
+                    min-width: 50px !important;
+                  }
+                  
+                  .table-container-with-scroll::-webkit-scrollbar-thumb:hover {
+                    background: #B91C1C !important;
+                  }
+                  
+                  .force-wide-table {
+                    min-width: 2500px !important;
+                    width: 2500px !important;
+                  }
                   `}</style>
-                  <div className="relative min-w-max">
-                    <Table className="w-full" style={{ minWidth: '1800px' }}>
+                  <Table className="force-wide-table">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="sticky left-0 bg-white dark:bg-gray-800 border-r z-10 w-12">
@@ -1070,8 +1081,7 @@ export default function EvidenceLibraryManagement() {
                         </TableRow>
                       ))}
                     </TableBody>
-                    </Table>
-                  </div>
+                  </Table>
                 </div>
               </div>
             )}
