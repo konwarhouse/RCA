@@ -16,8 +16,17 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Three-Level Equipment Classification Validation (LATEST)
-- **Date**: January 22, 2025 (Latest Update)
+### Critical Database Bug Fix - Equipment Subtype Data Loss RESOLVED (LATEST)
+- **Date**: January 22, 2025 (Latest Update)  
+- **Root Cause Identified**: equipmentSubtype field was completely missing from incident creation INSERT statement in storage.ts despite being provided by user during incident creation
+- **Data Flow Issue**: User selected "Synchronous" subtype but database stored `null` causing AI analysis to show "Equipment Subtype Missing" error
+- **Fix Applied**: Added missing `equipmentSubtype: data.equipmentSubtype || null` to database INSERT operation in storage.ts line 674
+- **Database Schema Confirmed**: equipmentSubtype field exists in incidents table (shared/schema.ts line 197) - issue was purely in storage layer INSERT operation
+- **Zero Hardcoding Solution**: Fix maintains dynamic, configurable architecture by properly passing user-provided subtype data to database
+- **Impact**: **CRITICAL DATA INTEGRITY FIX** - Three-level equipment classification now works correctly end-to-end from user selection through database storage to AI analysis validation
+
+### Previous: Three-Level Equipment Classification Validation 
+- **Date**: January 22, 2025 (Previous Update)
 - **Changes**: Confirmed and validated the mandatory three-level equipment classification system (Group → Type → Subtype) is optimal for analysis quality
   - **Professional Classification**: ISO 14224 compliant three-level hierarchy ensures maximum analysis accuracy
   - **Exact Match Analysis**: System found 2 exact matches for "Electrical → Motors → Induction" vs generic motor fallback

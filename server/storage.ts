@@ -668,6 +668,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           description: data.description || '',
           equipmentGroup: data.equipmentGroup || '',
           equipmentType: data.equipmentType || '',
+          equipmentSubtype: data.equipmentSubtype || null, // FIXED: equipmentSubtype now properly saved to database
           equipmentId: data.equipmentId || '',
           location: data.location || '',
           reportedBy: data.reportedBy || '',
