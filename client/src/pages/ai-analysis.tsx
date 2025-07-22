@@ -190,7 +190,11 @@ export default function AIAnalysis() {
                 ← Back to Home
               </Button>
               <div className="flex items-center space-x-2">
-                <Brain className="h-5 w-5 text-primary" />
+                <img 
+                  src="/quanntaum-logo.jpg" 
+                  alt="Quanntaum Logo" 
+                  className="h-5 w-5 rounded object-contain"
+                />
                 <h1 className="text-xl font-bold">Steps 5-6: AI Analysis & Draft RCA</h1>
               </div>
             </div>

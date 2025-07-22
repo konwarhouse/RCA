@@ -212,7 +212,11 @@ export default function EvidenceChecklist() {
                 ← Back to Home
               </Button>
               <div className="flex items-center space-x-2">
-                <Brain className="h-5 w-5 text-primary" />
+                <img 
+                  src="/quanntaum-logo.jpg" 
+                  alt="Quanntaum Logo" 
+                  className="h-5 w-5 rounded object-contain"
+                />
                 <h1 className="text-xl font-bold">Step 3: AI Evidence Checklist</h1>
               </div>
             </div>

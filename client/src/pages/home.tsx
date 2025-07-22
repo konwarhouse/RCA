@@ -112,10 +112,12 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Brain className="text-primary-foreground text-sm" size={16} />
-                </div>
-                <h1 className="text-xl font-bold text-foreground">RCA Intelligence</h1>
+                <img 
+                  src="/quanntaum-logo.jpg" 
+                  alt="Quanntaum Logo" 
+                  className="w-8 h-8 rounded-lg object-contain"
+                />
+                <h1 className="text-xl font-bold text-foreground">Quanntaum RCA Intelligence Pro</h1>
                 <Badge className="enterprise-gradient text-white text-xs px-2 py-1 font-medium">
                   AI-Powered
                 </Badge>
