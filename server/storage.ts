@@ -396,6 +396,15 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       console.log('[RCA] Clearing existing evidence library data...');
       await db.delete(evidenceLibrary);
       
+      // Check for duplicate equipment codes in the import data
+      const equipmentCodes = items.map(item => item.equipmentCode);
+      const duplicates = equipmentCodes.filter((code, index) => equipmentCodes.indexOf(code) !== index);
+      
+      if (duplicates.length > 0) {
+        console.error('[RCA] Duplicate equipment codes found in import data:', duplicates);
+        throw new Error(`Duplicate equipment codes found in CSV: ${duplicates.join(', ')}`);
+      }
+      
       // Insert new data in batches to avoid memory issues
       console.log(`[RCA] Inserting ${items.length} new evidence library items...`);
       const batchSize = 50;

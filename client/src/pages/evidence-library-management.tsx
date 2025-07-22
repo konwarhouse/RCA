@@ -387,7 +387,7 @@ export default function EvidenceLibraryManagement() {
 
   const handleExport = () => {
     const csv = [
-      "Equipment Group,Equipment Type,Subtype / Example,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Blank Column 1,Blank Column 2,Blank Column 3",
+      "Equipment Group,Equipment Type,Subtype,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Blank Column 1,Blank Column 2,Blank Column 3",
       ...evidenceItems.map(item => [
         item.equipmentGroup,
         item.equipmentType,
