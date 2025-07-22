@@ -25,7 +25,7 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - **Export Header Fix**: Changed export header from "Subtype / Example" to clean "Subtype" format
   - **Validation Enhancement**: Added duplicate equipment code detection before database insertion
   - **User Trust**: Restored data integrity ensuring imported CSV data matches exactly what was provided
-- **Testing Results**: Successfully imported 100 evidence library items with accurate field preservation:
+- **Testing Results**: Successfully imported 101 evidence library items with accurate field preservation:
   - ✅ Control Valve attachments: "Position log, signal chart, test report" (complete, not truncated)
   - ✅ AI Questions: "Stem slow/stuck? Hysteresis observed?" (preserved exactly)
   - ✅ Trend Data: "Stem Position, Control Signal, Test" (commas handled correctly)
