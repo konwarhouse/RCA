@@ -22,7 +22,8 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 - **Data Flow Issue**: User selected "Synchronous" subtype but database stored `null` causing AI analysis to show "Equipment Subtype Missing" error
 - **Fix Applied**: Added missing `equipmentSubtype: data.equipmentSubtype || null` to database INSERT operation in storage.ts line 674
 - **Database Schema Confirmed**: equipmentSubtype field exists in incidents table (shared/schema.ts line 197) - issue was purely in storage layer INSERT operation
-- **Zero Hardcoding Solution**: Fix maintains dynamic, configurable architecture by properly passing user-provided subtype data to database
+- **Zero Hardcoding Solution**: Fix maintains dynamic, configurable architecture by properly passing user-provided subtype data to database  
+- **Dynamic Equipment Processing**: System uses `incident.equipmentGroup`, `incident.equipmentType`, `incident.equipmentSubtype` variables - works for ANY equipment combination (Electrical→Motors, Rotating→Pumps, Static→Vessels, etc.)
 - **Impact**: **CRITICAL DATA INTEGRITY FIX** - Three-level equipment classification now works correctly end-to-end from user selection through database storage to AI analysis validation
 
 ### Previous: Three-Level Equipment Classification Validation 
