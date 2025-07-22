@@ -284,7 +284,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             sql`LOWER(${evidenceLibrary.equipmentType}) LIKE ${searchPattern}`,
             sql`LOWER(${evidenceLibrary.componentFailureMode}) LIKE ${searchPattern}`,
             sql`LOWER(${evidenceLibrary.equipmentCode}) LIKE ${searchPattern}`,
-            sql`LOWER(${evidenceLibrary.subtypeExample}) LIKE ${searchPattern}`,
+            sql`LOWER(${evidenceLibrary.subtype}) LIKE ${searchPattern}`,
             sql`LOWER(${evidenceLibrary.equipmentGroup}) LIKE ${searchPattern}`
           )
         )

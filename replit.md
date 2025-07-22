@@ -16,9 +16,9 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Critical AI Analysis Quality & CSV Upload Issues COMPLETELY RESOLVED (LATEST)
+### Critical System Issues COMPLETELY RESOLVED (LATEST) 
 - **Date**: January 22, 2025 (Latest Update)
-- **Changes**: Fixed two critical enterprise deployment blockers: AI analysis quality and CSV upload functionality
+- **Changes**: Fixed three critical enterprise deployment blockers: AI analysis quality, CSV upload, and database schema alignment
   - **Equipment-Specific AI Analysis**: Completely rewrote AI analysis engine to provide equipment-appropriate recommendations
     - **Heat Exchangers**: Now generates thermal/corrosion analysis instead of vibration/bearing recommendations
     - **Root Causes**: Tube corrosion, gasket deterioration, erosion-corrosion from high velocity flow
@@ -28,6 +28,10 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
     - **File Types Added**: text/csv, Excel (.xls/.xlsx) now accepted in maintenance records category
     - **Expanded Acceptance**: PDF, text, CSV, Excel, and images all supported for maintenance evidence
     - **Full Compatibility**: Enables proper evidence collection for maintenance history data
+  - **Database Schema Alignment**: Fixed column name mismatch between Evidence Library schema and UI
+    - **Column Name Fix**: Changed `subtypeExample` to `subtype` to match actual UI display
+    - **Search Functionality**: Updated evidence library search to use correct column names
+    - **Schema Consistency**: Database now perfectly aligned with Evidence Library CSV structure
   - **Equipment Logic**: Added conditional analysis logic based on actual equipment type selection
   - **Historical Data**: Equipment-specific cross-matching with relevant failure patterns and case studies
 - **Testing Results**: Heat exchanger incident now generates appropriate analysis:

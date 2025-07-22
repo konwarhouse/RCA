@@ -39,12 +39,12 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Evidence Library table - EXACT CSV column mapping: Equipment Group, Equipment Type, Subtype / Example, Component / Failure Mode, Equipment Code, Failure Code, Risk Ranking, Required Trend Data / Evidence, AI or Investigator Questions, Attachments / Evidence Required, Root Cause Logic, Blank Column 1, Blank Column 2, Blank Column 3
+// Evidence Library table - EXACT CSV column mapping: Equipment Group, Equipment Type, Subtype, Component / Failure Mode, Equipment Code, Failure Code, Risk Ranking, Required Trend Data / Evidence, AI or Investigator Questions, Attachments / Evidence Required, Root Cause Logic, Blank Column 1, Blank Column 2, Blank Column 3
 export const evidenceLibrary = pgTable("evidence_library", {
   id: serial("id").primaryKey(),
   equipmentGroup: varchar("equipment_group").notNull(), // Equipment Group 
   equipmentType: varchar("equipment_type").notNull(), // Equipment Type
-  subtypeExample: varchar("subtype_example"), // Subtype / Example
+  subtype: varchar("subtype"), // Subtype
   componentFailureMode: varchar("component_failure_mode").notNull(), // Component / Failure Mode
   equipmentCode: varchar("equipment_code").notNull().unique(), // Equipment Code
   failureCode: varchar("failure_code").notNull(), // Failure Code
