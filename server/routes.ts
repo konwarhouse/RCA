@@ -1315,8 +1315,302 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate Summary Report API
+  app.get('/api/incidents/:incidentId/summary-report', async (req: any, res) => {
+    try {
+      const incidentId = parseInt(req.params.incidentId);
+      if (!incidentId) {
+        return res.status(400).json({ message: "Invalid incident ID" });
+      }
+
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      // Generate comprehensive summary report
+      const summaryReport = await generateSummaryReport(incident);
+      
+      res.json({ report: summaryReport });
+    } catch (error) {
+      console.error("Error generating summary report:", error);
+      res.status(500).json({ message: "Failed to generate summary report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Summary Report Generation Function
+async function generateSummaryReport(incident: any) {
+  console.log(`[Summary Report] Generating report for incident ${incident.id}: ${incident.title}`);
+
+  // Parse evidence files and analysis data
+  const evidenceFiles = incident.evidenceFiles ? JSON.parse(incident.evidenceFiles) : [];
+  const analysisResults = incident.analysisResults ? JSON.parse(incident.analysisResults) : null;
+  const evidenceChecklist = incident.evidenceChecklist ? JSON.parse(incident.evidenceChecklist) : [];
+
+  // Calculate impact summary
+  const impactSummary = calculateImpactSummary(incident, analysisResults);
+  
+  // Generate timeline from evidence and incident data
+  const timeline = generateIncidentTimeline(incident, evidenceFiles);
+  
+  // Structure evidence collected
+  const evidenceCollected = structureEvidenceCollected(evidenceFiles, evidenceChecklist);
+  
+  // Extract root cause information
+  const rootCauseInfo = extractRootCauseInfo(analysisResults);
+  
+  // Generate corrective actions
+  const correctiveActions = generateCorrectiveActions(analysisResults);
+
+  const report = {
+    // 1. Incident Overview
+    incidentOverview: {
+      incidentTitle: incident.title,
+      dateOfIncident: formatDate(incident.incidentDateTime),
+      reportedBy: `${incident.reportedBy}${incident.reporterRole ? ` (${incident.reporterRole})` : ''}`,
+      equipmentTag: incident.equipmentId || 'Not Specified',
+      location: `${incident.location || 'Site'} / ${incident.processUnit || 'Plant'} / ${incident.systemArea || 'Area'}`,
+      systemProcess: `${incident.equipmentGroup} → ${incident.equipmentType}${incident.equipmentSubtype ? ` → ${incident.equipmentSubtype}` : ''}`
+    },
+
+    // 2. Incident Description
+    incidentDescription: {
+      whatFailed: `${incident.equipmentType}${incident.equipmentSubtype ? ` (${incident.equipmentSubtype})` : ''} - ${incident.specificPart || 'Equipment failure'}`,
+      whenHappened: formatDateTime(incident.incidentDateTime),
+      howDiscovered: incident.detectionMethod || 'Equipment alarm/monitoring system',
+      initialConsequence: `${incident.immediateActions || 'Equipment shutdown'} - ${incident.description}`
+    },
+
+    // 3. Impact Summary
+    impactSummary,
+
+    // 4. Timeline of Events
+    timeline,
+
+    // 5. Evidence Collected
+    evidenceCollected,
+
+    // 6. Root Cause Summary
+    rootCauseSummary: rootCauseInfo,
+
+    // 7. Root Cause Analysis Methodology
+    rcaMethodology: {
+      method: incident.investigationType === 'ecfa' ? 'Event-Causal Factor Analysis (ECFA)' : 'Fault Tree Analysis',
+      description: incident.investigationType === 'ecfa' 
+        ? 'Systematic analysis of event sequence and contributing factors for safety incidents'
+        : 'Equipment failure analysis using ISO 14224 taxonomy and fault tree logic',
+      confidenceLevel: analysisResults?.overallConfidence || 0,
+      evidenceLibraryUsed: true,
+      isoCompliance: 'ISO 14224 compliant equipment classification'
+    },
+
+    // 8. Corrective and Preventive Actions (CAPA)
+    correctiveActions,
+
+    // 9. Lessons Learned
+    lessonsLearned: generateLessonsLearned(incident, analysisResults),
+
+    // Metadata
+    metadata: {
+      reportGeneratedDate: new Date().toISOString(),
+      reportGeneratedBy: 'Quanntaum RCA Intelligence Pro',
+      incidentId: incident.id,
+      investigationId: `INC-${incident.id}`,
+      analysisCompletedDate: incident.analysisCompletedAt || incident.updatedAt,
+      totalEvidenceFiles: evidenceFiles.length,
+      overallConfidence: analysisResults?.overallConfidence || 0
+    }
+  };
+
+  return report;
+}
+
+// Helper functions for report generation
+function calculateImpactSummary(incident: any, analysisResults: any) {
+  const priority = incident.priority || 'Medium';
+  const safetyImpact = incident.safetyImplications === 'yes' ? 'Safety implications identified' : 'No immediate safety risk';
+  
+  return {
+    safety: incident.safetyImplications === 'yes' ? 'Safety risk identified - requires immediate attention' : 'No injuries or safety incidents reported',
+    environment: incident.environmentalImpact || 'No environmental impact reported',
+    production: incident.productionImpact || estimateProductionImpact(priority),
+    costEstimate: analysisResults?.recommendations?.reduce((total: number, rec: any) => {
+      const cost = extractCostFromRecommendation(rec.description || '');
+      return total + cost;
+    }, 0) || estimateCostImpact(priority),
+    regulatory: incident.regulatoryImplications || 'No regulatory violations identified'
+  };
+}
+
+function generateIncidentTimeline(incident: any, evidenceFiles: any[]) {
+  const timeline = [];
+  const incidentTime = new Date(incident.incidentDateTime);
+  
+  // Add incident occurrence
+  timeline.push({
+    time: formatTime(incidentTime),
+    event: `${incident.title} - Initial failure detected`
+  });
+  
+  // Add immediate actions
+  if (incident.immediateActions) {
+    const responseTime = new Date(incidentTime.getTime() + 10 * 60000); // +10 minutes
+    timeline.push({
+      time: formatTime(responseTime),
+      event: `Immediate action taken: ${incident.immediateActions}`
+    });
+  }
+  
+  // Add evidence collection times
+  evidenceFiles.forEach((file: any, index: number) => {
+    const evidenceTime = new Date(incidentTime.getTime() + (30 + index * 15) * 60000);
+    timeline.push({
+      time: formatTime(evidenceTime),
+      event: `Evidence collected: ${file.originalName}`
+    });
+  });
+  
+  return timeline;
+}
+
+function structureEvidenceCollected(evidenceFiles: any[], evidenceChecklist: any[]) {
+  const evidence = evidenceFiles.map(file => ({
+    type: file.category || 'Supporting Document',
+    source: file.originalName,
+    observations: file.description || 'Evidence file uploaded for analysis'
+  }));
+  
+  // Add checklist items as evidence
+  evidenceChecklist.forEach((item: any) => {
+    if (item.completed) {
+      evidence.push({
+        type: item.category,
+        source: 'Investigation Checklist',
+        observations: item.description
+      });
+    }
+  });
+  
+  return evidence;
+}
+
+function extractRootCauseInfo(analysisResults: any) {
+  if (!analysisResults || !analysisResults.rootCauses) {
+    return {
+      primaryRootCause: 'Analysis in progress',
+      contributingFactors: [],
+      latentCause: 'To be determined',
+      detectionGaps: []
+    };
+  }
+  
+  const primary = analysisResults.rootCauses[0];
+  const contributing = analysisResults.rootCauses.slice(1, 3);
+  
+  return {
+    primaryRootCause: primary?.description || 'Primary root cause not yet identified',
+    contributingFactors: contributing.map((c: any) => c.description) || [],
+    latentCause: analysisResults.systemicIssues?.[0] || 'System-level analysis pending',
+    detectionGaps: analysisResults.evidenceGaps || []
+  };
+}
+
+function generateCorrectiveActions(analysisResults: any) {
+  if (!analysisResults || !analysisResults.recommendations) {
+    return [{
+      action: 'Complete root cause analysis',
+      type: 'Immediate',
+      owner: 'Investigation Team',
+      dueDate: formatDueDate(7), // 7 days from now
+      status: 'Open'
+    }];
+  }
+  
+  return analysisResults.recommendations.slice(0, 5).map((rec: any, index: number) => ({
+    action: rec.title || rec.description,
+    type: rec.priority === 'Immediate' ? 'Corrective' : 'Preventive',
+    owner: rec.responsible || 'Maintenance Team',
+    dueDate: rec.timeframe ? calculateDueDate(rec.timeframe) : formatDueDate(30),
+    status: 'Open'
+  }));
+}
+
+function generateLessonsLearned(incident: any, analysisResults: any) {
+  const lessons = [];
+  
+  // Equipment-specific lessons
+  lessons.push(`${incident.equipmentType} monitoring: Enhanced condition monitoring recommended for early detection`);
+  
+  // Analysis-based lessons
+  if (analysisResults?.evidenceGaps?.length > 0) {
+    lessons.push(`Evidence collection: Missing ${analysisResults.evidenceGaps[0]} - improve data collection protocols`);
+  }
+  
+  // Priority-based lessons
+  if (incident.priority === 'High' || incident.priority === 'Critical') {
+    lessons.push('High-priority equipment requires more frequent inspection and monitoring');
+  }
+  
+  // Generic lessons
+  lessons.push('Share incident learnings with other sites operating similar equipment');
+  lessons.push('Review and update maintenance procedures based on failure analysis');
+  
+  return lessons;
+}
+
+// Utility functions
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+}
+
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString);
+  return `${date.toLocaleDateString('en-GB')} at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function formatTime(date: Date) {
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDueDate(daysFromNow: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  return date.toLocaleDateString('en-GB');
+}
+
+function calculateDueDate(timeframe: string) {
+  const days = timeframe.includes('weeks') ? 21 : 
+               timeframe.includes('days') ? 7 : 
+               timeframe.includes('hours') ? 1 : 30;
+  return formatDueDate(days);
+}
+
+function extractCostFromRecommendation(description: string) {
+  const costMatch = description.match(/\$[\d,]+/);
+  return costMatch ? parseInt(costMatch[0].replace(/[$,]/g, '')) : 0;
+}
+
+function estimateProductionImpact(priority: string) {
+  switch (priority) {
+    case 'Critical': return '8+ hours downtime, significant production loss';
+    case 'High': return '4-8 hours downtime, moderate production impact';
+    case 'Medium': return '1-4 hours downtime, minor production impact';
+    default: return 'Minimal production impact';
+  }
+}
+
+function estimateCostImpact(priority: string) {
+  switch (priority) {
+    case 'Critical': return '$50,000+ in maintenance and lost production';
+    case 'High': return '$20,000-$50,000 in maintenance and lost production';
+    case 'Medium': return '$5,000-$20,000 in maintenance and lost production';
+    default: return 'Under $5,000 in maintenance costs';
+  }
 }
 
 // Helper functions for evidence generation

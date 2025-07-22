@@ -472,13 +472,21 @@ export default function AIAnalysis() {
               >
                 ← Back to Evidence Collection
               </Button>
-              <Button 
-                onClick={handleProceedToReview}
-                className="flex items-center gap-2"
-              >
-                Proceed to Engineer Review
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => setLocation(`/summary-report/${incidentId}`)}
+                >
+                  📋 Generate Summary Report
+                </Button>
+                <Button 
+                  onClick={handleProceedToReview}
+                  className="flex items-center gap-2"
+                >
+                  Proceed to Engineer Review
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
