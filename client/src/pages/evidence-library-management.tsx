@@ -911,6 +911,282 @@ export default function EvidenceLibraryManagement() {
                           )}
                         />
 
+                        {/* Configurable Intelligence Fields Section */}
+                        <div className="border-t pt-6 mt-6">
+                          <h3 className="text-lg font-semibold mb-4 text-blue-700 dark:text-blue-400">
+                            🧠 Configurable Intelligence Fields
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Admin-configurable fields that drive AI analysis behavior. Configure how the system analyzes this failure mode.
+                          </p>
+
+                          {/* Intelligence Grid Row 1 */}
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="confidenceLevel"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Confidence Level</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select confidence" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="High">High (90%+ confidence)</SelectItem>
+                                        <SelectItem value="Medium">Medium (70-89% confidence)</SelectItem>
+                                        <SelectItem value="Low">Low (50-69% confidence)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="diagnosticValue"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Diagnostic Value</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select value" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Critical">Critical (Must collect)</SelectItem>
+                                        <SelectItem value="Important">Important (Should collect)</SelectItem>
+                                        <SelectItem value="Useful">Useful (Could collect)</SelectItem>
+                                        <SelectItem value="Optional">Optional (If available)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="industryRelevance"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Industry Relevance</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select industry" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="All">All Industries</SelectItem>
+                                        <SelectItem value="Petrochemical">Petrochemical</SelectItem>
+                                        <SelectItem value="Power">Power Generation</SelectItem>
+                                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                        <SelectItem value="Mining">Mining</SelectItem>
+                                        <SelectItem value="Marine">Marine</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Intelligence Grid Row 2 */}
+                          <div className="grid grid-cols-4 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="evidencePriority"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Evidence Priority</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Priority" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1 - Critical</SelectItem>
+                                        <SelectItem value="2">2 - High</SelectItem>
+                                        <SelectItem value="3">3 - Medium</SelectItem>
+                                        <SelectItem value="4">4 - Low</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="timeToCollect"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Time to Collect</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Time" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Immediate">Immediate</SelectItem>
+                                        <SelectItem value="Hours">Few Hours</SelectItem>
+                                        <SelectItem value="Days">Few Days</SelectItem>
+                                        <SelectItem value="Weeks">Few Weeks</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="collectionCost"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Collection Cost</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Cost" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Low">Low ($0-1K)</SelectItem>
+                                        <SelectItem value="Medium">Medium ($1K-10K)</SelectItem>
+                                        <SelectItem value="High">High ($10K-50K)</SelectItem>
+                                        <SelectItem value="Very High">Very High ($50K+)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="analysisComplexity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Analysis Complexity</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Complexity" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Simple">Simple</SelectItem>
+                                        <SelectItem value="Moderate">Moderate</SelectItem>
+                                        <SelectItem value="Complex">Complex</SelectItem>
+                                        <SelectItem value="Expert Required">Expert Required</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Intelligence Grid Row 3 */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="seasonalFactor"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Seasonal Factor</FormLabel>
+                                  <FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Seasonal pattern" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="None">No Seasonal Pattern</SelectItem>
+                                        <SelectItem value="Summer">Summer Related</SelectItem>
+                                        <SelectItem value="Winter">Winter Related</SelectItem>
+                                        <SelectItem value="Shutdown">Shutdown Period</SelectItem>
+                                        <SelectItem value="Startup">Startup Period</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="relatedFailureModes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Related Failure Modes</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder="e.g., BRG-001, SEAL-002, VIB-003" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Intelligence Text Areas */}
+                          <div className="grid grid-cols-1 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="prerequisiteEvidence"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Prerequisite Evidence</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Evidence required before collecting this evidence (e.g., 'Collect vibration data before oil analysis')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="followupActions"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Follow-up Actions</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="What to do after collecting this evidence (e.g., 'Send oil sample to lab for ferrography analysis')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="industryBenchmark"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Industry Benchmark / Standards</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Industry standards or benchmarks (e.g., 'ISO 10816 vibration limits, API 682 seal standards')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-3 gap-4">
                           <FormField
                             control={form.control}
