@@ -21,6 +21,7 @@ import AIAnalysis from "@/pages/ai-analysis";
 import EngineerReview from "@/pages/engineer-review";
 import NLPAnalysis from "@/pages/nlp-analysis";
 import SummaryReport from "@/pages/summary-report";
+import AnalysisDetails from "@/pages/analysis-details";
 import NotFound from "@/pages/not-found";
 import DebugRoutes from "@/pages/debug-routes";
 
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/engineer-review" component={EngineerReview} />
       <Route path="/nlp-analysis" component={NLPAnalysis} />
       <Route path="/summary-report/:incidentId" component={SummaryReport} />
+      <Route path="/analysis-details/:incidentId" component={AnalysisDetails} />
       <Route component={NotFound} />
     </Switch>
   );

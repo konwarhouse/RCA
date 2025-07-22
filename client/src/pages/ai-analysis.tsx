@@ -120,13 +120,19 @@ export default function AIAnalysis() {
     },
   });
 
+  // Fetch analysis results separately
+  const { data: existingAnalysis, isLoading: analysisLoading } = useQuery({
+    queryKey: [`/api/incidents/${incidentId}/analysis`],
+    enabled: !!incidentId,
+  });
+
   // Start analysis when incident loads or load existing results
   useEffect(() => {
-    if (incident) {
+    if (incident && existingAnalysis && !analysisLoading) {
       // Check if analysis results already exist
-      if (incident.analysisResults) {
-        console.log('Loading existing analysis results:', incident.analysisResults);
-        setAnalysisResults(incident.analysisResults);
+      if (existingAnalysis && Object.keys(existingAnalysis).length > 0) {
+        console.log('Loading existing analysis results:', existingAnalysis);
+        setAnalysisResults(existingAnalysis);
         setAnalysisPhase("completed");
         setAnalysisProgress(100);
         setIsAnalyzing(false);
@@ -138,7 +144,7 @@ export default function AIAnalysis() {
         performAnalysisMutation.mutate(incident);
       }
     }
-  }, [incident]);
+  }, [incident, existingAnalysis, analysisLoading]);
 
   const simulateAnalysisProgress = () => {
     const phases = [
@@ -165,7 +171,7 @@ export default function AIAnalysis() {
     }
   };
 
-  if (isLoading || !incident) {
+  if (isLoading || analysisLoading || !incident) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

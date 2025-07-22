@@ -539,8 +539,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
 
-      // Parse the analysis results from the database
-      const analysisResults = incident.aiAnalysis ? JSON.parse(incident.aiAnalysis) : {};
+      // Handle analysis results - check if it's already parsed
+      let analysisResults = {};
+      if (incident.aiAnalysis) {
+        if (typeof incident.aiAnalysis === 'string') {
+          try {
+            analysisResults = JSON.parse(incident.aiAnalysis);
+          } catch (error) {
+            console.error('[Analysis Parse] String parse failed:', error.message);
+            analysisResults = {};
+          }
+        } else if (typeof incident.aiAnalysis === 'object') {
+          analysisResults = incident.aiAnalysis;
+        }
+      }
+      
+      console.log(`[Analysis Results] Returning analysis for incident ${id}:`, Object.keys(analysisResults));
       res.json(analysisResults);
     } catch (error) {
       console.error("[RCA] Error fetching analysis results:", error);

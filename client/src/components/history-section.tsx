@@ -242,8 +242,8 @@ export default function HistorySection() {
                                   // Navigate to continue draft
                                   setLocation(`/equipment-selection?incident=${analysis.id}`);
                                 } else {
-                                  // Navigate to view completed analysis
-                                  setLocation(`/investigation/${analysis.investigationId}`);
+                                  // Navigate to comprehensive analysis details page
+                                  setLocation(`/analysis-details/${analysis.id}`);
                                 }
                               }}
                               className="text-xs px-2"
