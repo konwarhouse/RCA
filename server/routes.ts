@@ -678,15 +678,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Provider and API key are required" });
       }
 
-      // Simple test - just verify key format
-      if (provider === 'openai' && !apiKey.startsWith('sk-')) {
-        return res.status(400).json({ success: false, message: "Invalid OpenAI API key format" });
-      }
+      // Test the actual API key
+      const { AIService } = await import("./ai-service");
+      const testResult = await AIService.testApiKey(provider, apiKey);
       
-      res.json({ success: true, message: "API key format is valid" });
+      if (testResult.success) {
+        res.json({ success: true, message: "API key tested successfully" });
+      } else {
+        res.status(400).json({ success: false, message: testResult.error });
+      }
     } catch (error) {
       console.error("[RCA] Error testing API key:", error);
-      res.status(500).json({ success: false, message: "Test failed" });
+      res.status(500).json({ success: false, message: "Test failed: " + error.message });
+    }
+  });
+
+  // Test existing AI provider
+  app.post("/api/admin/ai-settings/:id/test", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const providerId = parseInt(id);
+      
+      // Get the stored provider configuration
+      const settings = await investigationStorage.getAiSettingsById(providerId);
+      if (!settings) {
+        return res.status(404).json({ success: false, message: "AI provider not found" });
+      }
+
+      // Test the API key  
+      const { AIService } = await import("./ai-service");
+      const testResult = await AIService.testApiKey(settings.provider, settings.encryptedApiKey);
+      
+      // Update test status in database
+      await investigationStorage.updateAiSettingsTestStatus(providerId, testResult.success);
+      
+      if (testResult.success) {
+        res.json({ success: true, message: "API key tested successfully" });
+      } else {
+        res.status(400).json({ success: false, message: testResult.error });
+      }
+    } catch (error) {
+      console.error("[RCA] Error testing AI provider:", error);
+      res.status(500).json({ success: false, message: "Test failed: " + error.message });
     }
   });
 

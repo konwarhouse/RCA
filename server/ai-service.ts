@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { storage } from "./storage";
+import { investigationStorage } from "./storage";
 
 const ENCRYPTION_KEY = process.env.AI_KEY_ENCRYPTION_SECRET || "your-32-char-secret-key-here-123456";
 const ALGORITHM = "aes-256-cbc";
@@ -125,10 +125,10 @@ export class AIService {
     
     // Deactivate other providers if this one is set as active
     if (data.isActive) {
-      await storage.deactivateAllAiSettings();
+      await investigationStorage.deactivateAllAiSettings();
     }
 
-    return await storage.createAiSettings({
+    return await investigationStorage.createAiSettings({
       provider: data.provider,
       encryptedApiKey: encryptedKey,
       isActive: data.isActive,
@@ -139,7 +139,7 @@ export class AIService {
 
   // Get active AI provider and decrypt key for use
   static async getActiveAiProvider(): Promise<{ provider: string; apiKey: string } | null> {
-    const activeSettings = await storage.getActiveAiSettings();
+    const activeSettings = await investigationStorage.getActiveAiSettings();
     
     if (!activeSettings) {
       return null;

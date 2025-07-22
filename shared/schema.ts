@@ -118,11 +118,13 @@ export const investigations = pgTable("investigations", {
 // AI Settings for secure key management
 export const aiSettings = pgTable("ai_settings", {
   id: serial("id").primaryKey(),
-  provider: varchar("provider").notNull(), // openai, anthropic, etc.
-  apiKey: text("api_key").notNull(), // encrypted
+  provider: varchar("provider").notNull(), // openai, gemini, anthropic
+  encryptedApiKey: text("encrypted_api_key").notNull(), // encrypted API key
   isActive: boolean("is_active").default(false),
+  createdBy: integer("created_by"), // user who created this setting
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  lastTestedAt: timestamp("last_tested_at"), // when API key was last tested
+  testStatus: varchar("test_status"), // 'tested', 'failed', 'not_tested'
 });
 
 export const insertInvestigationSchema = createInsertSchema(investigations);

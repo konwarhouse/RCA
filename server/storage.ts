@@ -194,7 +194,22 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   private aiSettings: any[] = [];
 
   async getAllAiSettings(): Promise<any[]> {
-    return this.aiSettings;
+    try {
+      const settings = await db.select().from(aiSettings).orderBy(aiSettings.createdAt);
+      return settings.map(setting => ({
+        id: setting.id,
+        provider: setting.provider,
+        isActive: setting.isActive,
+        createdBy: setting.createdBy,
+        createdAt: setting.createdAt,
+        hasApiKey: true,
+        testStatus: setting.testStatus || 'not_tested',
+        lastTestedAt: setting.lastTestedAt
+      }));
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting AI settings:", error);
+      return [];
+    }
   }
 
   async saveAiSettings(data: any): Promise<any> {
@@ -529,6 +544,32 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       .orderBy(evidenceLibrary.subtypeExample);
     
     return results.map(r => r.subtypeExample);
+  }
+
+  // AI Settings operations
+  async getAiSettingsById(id: number): Promise<any> {
+    try {
+      const [settings] = await db.select().from(aiSettings).where(eq(aiSettings.id, id));
+      return settings;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error getting AI settings:", error);
+      throw error;
+    }
+  }
+
+  async updateAiSettingsTestStatus(id: number, testSuccess: boolean): Promise<void> {
+    try {
+      await db
+        .update(aiSettings)
+        .set({
+          testStatus: testSuccess ? 'tested' : 'failed',
+          lastTestedAt: new Date()
+        })
+        .where(eq(aiSettings.id, id));
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error updating AI settings test status:", error);
+      throw error;
+    }
   }
 }
 
