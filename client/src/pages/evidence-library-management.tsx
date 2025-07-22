@@ -17,7 +17,7 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Form schema for evidence library items
+// Form schema for evidence library items with intelligent configurable fields
 const evidenceLibrarySchema = z.object({
   equipmentGroup: z.string().min(1, "Equipment group is required"),
   equipmentType: z.string().min(1, "Equipment type is required"),
@@ -30,6 +30,22 @@ const evidenceLibrarySchema = z.object({
   aiOrInvestigatorQuestions: z.string().min(1, "AI questions are required"),
   attachmentsEvidenceRequired: z.string().min(1, "Attachments required is required"),
   rootCauseLogic: z.string().min(1, "Root cause logic is required"),
+  
+  // Configurable Intelligence Fields - Admin Editable
+  confidenceLevel: z.string().optional(), // High/Medium/Low
+  diagnosticValue: z.string().optional(), // Critical/Important/Useful/Optional
+  industryRelevance: z.string().optional(), // Petrochemical/Power/Manufacturing/All
+  evidencePriority: z.number().min(1).max(4).optional(), // 1=Critical, 2=High, 3=Medium, 4=Low
+  timeToCollect: z.string().optional(), // Immediate/Hours/Days/Weeks
+  collectionCost: z.string().optional(), // Low/Medium/High/Very High
+  analysisComplexity: z.string().optional(), // Simple/Moderate/Complex/Expert Required
+  seasonalFactor: z.string().optional(), // None/Summer/Winter/Shutdown/Startup
+  relatedFailureModes: z.string().optional(), // Comma-separated equipment codes
+  prerequisiteEvidence: z.string().optional(), // Evidence needed before this one
+  followupActions: z.string().optional(), // What to do after collecting
+  industryBenchmark: z.string().optional(), // Industry standards/benchmarks
+  
+  // Legacy fields
   blankColumn1: z.string().optional(),
   blankColumn2: z.string().optional(),
   blankColumn3: z.string().optional(),
@@ -51,6 +67,22 @@ interface EvidenceLibrary {
   aiOrInvestigatorQuestions: string;
   attachmentsEvidenceRequired: string;
   rootCauseLogic: string;
+  
+  // Configurable Intelligence Fields - Admin Editable
+  confidenceLevel?: string;
+  diagnosticValue?: string;
+  industryRelevance?: string;
+  evidencePriority?: number;
+  timeToCollect?: string;
+  collectionCost?: string;
+  analysisComplexity?: string;
+  seasonalFactor?: string;
+  relatedFailureModes?: string;
+  prerequisiteEvidence?: string;
+  followupActions?: string;
+  industryBenchmark?: string;
+  
+  // Legacy fields
   blankColumn1?: string;
   blankColumn2?: string;
   blankColumn3?: string;

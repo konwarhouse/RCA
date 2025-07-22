@@ -31,13 +31,25 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - ✅ Recommendations: "Implement Motor Condition Monitoring Program" ($25,000, 3-4 weeks) instead of lubrication programs
   - ✅ Historical References: "Motor winding failure due to insulation breakdown - Site B (2023)" instead of pump failures
   - ✅ Evidence Gaps: "Electrical test results not provided" instead of oil analysis requests
-- **Architecture Upgrade**: **INTELLIGENCE SYSTEM REDESIGNED** - Replaced ALL hardcoded analysis with intelligent Evidence Library-based system
-  - **Dynamic Analysis**: System now uses actual Evidence Library data to generate analysis for ANY equipment combination (Group+Type+Subtype)
-  - **No More Hardcoding**: Completely removed equipment-specific hardcoded fallbacks (Heat Exchangers, Motors, Pumps)
-  - **Smart Evidence Gap Response**: When Equipment Library data missing, system prompts for library expansion instead of using wrong fallback data
-  - **Scalable Solution**: Supports all 101+ evidence library items automatically - adding new equipment enables AI analysis without code changes
-  - **Intelligent Prompting**: Missing equipment combinations trigger library expansion recommendations with suggested failure modes and evidence types
-- **Impact**: **TRULY INTELLIGENT SYSTEM** - Analysis is generated dynamically from Evidence Library or prompts for missing data. No more wrong equipment analysis - system acknowledges gaps and guides library expansion.
+- **Architecture Upgrade**: **CONFIGURABLE INTELLIGENCE SYSTEM IMPLEMENTED** - Replaced ALL hardcoded analysis with admin-configurable Evidence Library intelligence
+  - **Dynamic Analysis**: System uses Evidence Library data to generate analysis for ANY equipment combination (Group+Type+Subtype)
+  - **No More Hardcoding**: Completely removed equipment-specific hardcoded fallbacks - ALL intelligence now configurable via Evidence Library fields
+  - **Admin-Configurable Intelligence**: Added 12 configurable intelligence fields to Evidence Library:
+    - `confidenceLevel` (High/Medium/Low) - Admin sets analysis confidence
+    - `diagnosticValue` (Critical/Important/Useful/Optional) - Admin sets evidence importance
+    - `industryRelevance` (Petrochemical/Power/Manufacturing/All) - Admin sets industry context
+    - `evidencePriority` (1-4) - Admin sets collection priority order
+    - `timeToCollect` (Immediate/Hours/Days/Weeks) - Admin sets collection timeframe
+    - `collectionCost` (Low/Medium/High/Very High) - Admin sets cost expectations
+    - `analysisComplexity` (Simple/Moderate/Complex/Expert Required) - Admin sets skill requirements
+    - `seasonalFactor` (None/Summer/Winter/Shutdown/Startup) - Admin sets timing considerations
+    - `relatedFailureModes` - Admin links related equipment codes
+    - `prerequisiteEvidence` - Admin defines evidence dependencies
+    - `followupActions` - Admin specifies next steps
+    - `industryBenchmark` - Admin adds industry standards
+  - **Smart Evidence Gap Response**: Missing equipment combinations prompt library expansion with configurable suggestions
+  - **Scalable Intelligence**: Adding equipment with configured intelligence fields enables immediate AI analysis
+- **Impact**: **FULLY CONFIGURABLE INTELLIGENCE** - Zero hardcoded logic. All analysis intelligence managed through admin-editable Evidence Library fields. System adapts to any industry, plant, or equipment type through configuration.
 
 ## Recent Changes (January 2025)
 

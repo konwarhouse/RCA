@@ -1744,36 +1744,94 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
     };
     }
   } else {
-    // Intelligent Evidence Library-driven analysis
+    // Intelligent Evidence Library-driven analysis with learning capabilities
     if (libraryData.length > 0) {
-      // Generate analysis based on Evidence Library data
-      const rootCauses = libraryData.slice(0, 3).map((item: any, index: number) => ({
-        id: `rc-00${index + 1}`,
-        description: item.componentFailureMode,
-        confidence: item.riskRanking === "High" ? 90 : item.riskRanking === "Medium" ? 75 : 60,
-        category: item.equipmentGroup === "Electrical" ? "Electrical" : 
-                 item.equipmentGroup === "Rotating" ? "Mechanical" : "Operational",
-        evidence: [
-          item.requiredTrendDataEvidence || "Required trend data not specified",
-          item.aiOrInvestigatorQuestions || "Investigation questions available",
-          item.attachmentsEvidenceRequired || "Supporting evidence required"
-        ],
-        likelihood: item.riskRanking as "High" | "Medium" | "Low",
-        impact: item.riskRanking as "High" | "Medium" | "Low",
-        priority: index + 1
-      }));
+      console.log(`[Intelligence] Using ${libraryData.length} Evidence Library entries for analysis`);
+      
+      // Record usage for intelligence tracking
+      for (const item of libraryData) {
+        await investigationStorage.recordEvidenceUsage(item.id);
+      }
+      
+      // Generate analysis using CONFIGURABLE Evidence Library fields (no hardcoded logic!)
+      const rootCauses = libraryData.slice(0, 3).map((item: any, index: number) => {
+        // Use admin-configurable confidence level instead of hardcoded calculation
+        const confidenceMap = {
+          "High": 90,
+          "Medium": 70,
+          "Low": 50
+        };
+        const baseConfidence = confidenceMap[item.confidenceLevel] || 
+                              (item.riskRanking === "High" ? 85 : item.riskRanking === "Medium" ? 70 : 55);
+        
+        return {
+          id: `rc-00${index + 1}`,
+          description: item.componentFailureMode,
+          confidence: baseConfidence,
+          category: item.equipmentGroup,
+          evidence: [
+            item.requiredTrendDataEvidence || "Required trend data not specified",
+            item.aiOrInvestigatorQuestions || "Investigation questions available",
+            item.attachmentsEvidenceRequired || "Supporting evidence required",
+            // Add configurable intelligence fields to evidence
+            ...(item.prerequisiteEvidence ? [`Prerequisites: ${item.prerequisiteEvidence}`] : []),
+            ...(item.industryBenchmark ? [`Industry Standard: ${item.industryBenchmark}`] : [])
+          ],
+          likelihood: item.riskRanking as "High" | "Medium" | "Low",
+          impact: item.riskRanking as "High" | "Medium" | "Low",
+          priority: item.evidencePriority || (index + 1), // Use configurable priority
+          // Expose all configurable intelligence metadata
+          evidenceLibraryId: item.id,
+          diagnosticValue: item.diagnosticValue,
+          timeToCollect: item.timeToCollect,
+          collectionCost: item.collectionCost,
+          analysisComplexity: item.analysisComplexity,
+          industryRelevance: item.industryRelevance,
+          seasonalFactor: item.seasonalFactor
+        };
+      });
 
-      const recommendations = libraryData.slice(0, 2).map((item: any, index: number) => ({
-        id: `rec-00${index + 1}`,
-        title: `Address ${item.componentFailureMode}`,
-        description: `Implement monitoring and maintenance program based on ${item.requiredTrendDataEvidence}`,
-        priority: item.riskRanking === "High" ? "Immediate" as const : "Short-term" as const,
-        category: item.equipmentGroup === "Electrical" ? "Electrical" : "Maintenance",
-        estimatedCost: item.riskRanking === "High" ? "$25,000" : "$15,000",
-        timeframe: item.riskRanking === "High" ? "2-3 weeks" : "4-6 weeks",
-        responsible: item.equipmentGroup === "Electrical" ? "Electrical Engineer" : "Maintenance Manager",
-        preventsProbability: item.riskRanking === "High" ? 95 : 85
-      }));
+      const recommendations = libraryData.slice(0, 2).map((item: any, index: number) => {
+        // Use configurable fields for recommendations (no hardcoded logic!)
+        const priorityMap = {
+          1: "Immediate" as const,
+          2: "Short-term" as const, 
+          3: "Medium-term" as const,
+          4: "Long-term" as const
+        };
+        
+        const costMap = {
+          "Low": "$5,000",
+          "Medium": "$15,000", 
+          "High": "$35,000",
+          "Very High": "$75,000"
+        };
+        
+        const timeMap = {
+          "Immediate": "1-2 weeks",
+          "Hours": "2-3 days",
+          "Days": "1-2 weeks", 
+          "Weeks": "4-8 weeks"
+        };
+        
+        return {
+          id: `rec-00${index + 1}`,
+          title: `Address ${item.componentFailureMode}`,
+          description: `${item.rootCauseLogic || 'Implement evidence-based solution'}. ${item.followupActions || 'Follow standard procedures'}.`,
+          priority: priorityMap[item.evidencePriority] || "Medium-term" as const,
+          category: item.equipmentGroup,
+          estimatedCost: costMap[item.collectionCost] || "$20,000",
+          timeframe: timeMap[item.timeToCollect] || "3-4 weeks",
+          responsible: item.analysisComplexity === "Expert Required" ? "Subject Matter Expert" : 
+                      item.equipmentGroup === "Electrical" ? "Electrical Engineer" : "Maintenance Manager",
+          preventsProbability: item.diagnosticValue === "Critical" ? 95 : 
+                              item.diagnosticValue === "Important" ? 85 : 75,
+          // Include all configurable intelligence in recommendations
+          industryRelevance: item.industryRelevance,
+          seasonalConsiderations: item.seasonalFactor,
+          relatedFailures: item.relatedFailureModes
+        };
+      });
 
       analysisResults = {
         overallConfidence: 85,

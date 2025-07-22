@@ -53,6 +53,22 @@ export const evidenceLibrary = pgTable("evidence_library", {
   aiOrInvestigatorQuestions: text("ai_or_investigator_questions"), // AI or Investigator Questions
   attachmentsEvidenceRequired: text("attachments_evidence_required"), // Attachments / Evidence Required
   rootCauseLogic: text("root_cause_logic"), // Root Cause Logic
+  
+  // Configurable Intelligence Fields - Admin Editable
+  confidenceLevel: varchar("confidence_level"), // "High", "Medium", "Low" - Admin configurable
+  diagnosticValue: varchar("diagnostic_value"), // "Critical", "Important", "Useful", "Optional" - Admin configurable  
+  industryRelevance: varchar("industry_relevance"), // "Petrochemical", "Power", "Manufacturing", "All" - Admin configurable
+  evidencePriority: integer("evidence_priority").default(3), // 1=Critical, 2=High, 3=Medium, 4=Low - Admin configurable
+  timeToCollect: varchar("time_to_collect"), // "Immediate", "Hours", "Days", "Weeks" - Admin configurable
+  collectionCost: varchar("collection_cost"), // "Low", "Medium", "High", "Very High" - Admin configurable
+  analysisComplexity: varchar("analysis_complexity"), // "Simple", "Moderate", "Complex", "Expert Required" - Admin configurable
+  seasonalFactor: varchar("seasonal_factor"), // "None", "Summer", "Winter", "Shutdown", "Startup" - Admin configurable
+  relatedFailureModes: text("related_failure_modes"), // Comma-separated equipment codes - Admin editable
+  prerequisiteEvidence: text("prerequisite_evidence"), // Evidence needed before this one - Admin editable
+  followupActions: text("followup_actions"), // What to do after collecting this evidence - Admin editable
+  industryBenchmark: text("industry_benchmark"), // Industry standards/benchmarks - Admin editable
+  
+  // Legacy fields (keeping for compatibility)
   blankColumn1: varchar("blank_column_1"), // Blank Column 1
   blankColumn2: varchar("blank_column_2"), // Blank Column 2
   blankColumn3: varchar("blank_column_3"), // Blank Column 3

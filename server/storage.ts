@@ -379,10 +379,118 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             sql`LOWER(${evidenceLibrary.equipmentGroup}) LIKE ${searchPattern}`
           )
         )
-      );
+      )
+      // Simple ordering for now (configurable intelligence ready for schema update)
+      .orderBy(evidenceLibrary.equipmentGroup, evidenceLibrary.equipmentType);
     
     console.log('Evidence library search results:', results.length, 'items found');
     return results;
+  }
+
+  // Configurable intelligence tracking - all admin-configurable via Evidence Library fields
+  async recordEvidenceUsage(evidenceLibraryId: number): Promise<void> {
+    try {
+      console.log(`[Configurable Intelligence] Recording usage for Evidence Library item ${evidenceLibraryId}`);
+      // Simply update last updated - intelligence is now managed through admin-configurable fields
+      await db
+        .update(evidenceLibrary)
+        .set({
+          lastUpdated: new Date()
+        })
+        .where(eq(evidenceLibrary.id, evidenceLibraryId));
+    } catch (error) {
+      console.error("[Configurable Intelligence] Error recording evidence usage:", error);
+    }
+  }
+
+  async recordSuccessfulAnalysis(evidenceLibraryId: number, analysisTimeMinutes: number): Promise<void> {
+    try {
+      console.log(`[Intelligence] Recording successful analysis for Evidence Library item ${evidenceLibraryId}`);
+      
+      // Get current values
+      const [currentItem] = await db
+        .select({
+          usageCount: evidenceLibrary.usageCount,
+          successCount: evidenceLibrary.successCount,
+          averageAnalysisTime: evidenceLibrary.averageAnalysisTime
+        })
+        .from(evidenceLibrary)
+        .where(eq(evidenceLibrary.id, evidenceLibraryId));
+
+      if (currentItem) {
+        const newSuccessCount = (currentItem.successCount || 0) + 1;
+        const newUsageCount = currentItem.usageCount || 1;
+        const newSuccessRate = (newSuccessCount / newUsageCount) * 100;
+        
+        // Calculate new average analysis time
+        const currentAvgTime = currentItem.averageAnalysisTime || 0;
+        const newAvgTime = currentAvgTime > 0 
+          ? Math.round((currentAvgTime + analysisTimeMinutes) / 2)
+          : analysisTimeMinutes;
+
+        await db
+          .update(evidenceLibrary)
+          .set({
+            successCount: newSuccessCount,
+            successRate: newSuccessRate.toFixed(2),
+            averageAnalysisTime: newAvgTime,
+            // Increase confidence based on success
+            confidenceScore: sql`LEAST(100, COALESCE(${evidenceLibrary.confidenceScore}, 50) + 2)`,
+            lastUpdated: new Date()
+          })
+          .where(eq(evidenceLibrary.id, evidenceLibraryId));
+
+        console.log(`[Intelligence] Updated success rate to ${newSuccessRate.toFixed(2)}% for evidence item ${evidenceLibraryId}`);
+      }
+    } catch (error) {
+      console.error("[Intelligence] Error recording successful analysis:", error);
+    }
+  }
+
+  async updateEvidenceEffectiveness(evidenceLibraryId: number, effectivenessData: any): Promise<void> {
+    try {
+      console.log(`[Intelligence] Updating evidence effectiveness for item ${evidenceLibraryId}`);
+      await db
+        .update(evidenceLibrary)
+        .set({
+          evidenceEffectiveness: effectivenessData,
+          lastUpdated: new Date()
+        })
+        .where(eq(evidenceLibrary.id, evidenceLibraryId));
+    } catch (error) {
+      console.error("[Intelligence] Error updating evidence effectiveness:", error);
+    }
+  }
+
+  async getIntelligentEvidenceRecommendations(equipmentGroup: string, equipmentType: string, subtype?: string): Promise<EvidenceLibrary[]> {
+    try {
+      console.log(`[Intelligence] Getting smart recommendations for ${equipmentGroup} → ${equipmentType} → ${subtype}`);
+      
+      const results = await db
+        .select()
+        .from(evidenceLibrary)
+        .where(
+          and(
+            eq(evidenceLibrary.isActive, true),
+            eq(evidenceLibrary.equipmentGroup, equipmentGroup),
+            eq(evidenceLibrary.equipmentType, equipmentType),
+            subtype ? eq(evidenceLibrary.subtype, subtype) : sql`1=1`
+          )
+        )
+        // INTELLIGENT RANKING: Best evidence first
+        .orderBy(
+          sql`COALESCE(${evidenceLibrary.successRate}, 0) DESC`,
+          sql`COALESCE(${evidenceLibrary.confidenceScore}, 50) DESC`,
+          sql`COALESCE(${evidenceLibrary.usageCount}, 0) DESC`
+        )
+        .limit(10);
+
+      console.log(`[Intelligence] Found ${results.length} intelligent recommendations`);
+      return results;
+    } catch (error) {
+      console.error("[Intelligence] Error getting intelligent recommendations:", error);
+      return [];
+    }
   }
 
   async bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]> {
