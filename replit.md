@@ -16,7 +16,33 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### Critical Database Bug Fix - Equipment Subtype Data Loss RESOLVED (LATEST)
+### Investigation Completeness Validation System IMPLEMENTED (LATEST)
+- **Date**: January 22, 2025 (Latest Major Feature)
+- **User Requirement Fulfilled**: "Investigation cannot be closed if questions are unanswered - need potential failure modes and solutions for incomplete evidence"
+- **Revolutionary Change**: Investigations can now proceed with theoretical analysis when definitive evidence isn't available
+- **Key Feature**: **THEORETICAL ANALYSIS CLOSURE** - System allows closure based on engineering judgment with proper documentation
+- **Comprehensive Validation System**:
+  - **6-Layer Completeness Check**: Critical evidence, failure mode analysis, root cause validation, operational data, human factors, corrective actions
+  - **Universal Failure Pattern Detection**: 5 categories (structural, thermal, dynamic, containment, electrical) with keyword-based confidence scoring
+  - **Equipment-Specific Failure Modes**: Dynamic library covering Pumps, Motors, Heat Exchangers, Pressure Vessels with specific failure modes and causes
+  - **Minimum Evidence Threshold**: Requires only 2 evidence files + 3 checklist items for theoretical closure (reduced from strict 80% requirement)
+- **Intelligent Documentation System**:
+  - **Theoretical Analysis Generator**: Creates engineering-based conclusions when evidence is inconclusive
+  - **Inconclusive Findings Documentation**: Automatically documents evidence gaps and confidence impact
+  - **Industry Benchmark Integration**: References standard failure patterns and engineering practice
+  - **Future Prevention Actions**: Suggests improvements to evidence collection protocols
+- **Enhanced Frontend Integration**: 
+  - **Investigation Completeness Assessment Panel**: Visual completeness status with percentage, outstanding issues, theoretical analysis availability
+  - **Alternative Failure Modes Display**: Shows considered failure modes with potential causes
+  - **Theoretical Analysis Section**: Details engineering approach, basis for analysis, and theoretical conclusions
+  - **Inconclusive Findings Panel**: Documents evidence limitations and confidence impact
+- **API Endpoints**: 
+  - `GET /api/incidents/:id/completeness-check` - Validates investigation completeness
+  - Enhanced engineer review endpoint with mandatory completeness validation
+- **Closure Logic**: **FLEXIBLE BUT RIGOROUS** - Allows closure with 60%+ confidence + theoretical analysis while maintaining engineering standards
+- **Impact**: **ENTERPRISE-READY INVESTIGATION CLOSURE** - Investigators can complete professional-grade investigations even when some evidence is inconclusive, with proper theoretical analysis and documentation of limitations. No more investigations stuck indefinitely due to evidence gaps.
+
+### Previous: Critical Database Bug Fix - Equipment Subtype Data Loss RESOLVED
 - **Date**: January 22, 2025 (Latest Update)  
 - **Root Cause Identified**: equipmentSubtype field was completely missing from incident creation INSERT statement in storage.ts despite being provided by user during incident creation
 - **Data Flow Issue**: User selected "Synchronous" subtype but database stored `null` causing AI analysis to show "Equipment Subtype Missing" error

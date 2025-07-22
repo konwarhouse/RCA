@@ -77,6 +77,12 @@ export default function EngineerReview() {
     enabled: !!incidentId,
   });
 
+  // Fetch investigation completeness check
+  const { data: completenessCheck, refetch: refetchCompleteness } = useQuery({
+    queryKey: ['/api/incidents', incidentId, 'completeness-check'],
+    enabled: !!incidentId,
+  });
+
   // Submit engineer review
   const submitReviewMutation = useMutation({
     mutationFn: async (reviewData: EngineerReview) => {
@@ -89,9 +95,15 @@ export default function EngineerReview() {
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       if (reviewData.approved) {
         setLocation(`/final-rca?incident=${incidentId}`);
+      }
+    },
+    onError: (error: any) => {
+      // Handle validation errors from completeness check
+      if (error?.message?.includes('minimum evidence')) {
+        console.error('Investigation completeness validation failed:', error);
       }
     },
   });
@@ -353,6 +365,120 @@ export default function EngineerReview() {
           </TabsContent>
 
           <TabsContent value="approval" className="space-y-6">
+            {/* Investigation Completeness Check */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Investigation Completeness Assessment
+                </CardTitle>
+                <CardDescription>
+                  Review completeness before finalizing investigation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {completenessCheck ? (
+                  <div className="space-y-4">
+                    {/* Completeness Status */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${completenessCheck.canBeClosed ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                        <div>
+                          <span className="font-medium">
+                            {completenessCheck.canBeClosed ? 'Ready for Closure' : 'Closure Available with Theoretical Analysis'}
+                          </span>
+                          <p className="text-sm text-gray-600">{completenessCheck.closureReason}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">{completenessCheck.overallCompleteness}%</div>
+                        <div className="text-sm text-gray-500">Complete</div>
+                      </div>
+                    </div>
+
+                    {/* Critical Issues */}
+                    {completenessCheck.issues.length > 0 && (
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium text-amber-700 mb-2">Outstanding Issues</h4>
+                        <ul className="space-y-1">
+                          {completenessCheck.issues.map((issue, index) => (
+                            <li key={index} className="text-sm text-amber-600 flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-2 flex-shrink-0"></span>
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Theoretical Analysis Section */}
+                    {completenessCheck.theoreticalAnalysisRecommended && (
+                      <div className="border rounded-lg p-4 bg-blue-50">
+                        <h4 className="font-medium text-blue-700 mb-3">Theoretical Analysis Available</h4>
+                        {completenessCheck.theoreticalAnalysis && (
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <span className="font-medium text-blue-600">Approach:</span>
+                              <p className="text-blue-700 mt-1">{completenessCheck.theoreticalAnalysis.approach}</p>
+                            </div>
+                            {completenessCheck.theoreticalAnalysis.theoreticalConclusions?.length > 0 && (
+                              <div>
+                                <span className="font-medium text-blue-600">Engineering Conclusions:</span>
+                                <ul className="mt-1 space-y-1">
+                                  {completenessCheck.theoreticalAnalysis.theoreticalConclusions.slice(0, 2).map((conclusion, idx) => (
+                                    <li key={idx} className="text-blue-700 pl-2">{conclusion}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Inconclusive Findings */}
+                    {completenessCheck.inconclusiveFindings && completenessCheck.unansweredCriticalQuestions.length > 0 && (
+                      <div className="border rounded-lg p-4 bg-orange-50">
+                        <h4 className="font-medium text-orange-700 mb-3">Inconclusive Findings Documentation</h4>
+                        <div className="text-sm space-y-2">
+                          <p className="text-orange-700">{completenessCheck.inconclusiveFindings.summary}</p>
+                          {completenessCheck.inconclusiveFindings.confidenceImpact && (
+                            <p className="text-orange-600 font-medium">{completenessCheck.inconclusiveFindings.confidenceImpact}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Potential Failure Modes */}
+                    {completenessCheck.potentialFailureModes.length > 0 && (
+                      <details className="border rounded-lg p-4">
+                        <summary className="font-medium cursor-pointer text-gray-700">
+                          Alternative Failure Modes Considered ({completenessCheck.potentialFailureModes.length})
+                        </summary>
+                        <div className="mt-3 space-y-2">
+                          {completenessCheck.potentialFailureModes.slice(0, 3).map((mode, index) => (
+                            <div key={index} className="text-sm p-2 bg-gray-50 rounded">
+                              <div className="font-medium">{mode.mode}</div>
+                              {mode.causes && (
+                                <div className="text-gray-600 mt-1">
+                                  Potential causes: {mode.causes.slice(0, 2).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">Loading completeness assessment...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Final Approval</CardTitle>
