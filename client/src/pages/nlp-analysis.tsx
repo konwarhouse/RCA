@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageCircle, Search, TrendingUp, Lightbulb } from "lucide-react";
+import { Brain, MessageCircle, Search, TrendingUp, Lightbulb, Home, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function NLPAnalysisPage() {
@@ -51,6 +52,20 @@ export default function NLPAnalysisPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <Link href="/">
+            <Button variant="outline" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Home
+            </Button>
+          </Link>
+        </div>
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Brain className="h-8 w-8 text-blue-600" />
           NLP Analysis Dashboard
