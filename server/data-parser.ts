@@ -27,29 +27,9 @@ export const OperatingDataSchema = z.object({
   events: z.array(z.string()).optional()
 });
 
-// Standardized asset types and subtypes
-export const ASSET_TYPES = {
-  pump: {
-    subtypes: ['centrifugal', 'positive_displacement', 'diaphragm', 'peristaltic', 'gear'],
-    commonIssues: ['seal_leak', 'cavitation', 'bearing_failure', 'impeller_wear', 'coupling_misalignment']
-  },
-  motor: {
-    subtypes: ['induction', 'synchronous', 'dc', 'servo', 'stepper'],
-    commonIssues: ['overheating', 'bearing_failure', 'winding_failure', 'rotor_imbalance', 'insulation_breakdown']
-  },
-  valve: {
-    subtypes: ['ball', 'gate', 'globe', 'butterfly', 'check', 'relief'],
-    commonIssues: ['seat_leak', 'stem_leak', 'actuator_failure', 'body_crack', 'erosion']
-  },
-  conveyor: {
-    subtypes: ['belt', 'screw', 'chain', 'roller', 'pneumatic'],
-    commonIssues: ['belt_slip', 'bearing_wear', 'misalignment', 'motor_overload', 'material_spillage']
-  },
-  compressor: {
-    subtypes: ['reciprocating', 'rotary_screw', 'centrifugal', 'scroll'],
-    commonIssues: ['valve_failure', 'oil_contamination', 'intercooler_fouling', 'belt_wear', 'pressure_regulation']
-  }
-};
+// NOTE: Asset types and subtypes are now managed through Evidence Library database
+// This ensures zero hardcoded equipment logic - all equipment classifications
+// come from admin-configurable Evidence Library entries
 
 // Common symptom patterns for NLP extraction
 export const SYMPTOM_PATTERNS = {

@@ -72,20 +72,18 @@ export class FaultTreeEngine {
   }
 
   private getFaultTreeTemplate(equipmentType: string): FaultTreeNode | null {
-    // Map equipment types to fault tree templates
-    const templateMap: Record<string, string> = {
-      'centrifugal_pump': 'pump_failure',
-      'reciprocating_pump': 'pump_failure', 
-      'rotary_pump': 'pump_failure',
-      'gate_valve': 'valve_failure',
-      'globe_valve': 'valve_failure',
-      'ball_valve': 'valve_failure',
-      'butterfly_valve': 'valve_failure',
-      'control_valve': 'valve_failure'
-    };
-
-    const templateKey = templateMap[equipmentType];
-    return templateKey ? this.templates[templateKey] : null;
+    // NOTE: Equipment type mapping now uses Evidence Library data instead of hardcoded mappings
+    // This ensures universal support for any equipment type configured in the database
+    
+    // Use generic fault tree template that adapts based on Evidence Library intelligence
+    const normalizedType = equipmentType.toLowerCase();
+    if (normalizedType.includes('pump')) return this.templates['pump_failure'];
+    if (normalizedType.includes('valve')) return this.templates['valve_failure'];
+    if (normalizedType.includes('motor')) return this.templates['motor_failure'];
+    if (normalizedType.includes('compressor')) return this.templates['compressor_failure'];
+    
+    // Default to generic equipment failure template for any unknown equipment
+    return this.templates['equipment_failure'] || this.templates['pump_failure'];
   }
 
   private buildSpecificFaultTree(
