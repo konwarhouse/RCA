@@ -21,7 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 const evidenceLibrarySchema = z.object({
   equipmentGroup: z.string().min(1, "Equipment group is required"),
   equipmentType: z.string().min(1, "Equipment type is required"),
-  subtypeExample: z.string().optional(),
+  subtype: z.string().optional(),
   componentFailureMode: z.string().min(1, "Failure mode is required"),
   equipmentCode: z.string().min(1, "Equipment code is required"),
   failureCode: z.string().min(1, "Failure code is required"),
@@ -42,7 +42,7 @@ interface EvidenceLibrary {
   id: number;
   equipmentGroup: string;
   equipmentType: string;
-  subtypeExample?: string;
+  subtype?: string;
   componentFailureMode: string;
   equipmentCode: string;
   failureCode: string;
@@ -76,7 +76,7 @@ export default function EvidenceLibraryManagement() {
     defaultValues: {
       equipmentGroup: "",
       equipmentType: "",
-      subtypeExample: "",
+      subtype: "",
       componentFailureMode: "",
       equipmentCode: "",
       failureCode: "",
@@ -144,7 +144,7 @@ export default function EvidenceLibraryManagement() {
     const matchesType = selectedEquipmentTypes.length === 0 || selectedEquipmentTypes.includes(item.equipmentType);
     return matchesGroup && matchesType;
   });
-  const uniqueSubtypes = [...new Set(filteredSubtypes.map(item => item.subtypeExample).filter(Boolean))].sort();
+  const uniqueSubtypes = [...new Set(filteredSubtypes.map(item => item.subtype).filter(Boolean))].sort();
 
   // Filter evidence items based on selected filters and search term
   const filteredItems = evidenceItems.filter(item => {
@@ -160,7 +160,7 @@ export default function EvidenceLibraryManagement() {
       selectedEquipmentTypes.includes(item.equipmentType);
     
     const matchesSubtype = selectedSubtypes.length === 0 || 
-      (item.subtypeExample && selectedSubtypes.includes(item.subtypeExample));
+      (item.subtype && selectedSubtypes.includes(item.subtype));
 
     return matchesSearch && matchesEquipmentGroup && matchesEquipmentType && matchesSubtype;
   });
@@ -306,7 +306,7 @@ export default function EvidenceLibraryManagement() {
     form.reset({
       equipmentGroup: item.equipmentGroup,
       equipmentType: item.equipmentType,
-      subtypeExample: item.subtypeExample || "",
+      subtype: item.subtype || "",
       componentFailureMode: item.componentFailureMode,
       equipmentCode: item.equipmentCode,
       failureCode: item.failureCode,
@@ -335,7 +335,7 @@ export default function EvidenceLibraryManagement() {
       ...evidenceItems.map(item => [
         item.equipmentGroup,
         item.equipmentType,
-        item.subtypeExample || "",
+        item.subtype || "",
         item.componentFailureMode,
         item.equipmentCode,
         item.failureCode,
