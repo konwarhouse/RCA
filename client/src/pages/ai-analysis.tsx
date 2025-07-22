@@ -432,11 +432,11 @@ export default function AIAnalysis() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {analysisResults.evidenceGaps.length > 0 && (
+                    {(analysisResults.evidenceGaps?.length || 0) > 0 && (
                       <div>
                         <h4 className="font-medium mb-3 text-orange-700">Evidence Gaps Identified</h4>
                         <ul className="space-y-2">
-                          {analysisResults.evidenceGaps.map((gap, index) => (
+                          {(analysisResults.evidenceGaps || []).map((gap, index) => (
                             <li key={index} className="flex items-start gap-2 text-sm">
                               <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5" />
                               {gap}
@@ -446,11 +446,11 @@ export default function AIAnalysis() {
                       </div>
                     )}
                     
-                    {analysisResults.additionalInvestigation.length > 0 && (
+                    {(analysisResults.additionalInvestigation?.length || 0) > 0 && (
                       <div>
                         <h4 className="font-medium mb-3 text-blue-700">Additional Investigation Recommended</h4>
                         <ul className="space-y-2">
-                          {analysisResults.additionalInvestigation.map((item, index) => (
+                          {(analysisResults.additionalInvestigation || []).map((item, index) => (
                             <li key={index} className="flex items-start gap-2 text-sm">
                               <TrendingUp className="h-4 w-4 text-blue-500 mt-0.5" />
                               {item}
