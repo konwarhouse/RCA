@@ -939,7 +939,38 @@ export default function EvidenceLibraryManagement() {
                   : "No evidence items found. Add some items to get started."}
               </div>
             ) : (
-              <div className="overflow-x-auto border rounded-lg">
+              <div 
+                className="overflow-x-auto border rounded-lg evidence-table-container" 
+                style={{
+                  scrollbarWidth: 'auto',
+                  scrollbarColor: '#3B82F6 #E5E7EB'
+                }}
+              >
+                <style>{`
+                  .evidence-table-container::-webkit-scrollbar {
+                    height: 14px;
+                    background: #f3f4f6;
+                  }
+                  .evidence-table-container::-webkit-scrollbar-track {
+                    background: #e5e7eb;
+                    border-radius: 7px;
+                    margin: 0 4px;
+                  }
+                  .evidence-table-container::-webkit-scrollbar-thumb {
+                    background: #3b82f6;
+                    border-radius: 7px;
+                    border: 1px solid #e5e7eb;
+                  }
+                  .evidence-table-container::-webkit-scrollbar-thumb:hover {
+                    background: #2563eb;
+                  }
+                  .evidence-table-container::-webkit-scrollbar-thumb:active {
+                    background: #1d4ed8;
+                  }
+                  .evidence-table-container::-webkit-scrollbar-corner {
+                    background: #f3f4f6;
+                  }
+                `}</style>
                 <div className="relative">
                   <Table className="table-fixed">
                     <TableHeader>
