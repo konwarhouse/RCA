@@ -1892,28 +1892,69 @@ async function performAIAnalysis(equipmentGroup: string, equipmentType: string, 
   const { AIService } = await import("./ai-service");
   
   try {
-    // Construct AI prompt based on equipment type and evidence
+    // Create failure-mode-aware AI prompt that focuses on PRIMARY causes
+    const failureModeAnalysis = analyzeFailureMode(symptoms, equipmentType);
+    
     const analysisPrompt = `
-Perform a comprehensive root cause analysis for the following equipment failure:
+You are a senior mechanical engineer conducting root cause analysis. The equipment has experienced a ${failureModeAnalysis.severity} failure.
+
+CRITICAL ANALYSIS REQUIREMENTS:
+${failureModeAnalysis.analysisInstructions}
 
 Equipment Details:
 - Equipment Group: ${equipmentGroup}
 - Equipment Type: ${equipmentType}
-- Symptoms/Problem: ${symptoms}
+- Equipment Subtype: ${equipmentSubtype}
+- Failure Description: ${symptoms}
 
-Evidence Checklist:
+${failureModeAnalysis.keyQuestions.length > 0 ? `
+MANDATORY INVESTIGATION FOCUS:
+${failureModeAnalysis.keyQuestions.map(q => `- ${q}`).join('\n')}
+` : ''}
+
+Evidence Available:
 ${evidenceChecklist.map(item => `- ${item.title}: ${item.description}`).join('\n')}
 
-Evidence Files:
+Files Provided:
 ${evidenceFiles.map(file => `- ${file.name}: ${file.description || 'File uploaded'}`).join('\n')}
 
-Provide analysis in JSON format with:
-1. Root causes with confidence percentages and supporting evidence
-2. Specific recommendations with cost estimates and timeframes
-3. Evidence gaps and additional investigation needs
-4. Equipment-specific failure patterns and historical correlations
+RESPONSE FORMAT (JSON):
+{
+  "overallConfidence": [0-100],
+  "analysisDate": "${new Date().toISOString()}",
+  "failureMode": "${failureModeAnalysis.mode}",
+  "severity": "${failureModeAnalysis.severity}",
+  "rootCauses": [
+    {
+      "id": "rc-001",
+      "description": "[PRIMARY mechanical cause - not secondary effects]",
+      "confidence": [percentage],
+      "category": "${equipmentGroup}",
+      "evidence": ["specific evidence supporting this cause"],
+      "likelihood": "High|Medium|Low",
+      "impact": "Critical|High|Medium|Low",
+      "priority": [1-4],
+      "mechanismOfFailure": "[detailed explanation of HOW this caused the failure]"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "rec-001",
+      "title": "[Specific corrective action]",
+      "description": "[Detailed action to prevent recurrence]",
+      "priority": "Immediate|Short-term|Long-term",
+      "category": "${equipmentGroup}",
+      "estimatedCost": "$[amount]",
+      "timeframe": "[duration]",
+      "responsible": "[role]",
+      "preventsProbability": [0-100]
+    }
+  ],
+  "evidenceGaps": ["critical evidence needed to confirm root causes"],
+  "additionalInvestigation": ["follow-up actions needed"]
+}
 
-Focus on ${equipmentType.toLowerCase()}-specific failure modes and provide industrial-grade analysis appropriate for enterprise use.
+Focus on the PRIMARY failure mechanism that caused the ${failureModeAnalysis.mode.toLowerCase()}. Ignore secondary effects like seal leaks that occur AFTER the primary failure.
 `;
 
     console.log(`[AI Analysis] Sending request to configured AI provider for ${equipmentType}`);
@@ -1938,6 +1979,165 @@ Focus on ${equipmentType.toLowerCase()}-specific failure modes and provide indus
     // Fallback to equipment-specific analysis if AI service is unavailable
     return await generateFallbackAnalysis(equipmentGroup, equipmentType, equipmentSubtype, symptoms, evidenceChecklist);
   }
+}
+
+// Universal failure mode analyzer - works for ANY equipment type
+function analyzeFailureMode(symptoms: string, equipmentType: string) {
+  const symptomsLower = symptoms.toLowerCase();
+  const equipmentLower = equipmentType.toLowerCase();
+  
+  // Define generic failure patterns that apply to all equipment
+  const failurePatterns = [
+    {
+      keywords: ['break', 'broke', 'snap', 'fracture', 'crack', 'split', 'shatter'],
+      components: ['shaft', 'rotor', 'blade', 'rod', 'arm', 'beam', 'member', 'component'],
+      mode: 'Catastrophic Structural Failure',
+      severity: 'CATASTROPHIC',
+      primaryCauses: [
+        'OVERLOAD/EXCESSIVE FORCE - Was the component subjected to forces beyond design limits?',
+        'MATERIAL DEFECT - Manufacturing flaw, material fatigue, or stress concentration?',
+        'DESIGN INADEQUACY - Insufficient design factor or inappropriate material selection?',
+        'OPERATIONAL ABUSE - Equipment operated outside design parameters?',
+        'FATIGUE FAILURE - Repeated cyclic loading causing crack propagation over time?',
+        'ENVIRONMENTAL FACTORS - Corrosion, temperature effects, or chemical attack?'
+      ],
+      keyQuestions: [
+        'What were the operating loads/stresses immediately before failure?',
+        'Are there signs of material fatigue, stress concentrations, or manufacturing defects?',
+        'What is the component material specification and manufacturing quality?',
+        'Was the equipment operating within design parameters?',
+        'What is the loading history and duty cycle?',
+        'Are there environmental factors (corrosion, temperature, chemicals)?'
+      ],
+      avoidSecondaryEffects: true
+    },
+    {
+      keywords: ['overheat', 'hot', 'temperature', 'thermal', 'burn', 'scorch'],
+      components: ['motor', 'bearing', 'winding', 'coil', 'element', 'surface'],
+      mode: 'Thermal Failure',
+      severity: 'MAJOR',
+      primaryCauses: [
+        'OVERLOAD - Excessive current, pressure, or mechanical load generating heat?',
+        'COOLING SYSTEM FAILURE - Inadequate heat dissipation or cooling system malfunction?',
+        'LUBRICATION FAILURE - Poor lubrication causing friction and heat buildup?',
+        'ELECTRICAL ISSUES - High resistance connections, insulation breakdown?',
+        'BLOCKAGE/RESTRICTION - Reduced flow or ventilation causing heat accumulation?'
+      ],
+      keyQuestions: [
+        'What was the operating temperature before failure?',
+        'Is the cooling system functioning properly?',
+        'What is the condition of lubrication systems?',
+        'Are there signs of overloading or excessive duty?',
+        'Are ventilation and heat dissipation paths clear?'
+      ]
+    },
+    {
+      keywords: ['vibrat', 'shake', 'oscillat', 'wobble', 'unstable'],
+      components: ['high', 'excessive', 'unusual', '1x', '2x', 'frequency'],
+      mode: 'Dynamic/Vibration Failure',
+      severity: 'MAJOR',
+      primaryCauses: [
+        'IMBALANCE - Mass imbalance in rotating components?',
+        'MISALIGNMENT - Angular or parallel misalignment of coupled components?',
+        'LOOSENESS - Mechanical looseness amplifying vibration?',
+        'BEARING/SUPPORT ISSUES - Worn bearings or damaged support structures?',
+        'RESONANCE - Operating at or near natural frequencies?',
+        'FOUNDATION PROBLEMS - Inadequate or deteriorated foundation?'
+      ],
+      keyQuestions: [
+        'What are the vibration frequency patterns and amplitudes?',
+        'When did the vibration start - gradually or suddenly?',
+        'Are there signs of looseness or misalignment?',
+        'What is the condition of bearings and supports?',
+        'Has there been recent maintenance affecting balance or alignment?'
+      ]
+    },
+    {
+      keywords: ['leak', 'drip', 'flow', 'discharge', 'escape'],
+      components: ['seal', 'gasket', 'valve', 'joint', 'connection', 'flange'],
+      mode: 'Containment/Sealing Failure',
+      severity: 'SIGNIFICANT',
+      primaryCauses: [
+        'SEAL/GASKET DEGRADATION - Age, chemical attack, or thermal cycling?',
+        'EXCESSIVE PRESSURE - Operating pressure beyond design limits?',
+        'MISALIGNMENT - Poor alignment causing seal distortion?',
+        'CONTAMINATION - Foreign material preventing proper sealing?',
+        'INSTALLATION ERROR - Improper installation or wrong specifications?'
+      ],
+      keyQuestions: [
+        'What is the condition and age of sealing components?',
+        'What are the operating pressures and temperatures?',
+        'Are there signs of chemical attack or degradation?',
+        'Was there recent maintenance on sealing systems?',
+        'Is the equipment properly aligned and supported?'
+      ]
+    },
+    {
+      keywords: ['electric', 'electrical', 'short', 'ground', 'arc', 'spark'],
+      components: ['motor', 'control', 'wire', 'cable', 'switch', 'breaker'],
+      mode: 'Electrical Failure',
+      severity: 'MAJOR',
+      primaryCauses: [
+        'INSULATION BREAKDOWN - Age, moisture, or thermal degradation?',
+        'OVERLOAD - Excessive current causing overheating?',
+        'VOLTAGE ISSUES - Over/under voltage or power quality problems?',
+        'CONTAMINATION - Moisture, dirt, or foreign material in electrical systems?',
+        'CONNECTION PROBLEMS - Loose, corroded, or damaged connections?'
+      ],
+      keyQuestions: [
+        'What are the electrical parameters (voltage, current, resistance)?',
+        'What is the condition of insulation systems?',
+        'Are there power quality issues or electrical disturbances?',
+        'What is the condition of electrical connections?',
+        'Are there environmental factors affecting electrical systems?'
+      ]
+    }
+  ];
+  
+  // Analyze symptoms to find matching failure pattern
+  for (const pattern of failurePatterns) {
+    const hasFailureKeyword = pattern.keywords.some(keyword => symptomsLower.includes(keyword));
+    const hasComponentKeyword = pattern.components.some(component => symptomsLower.includes(component));
+    
+    if (hasFailureKeyword && (hasComponentKeyword || pattern.components.some(comp => symptomsLower.includes(comp)))) {
+      return {
+        mode: pattern.mode,
+        severity: pattern.severity,
+        analysisInstructions: `This is a ${pattern.severity} ${pattern.mode.toUpperCase()}. Focus ONLY on primary causes:
+
+${pattern.primaryCauses.map((cause, i) => `${i + 1}. ${cause}`).join('\n')}
+
+${pattern.avoidSecondaryEffects ? 'DO NOT focus on secondary effects or consequences - these occur AFTER the primary failure.' : ''}
+
+Analyze the ROOT ENGINEERING CAUSE that initiated this failure mode in the ${equipmentType}.`,
+        keyQuestions: pattern.keyQuestions,
+        equipmentSpecific: `For ${equipmentType} equipment, consider specific design characteristics, operating parameters, and common failure modes.`
+      };
+    }
+  }
+  
+  // Generic analysis for unmatched symptoms
+  return {
+    mode: 'Equipment Failure',
+    severity: 'SIGNIFICANT',
+    analysisInstructions: `Analyze the specific failure mechanism described for this ${equipmentType}.
+Focus on primary engineering causes based on:
+1. The specific failure mode and symptoms described
+2. Operating conditions and parameters
+3. Design characteristics of ${equipmentType} equipment
+4. Maintenance and operational history
+5. Environmental and external factors
+
+Look for ROOT CAUSES, not symptoms or secondary effects.`,
+    keyQuestions: [
+      `What is the primary failure mechanism affecting this ${equipmentType}?`,
+      'What operating conditions or parameters contributed to this failure?',
+      'What maintenance, design, or material factors are involved?',
+      'Are there environmental or external factors contributing to the failure?',
+      'What is the timeline and progression of the failure?'
+    ],
+    equipmentSpecific: `Analysis must be specific to ${equipmentType} characteristics and typical failure modes.`
+  };
 }
 
 async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: string, equipmentSubtype: string, symptoms: string, evidenceChecklist: any[]) {
@@ -2124,16 +2324,20 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
     };
     }
   } else {
-    // Intelligent Evidence Library-driven analysis with learning capabilities
+    // Intelligent Evidence Library-driven analysis with universal failure mode logic
     if (libraryData.length > 0) {
       console.log(`[Intelligence] Using ${libraryData.length} Evidence Library entries for analysis`);
+      
+      // Get universal failure mode analysis for this equipment failure
+      const failureModeAnalysis = analyzeFailureMode(symptoms, equipmentType);
+      console.log(`[Intelligence] Detected failure mode: ${failureModeAnalysis.mode} (${failureModeAnalysis.severity})`);
       
       // Record usage for intelligence tracking
       for (const item of libraryData) {
         await investigationStorage.recordEvidenceUsage(item.id);
       }
       
-      // Generate analysis using CONFIGURABLE Evidence Library fields (no hardcoded logic!)
+      // Generate analysis using BOTH failure mode logic AND Evidence Library fields
       const rootCauses = libraryData.slice(0, 3).map((item: any, index: number) => {
         // Use admin-configurable confidence level instead of hardcoded calculation
         const confidenceMap = {
@@ -2153,6 +2357,8 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
             item.requiredTrendDataEvidence || "Required trend data not specified",
             item.aiOrInvestigatorQuestions || "Investigation questions available",
             item.attachmentsEvidenceRequired || "Supporting evidence required",
+            // Add failure mode specific questions from universal analyzer
+            ...(failureModeAnalysis.keyQuestions.slice(0, 2).map(q => `Key Investigation: ${q}`) || []),
             // Add configurable intelligence fields to evidence
             ...(item.prerequisiteEvidence ? [`Prerequisites: ${item.prerequisiteEvidence}`] : []),
             ...(item.industryBenchmark ? [`Industry Standard: ${item.industryBenchmark}`] : [])
@@ -2216,6 +2422,8 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
       analysisResults = {
         overallConfidence: 85,
         analysisDate: new Date(),
+        failureMode: failureModeAnalysis.mode,
+        severity: failureModeAnalysis.severity,
         rootCauses,
         recommendations,
         crossMatchResults: {
