@@ -391,10 +391,32 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       lastUpdated: new Date(),
     }));
     
-    return await db
-      .insert(evidenceLibrary)
-      .values(items)
-      .returning();
+    try {
+      // Clear existing data first (bulk import typically replaces all data)
+      console.log('[RCA] Clearing existing evidence library data...');
+      await db.delete(evidenceLibrary);
+      
+      // Insert new data in batches to avoid memory issues
+      console.log(`[RCA] Inserting ${items.length} new evidence library items...`);
+      const batchSize = 50;
+      const results: EvidenceLibrary[] = [];
+      
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await db
+          .insert(evidenceLibrary)
+          .values(batch)
+          .returning();
+        results.push(...batchResults);
+        console.log(`[RCA] Imported batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(items.length/batchSize)}`);
+      }
+      
+      console.log(`[RCA] Successfully imported ${results.length} evidence library items`);
+      return results;
+    } catch (error) {
+      console.error('[RCA] Error in bulkImportEvidenceLibrary:', error);
+      throw error;
+    }
   }
 
 

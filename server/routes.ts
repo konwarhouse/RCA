@@ -887,11 +887,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             equipmentCode: values[4],
             failureCode: values[5],
             riskRanking: values[6],
-            requiredTrendData: values[7],
-            aiQuestions: values[8],
-            attachmentsRequired: values[9],
+            requiredTrendDataEvidence: values[7],
+            aiOrInvestigatorQuestions: values[8],
+            attachmentsEvidenceRequired: values[9],
             rootCauseLogic: values[10],
-            notes: values[11] || null,
+            blankColumn1: values[11] || null,
+            blankColumn2: values[12] || null,
+            blankColumn3: values[13] || null,
             updatedBy: "admin-import",
           });
         }
