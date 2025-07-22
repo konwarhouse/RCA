@@ -1424,7 +1424,60 @@ async function generateEvidenceCategories(equipmentGroup: string, equipmentType:
 }
 
 async function performAIAnalysis(equipmentGroup: string, equipmentType: string, symptoms: string, evidenceChecklist: any[], evidenceFiles: any[]) {
-  // Equipment-specific AI analysis based on actual equipment type
+  // Use configurable AI provider system for analysis
+  const { AIService } = await import("./ai-service");
+  
+  try {
+    // Construct AI prompt based on equipment type and evidence
+    const analysisPrompt = `
+Perform a comprehensive root cause analysis for the following equipment failure:
+
+Equipment Details:
+- Equipment Group: ${equipmentGroup}
+- Equipment Type: ${equipmentType}
+- Symptoms/Problem: ${symptoms}
+
+Evidence Checklist:
+${evidenceChecklist.map(item => `- ${item.title}: ${item.description}`).join('\n')}
+
+Evidence Files:
+${evidenceFiles.map(file => `- ${file.name}: ${file.description || 'File uploaded'}`).join('\n')}
+
+Provide analysis in JSON format with:
+1. Root causes with confidence percentages and supporting evidence
+2. Specific recommendations with cost estimates and timeframes
+3. Evidence gaps and additional investigation needs
+4. Equipment-specific failure patterns and historical correlations
+
+Focus on ${equipmentType.toLowerCase()}-specific failure modes and provide industrial-grade analysis appropriate for enterprise use.
+`;
+
+    console.log(`[AI Analysis] Sending request to configured AI provider for ${equipmentType}`);
+    
+    // Call the configurable AI service
+    const aiResponse = await AIService.makeAIRequest(analysisPrompt, equipmentType);
+    
+    // Parse AI response and structure it appropriately
+    let analysisResults;
+    try {
+      analysisResults = JSON.parse(aiResponse);
+    } catch (parseError) {
+      console.warn("[AI Analysis] Failed to parse AI response as JSON, using fallback structure");
+      // Fallback to equipment-specific structured response if AI doesn't return valid JSON
+      analysisResults = generateFallbackAnalysis(equipmentType, symptoms, evidenceChecklist);
+    }
+
+    return analysisResults;
+    
+  } catch (aiError) {
+    console.error("[AI Analysis] AI service failed, using fallback analysis:", aiError);
+    // Fallback to equipment-specific analysis if AI service is unavailable
+    return generateFallbackAnalysis(equipmentType, symptoms, evidenceChecklist);
+  }
+}
+
+function generateFallbackAnalysis(equipmentType: string, symptoms: string, evidenceChecklist: any[]) {
+  // Equipment-specific fallback analysis when AI is unavailable
   let analysisResults;
   
   if (equipmentType === "Heat Exchangers") {
