@@ -1567,234 +1567,182 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
   // First, try to get equipment-specific data from Evidence Library
   let libraryData = [];
   try {
-    const storageModule = await import("./storage");
-    const storage = storageModule.storage;
+    // Search for matching equipment in evidence library using the existing investigationStorage
+    const searchResults = await investigationStorage.searchEvidenceLibrary(equipmentType);
     
-    // Search for matching equipment in evidence library
-    const searchResults = await storage.searchEvidenceLibrary(equipmentType);
-    libraryData = searchResults.filter((item: any) => 
-      item.equipmentGroup === equipmentGroup && 
-      item.equipmentType === equipmentType &&
-      (!equipmentSubtype || item.subtype === equipmentSubtype)
-    );
-    
-    console.log(`[AI Fallback] Found ${libraryData.length} matching evidence library items`);
+    // First try exact match including subtype
+    if (equipmentSubtype && equipmentSubtype.trim() !== '') {
+      libraryData = searchResults.filter((item: any) => 
+        item.equipmentGroup === equipmentGroup && 
+        item.equipmentType === equipmentType &&
+        item.subtype === equipmentSubtype
+      );
+      console.log(`[AI Fallback] Exact match search: ${libraryData.length} items for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
+    } else {
+      // If no subtype provided, check if we have any matches for this equipment type
+      const typeMatches = searchResults.filter((item: any) => 
+        item.equipmentGroup === equipmentGroup && 
+        item.equipmentType === equipmentType
+      );
+      
+      console.log(`[AI Fallback] No subtype specified. Found ${typeMatches.length} ${equipmentType} entries in Evidence Library:`);
+      typeMatches.forEach((item: any) => {
+        console.log(`[AI Fallback] Available: ${item.equipmentGroup} → ${item.equipmentType} → ${item.subtype}`);
+      });
+      
+      // If we have type matches but no subtype specified, this indicates missing subtype selection
+      if (typeMatches.length > 0) {
+        console.log(`[AI Fallback] Equipment type ${equipmentType} found in library but subtype missing from incident`);
+        libraryData = []; // Force the "needs library expansion" logic to handle subtype selection
+      }
+    }
   } catch (error) {
-    console.warn("[AI Fallback] Could not access Evidence Library, using hardcoded fallback");
+    console.error("[AI Fallback] Error accessing Evidence Library:", error);
   }
   
   let analysisResults;
-  
-  if (equipmentType === "Heat Exchangers") {
-    analysisResults = {
-      overallConfidence: 87,
-      analysisDate: new Date(),
-      rootCauses: [
-        {
-          id: "rc-001",
-          description: "Tube Corrosion Leading to Leak Development",
-          confidence: 92,
-          category: "Material Degradation",
-          evidence: [
-            "Visual inspection shows localized pitting on tube surface",
-            "Process fluid chemistry analysis indicates aggressive environment", 
-            "Tube thickness measurements below design minimum"
-          ],
-          likelihood: "Very High" as const,
-          impact: "High" as const,
-          priority: 1
-        },
-        {
-          id: "rc-002",
-          description: "Gasket Deterioration Due to Thermal Cycling",
-          confidence: 85,
-          category: "Mechanical",
-          evidence: [
-            "Gasket inspection shows compression set and cracking",
-            "Temperature logs show frequent thermal cycles",
-            "Previous maintenance records indicate gasket aging"
-          ],
-          likelihood: "High" as const,
-          impact: "Medium" as const,
-          priority: 2
-        },
-        {
-          id: "rc-003",
-          description: "Erosion-Corrosion from High Velocity Flow",
-          confidence: 78,
-          category: "Operational",
-          evidence: [
-            "Flow rate data exceeds design velocity limits",
-            "Tube inlet shows characteristic erosion patterns",
-            "Pressure drop trends indicate flow distribution issues"
-          ],
-          likelihood: "High" as const,
-          impact: "High" as const,
-          priority: 3
+  if (libraryData.length === 0) {
+    // Check if this is a missing subtype issue vs completely missing equipment
+    const typeCheckResults = await investigationStorage.searchEvidenceLibrary(equipmentType);
+    const availableSubtypes = typeCheckResults
+      .filter((item: any) => item.equipmentGroup === equipmentGroup && item.equipmentType === equipmentType)
+      .map((item: any) => item.subtype)
+      .filter((subtype: string) => subtype && subtype.trim() !== '');
+    
+    const isMissingSubtype = availableSubtypes.length > 0 && (!equipmentSubtype || equipmentSubtype.trim() === '');
+    
+    if (isMissingSubtype) {
+      // Equipment type exists but subtype missing - prompt for subtype selection
+      analysisResults = {
+        overallConfidence: 20, // Very low confidence because subtype missing
+        analysisDate: new Date(),
+        needsSubtypeSelection: true, // Flag indicating subtype needs to be selected
+        availableSubtypes: availableSubtypes,
+        rootCauses: [
+          {
+            id: "rc-001",
+            description: `Equipment Subtype Missing for ${equipmentGroup} → ${equipmentType}`,
+            confidence: 20,
+            category: "Incomplete Equipment Selection",
+            evidence: [
+              `${equipmentType} found in Evidence Library but specific subtype not selected`,
+              `Available subtypes: ${availableSubtypes.join(', ')}`,
+              "Analysis cannot proceed without complete equipment specification"
+            ],
+            likelihood: "Unknown" as const,
+            impact: "Unknown" as const,
+            priority: 1
+          }
+        ],
+        recommendations: [
+          {
+            id: "rec-001",
+            title: "Complete Equipment Selection",
+            description: `Select specific ${equipmentType} subtype from available options: ${availableSubtypes.join(', ')}`,
+            priority: "Immediate" as const,
+            category: "Data Entry",
+            estimatedCost: "$0",
+            timeframe: "5 minutes",
+            responsible: "Investigator",
+            preventsProbability: 100
+          }
+        ],
+        promptForSubtypeSelection: {
+          equipmentGroup,
+          equipmentType,
+          availableSubtypes: availableSubtypes,
+          message: `Please select the specific ${equipmentType} subtype to continue with analysis`
         }
-      ],
+      };
+    } else {
+      // No Evidence Library data found - prompt for expansion instead of using wrong fallback
+      analysisResults = {
+        overallConfidence: 30, // Low confidence because no equipment-specific data available
+        analysisDate: new Date(),
+        needsEvidenceLibraryExpansion: true, // Flag indicating library needs updating
+        rootCauses: [
+          {
+            id: "rc-001",
+            description: `Evidence Library Missing for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+            confidence: 30,
+            category: "Evidence Gap",
+            evidence: [
+              "No equipment-specific failure patterns available in Evidence Library",
+              "Investigation requires manual engineering analysis",
+              "Standard failure modes cannot be determined without equipment data"
+            ],
+            likelihood: "Unknown" as const,
+            impact: "Unknown" as const,
+            priority: 1
+          }
+        ],
       recommendations: [
         {
           id: "rec-001",
-          title: "Upgrade to Corrosion-Resistant Tube Material",
-          description: "Replace existing tubes with superior alloy rated for current process conditions",
+          title: "Expand Evidence Library with Equipment-Specific Data",
+          description: `Add ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype} failure modes, evidence requirements, and investigation questions to Evidence Library`,
           priority: "Immediate" as const,
-          category: "Design",
-          estimatedCost: "$85,000",
-          timeframe: "4-6 weeks",
-          responsible: "Process Engineer",
-          preventsProbability: 95
+          category: "Library Management",
+          estimatedCost: "$5,000",
+          timeframe: "1-2 weeks",
+          responsible: "RCA Administrator",
+          preventsProbability: 100
         },
         {
           id: "rec-002",
-          title: "Implement Online Corrosion Monitoring",
-          description: "Install corrosion probes and ultrasonic thickness monitoring for early detection",
-          priority: "Short-term" as const,
-          category: "Monitoring",
-          estimatedCost: "$25,000",
-          timeframe: "3-4 weeks",
-          responsible: "Reliability Engineer",
-          preventsProbability: 90
-        },
-        {
-          id: "rec-003",
-          title: "Operating Parameter Review and Training",
-          description: "Review and enforce operating limits, provide operator training on equipment limitations",
-          priority: "Short-term" as const,
-          category: "Operational",
-          estimatedCost: "$8,000",
-          timeframe: "3 weeks",
-          responsible: "Operations Manager",
-          preventsProbability: 70
-        }
-      ],
-      crossMatchResults: {
-        libraryMatches: 15,
-        patternSimilarity: 89,
-        historicalData: [
-          "Similar tube corrosion in heat exchanger - Site C (2023)",
-          "Gasket failure pattern - Equipment Type: Heat Exchanger (2022)",
-          "Flow velocity correlation study - Industrial facility (2021)",
-          "Thermal cycling analysis - Heat exchanger database"
-        ]
-      },
-      evidenceGaps: [
-        "Process fluid chemistry analysis not provided - recommend immediate sampling",
-        "Tube thickness measurements missing - could confirm corrosion extent",
-        "Baseline thermal performance data not available - limits efficiency analysis"
-      ],
-      additionalInvestigation: [
-        "Perform comprehensive process fluid analysis including corrosivity assessment",
-        "Conduct eddy current testing of all tubes for thickness mapping",
-        "Review process chemistry specifications and fluid velocity limits",
-        "Analyze thermal performance trends for correlation with operational factors"
-      ]
-    };
-  } else if (equipmentType === "Motors") {
-    // Motor-specific fallback analysis for electrical motor failures
-    analysisResults = {
-      overallConfidence: 87,
-      analysisDate: new Date(),
-      rootCauses: [
-        {
-          id: "rc-001",
-          description: "Winding Insulation Failure Due to Overheating",
-          confidence: 92,
-          category: "Electrical",
-          evidence: [
-            "Motor fire indicates thermal breakdown of insulation",
-            "Historical electrical test data shows deteriorating insulation resistance",
-            "Operating conditions show overloading patterns"
-          ],
-          likelihood: "Very High" as const,
-          impact: "High" as const,
-          priority: 1
-        },
-        {
-          id: "rc-002",
-          description: "Rotor Bar Cracking Causing Internal Arcing",
-          confidence: 85,
-          category: "Mechanical",
-          evidence: [
-            "Burning pattern suggests internal electrical failure",
-            "Current signature analysis may show rotor bar issues",
-            "Motor performance degradation prior to failure"
-          ],
-          likelihood: "High" as const,
-          impact: "High" as const,
-          priority: 2
-        },
-        {
-          id: "rc-003",
-          description: "Overload Condition Leading to Thermal Stress",
-          confidence: 78,
-          category: "Operational",
-          evidence: [
-            "Process data may show excessive loading",
-            "Motor protection settings may be inadequate",
-            "Environmental conditions contributing to heat buildup"
-          ],
-          likelihood: "High" as const,
-          impact: "Medium" as const,
-          priority: 3
-        }
-      ],
-      recommendations: [
-        {
-          id: "rec-001",
-          title: "Implement Motor Condition Monitoring Program",
-          description: "Install current signature analysis and thermal monitoring to detect insulation degradation and rotor issues",
+          title: "Conduct Manual Engineering Analysis",
+          description: "Perform detailed engineering analysis with subject matter experts until Evidence Library is expanded",
           priority: "Immediate" as const,
-          category: "Monitoring",
-          estimatedCost: "$25,000",
-          timeframe: "3-4 weeks",
-          responsible: "Electrical Engineer",
-          preventsProbability: 95
-        },
-        {
-          id: "rec-002",
-          title: "Review Motor Protection Settings",
-          description: "Audit and upgrade motor protection relay settings to prevent overload conditions",
-          priority: "Short-term" as const,
-          category: "Protection",
-          estimatedCost: "$8,000",
-          timeframe: "2 weeks",
-          responsible: "Protection Engineer",
+          category: "Engineering",
+          estimatedCost: "$15,000",
+          timeframe: "2-3 weeks", 
+          responsible: "Subject Matter Expert",
           preventsProbability: 85
-        },
-        {
-          id: "rec-003",
-          title: "Electrical Testing Program",
-          description: "Establish routine insulation resistance and current signature testing program",
-          priority: "Short-term" as const,
-          category: "Testing",
-          estimatedCost: "$12,000",
-          timeframe: "4 weeks",
-          responsible: "Maintenance Manager",
-          preventsProbability: 90
         }
       ],
       crossMatchResults: {
-        libraryMatches: 18,
-        patternSimilarity: 89,
+        libraryMatches: 0,
+        patternSimilarity: 0,
         historicalData: [
-          "Motor winding failure due to insulation breakdown - Site B (2023)",
-          "Electrical fire pattern - Equipment Type: Motor (2022)",
-          "Rotor bar failure correlation study - Industrial facility (2021)"
+          "No historical patterns available - Evidence Library expansion required",
+          `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype} not found in current database`
         ]
       },
       evidenceGaps: [
-        "Electrical test results not provided - recommend insulation resistance testing",
-        "Current signature analysis data missing - could identify rotor bar issues",
-        "Motor protection relay logs not available - need to verify trip settings"
+        `Equipment-specific evidence requirements not defined for ${equipmentType}`,
+        "Cannot determine critical evidence without Equipment Library data",
+        "Investigation questions unavailable for this equipment combination"
       ],
       additionalInvestigation: [
-        "Perform comprehensive electrical testing including insulation resistance and current signature analysis",
-        "Review motor protection relay settings and event logs",
-        "Analyze process loading conditions during failure event",
-        "Conduct thermal imaging survey of similar motors"
-      ]
+        `Research industry best practices for ${equipmentType} failure analysis`,
+        "Consult with equipment manufacturers for failure mode patterns",
+        `Update Evidence Library with ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype} data`,
+        "Establish evidence collection procedures for this equipment type"
+      ],
+      promptForLibraryExpansion: {
+        equipmentGroup,
+        equipmentType,
+        equipmentSubtype,
+        suggestedFailureModes: [
+          "Component degradation patterns",
+          "Operating parameter deviations", 
+          "Maintenance-related failures"
+        ],
+        suggestedEvidenceTypes: [
+          "Performance data trending",
+          "Maintenance records",
+          "Operating condition logs",
+          "Inspection reports"
+        ],
+        nextSteps: [
+          "Add equipment to Evidence Library",
+          "Define failure modes and evidence requirements",
+          "Establish AI investigation questions",
+          "Re-run analysis with complete library data"
+        ]
+      }
     };
+    }
   } else {
     // Intelligent Evidence Library-driven analysis
     if (libraryData.length > 0) {
@@ -1849,58 +1797,6 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
           `Perform analysis based on: ${libraryData[0]?.requiredTrendDataEvidence}`,
           `Investigate: ${libraryData[0]?.aiOrInvestigatorQuestions}`,
           `Review maintenance records for similar ${equipmentType.toLowerCase()} failures`
-        ]
-      };
-    } else {
-      // Ultimate fallback when no Evidence Library data available
-      analysisResults = {
-        overallConfidence: 70,
-        analysisDate: new Date(),
-        rootCauses: [
-          {
-            id: "rc-001",
-            description: `${equipmentType} Failure Analysis Required`,
-            confidence: 70,
-            category: "General",
-            evidence: [
-              `${equipmentType}-specific failure patterns need investigation`,
-              "Evidence Library data not available for this equipment type",
-              "Requires manual engineering analysis"
-            ],
-            likelihood: "Medium" as const,
-            impact: "Medium" as const,
-            priority: 1
-          }
-        ],
-        recommendations: [
-          {
-            id: "rec-001",
-            title: `Establish ${equipmentType} Monitoring Program`,
-            description: `Develop equipment-specific monitoring and maintenance program for ${equipmentGroup} - ${equipmentType}`,
-            priority: "Short-term" as const,
-            category: "Monitoring",
-            estimatedCost: "$20,000",
-            timeframe: "4-6 weeks",
-            responsible: "Equipment Engineer",
-            preventsProbability: 80
-          }
-        ],
-        crossMatchResults: {
-          libraryMatches: 0,
-          patternSimilarity: 0,
-          historicalData: [
-            `Equipment type ${equipmentType} requires Evidence Library expansion`,
-            "No historical patterns available in current database"
-          ]
-        },
-        evidenceGaps: [
-          `${equipmentType}-specific evidence requirements not defined`,
-          "Equipment failure patterns not documented in Evidence Library"
-        ],
-        additionalInvestigation: [
-          `Develop ${equipmentType} failure mode and effects analysis`,
-          `Establish equipment-specific evidence collection procedures`,
-          `Update Evidence Library with ${equipmentGroup} - ${equipmentType} data`
         ]
       };
     }
