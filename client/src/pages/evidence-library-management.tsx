@@ -70,6 +70,10 @@ export default function EvidenceLibraryManagement() {
   const [selectedEquipmentGroups, setSelectedEquipmentGroups] = useState<string[]>([]);
   const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<string[]>([]);
   const [selectedSubtypes, setSelectedSubtypes] = useState<string[]>([]);
+  
+  // Bulk delete states
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const form = useForm<EvidenceLibraryForm>({
     resolver: zodResolver(evidenceLibrarySchema),
@@ -130,13 +134,13 @@ export default function EvidenceLibraryManagement() {
   console.log('Risk Rankings data:', riskRankings);
 
   // Get unique filter values from data
-  const uniqueEquipmentGroups = [...new Set(evidenceItems.map(item => item.equipmentGroup))].filter(Boolean).sort();
+  const uniqueEquipmentGroups = Array.from(new Set(evidenceItems.map(item => item.equipmentGroup))).filter(Boolean).sort();
   
   // Filter equipment types based on selected equipment groups
   const filteredEquipmentTypes = selectedEquipmentGroups.length > 0 
     ? evidenceItems.filter(item => selectedEquipmentGroups.includes(item.equipmentGroup))
     : evidenceItems;
-  const uniqueEquipmentTypes = [...new Set(filteredEquipmentTypes.map(item => item.equipmentType))].filter(Boolean).sort();
+  const uniqueEquipmentTypes = Array.from(new Set(filteredEquipmentTypes.map(item => item.equipmentType))).filter(Boolean).sort();
   
   // Filter subtypes based on selected equipment groups AND types (cascading)
   const filteredSubtypes = evidenceItems.filter(item => {
@@ -144,7 +148,7 @@ export default function EvidenceLibraryManagement() {
     const matchesType = selectedEquipmentTypes.length === 0 || selectedEquipmentTypes.includes(item.equipmentType);
     return matchesGroup && matchesType;
   });
-  const uniqueSubtypes = [...new Set(filteredSubtypes.map(item => item.subtype).filter(Boolean))].sort();
+  const uniqueSubtypes = Array.from(new Set(filteredSubtypes.map(item => item.subtype).filter(Boolean))).sort();
 
   // Filter evidence items based on selected filters and search term
   const filteredItems = evidenceItems.filter(item => {
@@ -245,20 +249,47 @@ export default function EvidenceLibraryManagement() {
     },
   });
 
-  // Delete mutation
+  // Delete mutation (single item)
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       return await apiRequest(`/api/evidence-library/${id}`, {
         method: "DELETE",
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       toast({ title: "Success", description: "Evidence item deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
+      setSelectedItems(prev => prev.filter(itemId => itemId !== deletedId));
     },
     onError: (error) => {
       toast({ 
         title: "Error", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const deletePromises = ids.map(id => 
+        apiRequest(`/api/evidence-library/${id}`, { method: "DELETE" })
+      );
+      return await Promise.all(deletePromises);
+    },
+    onSuccess: (_, deletedIds) => {
+      toast({ 
+        title: "Success", 
+        description: `Deleted ${deletedIds.length} evidence items successfully` 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
+      setSelectedItems([]);
+      setSelectAll(false);
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Bulk Delete Error", 
         description: error.message,
         variant: "destructive" 
       });
@@ -326,6 +357,31 @@ export default function EvidenceLibraryManagement() {
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this evidence item?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedItems.length} evidence items? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(selectedItems);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedItems(filteredItems.map(item => item.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleSelectItem = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedItems(prev => [...prev, id]);
+    } else {
+      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+      setSelectAll(false);
     }
   };
 
@@ -464,6 +520,16 @@ export default function EvidenceLibraryManagement() {
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
                   </Button>
+                  {selectedItems.length > 0 && (
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete ({selectedItems.length})
+                    </Button>
+                  )}
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                       <Button 
@@ -638,7 +704,7 @@ export default function EvidenceLibraryManagement() {
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="subtypeExample"
+                            name="subtype"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Subtype</FormLabel>
@@ -873,78 +939,106 @@ export default function EvidenceLibraryManagement() {
                   : "No evidence items found. Add some items to get started."}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Equipment Group</TableHead>
-                      <TableHead>Equipment Type</TableHead>
-                      <TableHead>Subtype</TableHead>
-                      <TableHead>Component / Failure Mode</TableHead>
-                      <TableHead>Equipment Code</TableHead>
-                      <TableHead>Failure Code</TableHead>
-                      <TableHead>Risk Ranking</TableHead>
-                      <TableHead>Required Trend Data / Evidence</TableHead>
-                      <TableHead>AI or Investigator Questions</TableHead>
-                      <TableHead>Attachments / Evidence Required</TableHead>
-                      <TableHead>Root Cause Logic</TableHead>
-                      <TableHead>Blank Column 1</TableHead>
-                      <TableHead>Blank Column 2</TableHead>
-                      <TableHead>Blank Column 3</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(Array.isArray(filteredItems) ? filteredItems : []).map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.equipmentGroup}</TableCell>
-                        <TableCell>{item.equipmentType}</TableCell>
-                        <TableCell>{item.subtypeExample || '-'}</TableCell>
-                        <TableCell>{item.componentFailureMode}</TableCell>
-                        <TableCell>{item.equipmentCode}</TableCell>
-                        <TableCell>{item.failureCode}</TableCell>
-                        <TableCell>
-                          <Badge className={getRiskBadgeColor(item.riskRanking)}>
-                            {item.riskRanking}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="truncate">{item.requiredTrendDataEvidence || '-'}</div>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="truncate">{item.aiOrInvestigatorQuestions || '-'}</div>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="truncate">{item.attachmentsEvidenceRequired || '-'}</div>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="truncate">{item.rootCauseLogic || '-'}</div>
-                        </TableCell>
-                        <TableCell>{item.blankColumn1 || '-'}</TableCell>
-                        <TableCell>{item.blankColumn2 || '-'}</TableCell>
-                        <TableCell>{item.blankColumn3 || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(item)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+              <div className="overflow-x-auto border rounded-lg">
+                <div className="relative">
+                  <Table className="table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-white dark:bg-gray-800 border-r z-10 w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectAll && filteredItems.length > 0}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            className="rounded"
+                          />
+                        </TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Equipment Group</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Equipment Type</TableHead>
+                        <TableHead className="w-28 min-w-[7rem]">Subtype</TableHead>
+                        <TableHead className="w-40 min-w-[10rem]">Component / Failure Mode</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Equipment Code</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Failure Code</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Risk Ranking</TableHead>
+                        <TableHead className="w-48 min-w-[12rem]">Required Trend Data / Evidence</TableHead>
+                        <TableHead className="w-48 min-w-[12rem]">AI or Investigator Questions</TableHead>
+                        <TableHead className="w-48 min-w-[12rem]">Attachments / Evidence Required</TableHead>
+                        <TableHead className="w-48 min-w-[12rem]">Root Cause Logic</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Blank Column 1</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Blank Column 2</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Blank Column 3</TableHead>
+                        <TableHead className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10 w-24">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {(Array.isArray(filteredItems) ? filteredItems : []).map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="sticky left-0 bg-white dark:bg-gray-800 border-r z-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.includes(item.id)}
+                              onChange={(e) => handleSelectItem(item.id, e.target.checked)}
+                              className="rounded"
+                            />
+                          </TableCell>
+                          <TableCell className="truncate">{item.equipmentGroup}</TableCell>
+                          <TableCell className="truncate">{item.equipmentType}</TableCell>
+                          <TableCell className="truncate">{item.subtype || '-'}</TableCell>
+                          <TableCell className="truncate">{item.componentFailureMode}</TableCell>
+                          <TableCell className="truncate">{item.equipmentCode}</TableCell>
+                          <TableCell className="truncate">{item.failureCode}</TableCell>
+                          <TableCell>
+                            <Badge className={getRiskBadgeColor(item.riskRanking)}>
+                              {item.riskRanking}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.requiredTrendDataEvidence || ''}>
+                              {item.requiredTrendDataEvidence || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.aiOrInvestigatorQuestions || ''}>
+                              {item.aiOrInvestigatorQuestions || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.attachmentsEvidenceRequired || ''}>
+                              {item.attachmentsEvidenceRequired || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.rootCauseLogic || ''}>
+                              {item.rootCauseLogic || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="truncate">{item.blankColumn1 || '-'}</TableCell>
+                          <TableCell className="truncate">{item.blankColumn2 || '-'}</TableCell>
+                          <TableCell className="truncate">{item.blankColumn3 || '-'}</TableCell>
+                          <TableCell className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10">
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(item)}
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(item.id)}
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </CardContent>
