@@ -277,13 +277,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all analyses (both investigations and incidents for history page)
   app.get("/api/analyses", async (req, res) => {
     try {
+      const { status } = req.query; // Add status filter parameter
+      
       const investigations = await investigationStorage.getAllInvestigations();
       const incidents = await investigationStorage.getAllIncidents();
       
-      // Filter for completed investigations only and transform to analysis format
-      const completedAnalyses = investigations
-        .filter(inv => inv.status === 'completed' || inv.currentStep === 'completed')
-        .map(inv => ({
+      // Filter investigations based on status parameter
+      const filteredInvestigations = status === 'all' ? investigations : 
+        investigations.filter(inv => inv.status === 'completed' || inv.currentStep === 'completed');
+      
+      const analysesFromInvestigations = filteredInvestigations.map(inv => ({
           id: inv.id,
           investigationId: inv.investigationId,
           title: `${inv.whatHappened} - ${inv.evidenceData?.equipment_type || 'Equipment'} ${inv.evidenceData?.equipment_tag || ''}`.trim(),
@@ -308,20 +311,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: 'investigation'
         }));
 
-      // Add incidents that have completed AI analysis (Step 6+)
-      const completedIncidents = incidents
-        .filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created')
-        .map(inc => ({
+      // Add incidents based on status filter - all incidents if status='all', only completed if status='completed' 
+      const filteredIncidents = status === 'all' ? incidents : 
+        incidents.filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created');
+      
+      const analysesFromIncidents = filteredIncidents.map(inc => {
+        const isDraft = !inc.aiAnalysis || inc.currentStep < 6;
+        return {
           id: inc.id,
           investigationId: `INC-${inc.id}`,
           title: inc.title || `${inc.description} - ${inc.equipmentType}`,
-          status: inc.workflowStatus === 'finalized' ? 'completed' : 'analysis_complete',
+          status: isDraft ? 'draft' : (inc.workflowStatus === 'finalized' ? 'completed' : 'analysis_complete'),
+          isDraft: isDraft,
           createdAt: inc.createdAt,
           updatedAt: inc.updatedAt,
           confidence: inc.analysisResults?.overallConfidence || 85,
           equipmentType: inc.equipmentType || 'Unknown',
           location: inc.location || 'Unknown',
-          cause: inc.analysisResults?.rootCauses?.[0]?.description || 'Root cause analysis completed',
+          cause: isDraft ? 'Draft - Analysis pending' : 
+                 (inc.analysisResults?.rootCauses?.[0]?.description || 'Root cause analysis completed'),
           priority: inc.priority?.toLowerCase() === 'critical' ? 'high' : 
                    inc.priority?.toLowerCase() === 'high' ? 'high' :
                    inc.priority?.toLowerCase() === 'medium' ? 'medium' : 'low',
@@ -337,10 +345,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           analysisResults: inc.analysisResults,
           recommendations: inc.analysisResults?.recommendations,
           source: 'incident'
-        }));
+        };
+      });
 
       // Combine both sources and sort by creation date (newest first)
-      const allAnalyses = [...completedAnalyses, ...completedIncidents]
+      const allAnalyses = [...analysesFromInvestigations, ...analysesFromIncidents]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       res.json(allAnalyses);

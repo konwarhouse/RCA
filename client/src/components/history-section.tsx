@@ -27,6 +27,7 @@ export default function HistorySection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // Add status filter
   const [currentPage, setCurrentPage] = useState(1);
   const [, setLocation] = useLocation();
   const itemsPerPage = 10;
@@ -36,6 +37,7 @@ export default function HistorySection() {
   if (searchQuery) queryParams.set("search", searchQuery);
   if (priorityFilter && priorityFilter !== "all") queryParams.set("priority", priorityFilter);
   if (dateFilter && dateFilter !== "all") queryParams.set("dateRange", dateFilter);
+  if (statusFilter && statusFilter !== "all") queryParams.set("status", statusFilter);
 
   const { data: analyses = [], isLoading, refetch } = useQuery<Analysis[]>({
     queryKey: ["/api/analyses", queryParams.toString()],
@@ -125,6 +127,17 @@ export default function HistorySection() {
                   <SelectItem value="quarter">This Quarter</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Drafts Only</SelectItem>
+                  <SelectItem value="completed">Completed Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="flex space-x-2">
@@ -162,21 +175,30 @@ export default function HistorySection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Analysis ID</TableHead>
-                      <TableHead>Equipment</TableHead>
-                      <TableHead>Issue Description</TableHead>
-                      <TableHead>Root Cause</TableHead>
-                      <TableHead>Confidence</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="min-w-[120px]">Analysis ID</TableHead>
+                      <TableHead className="min-w-[140px]">Equipment</TableHead>
+                      <TableHead className="min-w-[200px]">Issue Description</TableHead>
+                      <TableHead className="min-w-[200px]">Root Cause</TableHead>
+                      <TableHead className="min-w-[100px]">Confidence</TableHead>
+                      <TableHead className="min-w-[90px]">Priority</TableHead>
+                      <TableHead className="min-w-[140px]">Date</TableHead>
+                      <TableHead className="min-w-[160px] sticky right-0 bg-background">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedAnalyses.map((analysis) => (
+                    {paginatedAnalyses.map((analysis: any) => (
                       <TableRow key={analysis.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{analysis.investigationId}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium min-w-[120px]">
+                          <div className="flex flex-col">
+                            <span>{analysis.investigationId}</span>
+                            {analysis.isDraft && (
+                              <Badge variant="outline" className="text-xs w-fit mt-1">
+                                Draft
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="min-w-[140px]">
                           <div className="flex flex-col">
                             <span className="font-medium">
                               {analysis.equipmentType?.charAt(0).toUpperCase() + analysis.equipmentType?.slice(1).replace('_', ' ')}
@@ -189,35 +211,46 @@ export default function HistorySection() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate">{analysis.whatHappened}</TableCell>
-                        <TableCell className="max-w-xs truncate">
+                        <TableCell className="min-w-[200px] max-w-[250px] truncate">{analysis.whatHappened}</TableCell>
+                        <TableCell className="min-w-[200px] max-w-[250px] truncate">
                           {analysis.cause || "Processing..."}
                         </TableCell>
-                        <TableCell>
-                          {analysis.confidence && (
+                        <TableCell className="min-w-[100px]">
+                          {analysis.confidence && !analysis.isDraft ? (
                             <Badge className={getConfidenceColor(analysis.confidence)}>
                               {analysis.confidence}%
                             </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="min-w-[90px]">
                           <Badge className={getPriorityColor(analysis.priority)}>
                             {analysis.priority.charAt(0).toUpperCase() + analysis.priority.slice(1)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="text-sm min-w-[140px]">
                           {formatDate(analysis.createdAt)}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
+                        <TableCell className="min-w-[160px] sticky right-0 bg-background">
+                          <div className="flex space-x-1">
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => setLocation(`/investigation/${analysis.investigationId}`)}
+                              onClick={() => {
+                                if (analysis.isDraft) {
+                                  // Navigate to continue draft
+                                  setLocation(`/equipment-selection?incident=${analysis.id}`);
+                                } else {
+                                  // Navigate to view completed analysis
+                                  setLocation(`/investigation/${analysis.investigationId}`);
+                                }
+                              }}
+                              className="text-xs px-2"
                             >
-                              View Details
+                              {analysis.isDraft ? 'Continue' : 'Details'}
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="text-xs px-2">
                               Export
                             </Button>
                           </div>
