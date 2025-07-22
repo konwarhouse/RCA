@@ -390,24 +390,24 @@ export default function AIAnalysis() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="text-center p-4 border rounded-lg">
-                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults.libraryMatches}</div>
+                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults?.libraryMatches || 0}</div>
                         <div className="text-sm text-muted-foreground">Similar Cases Found</div>
                       </div>
                       <div className="text-center p-4 border rounded-lg">
-                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults.patternSimilarity}%</div>
+                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults?.patternSimilarity || 0}%</div>
                         <div className="text-sm text-muted-foreground">Pattern Similarity</div>
                       </div>
                       <div className="text-center p-4 border rounded-lg">
-                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults.historicalData.length}</div>
+                        <div className="text-3xl font-bold text-primary">{analysisResults.crossMatchResults?.historicalData?.length || 0}</div>
                         <div className="text-sm text-muted-foreground">Historical References</div>
                       </div>
                     </div>
                     
-                    {analysisResults.crossMatchResults.historicalData.length > 0 && (
+                    {(analysisResults.crossMatchResults?.historicalData?.length || 0) > 0 && (
                       <div className="mt-6">
                         <h4 className="font-medium mb-3">Historical Data References</h4>
                         <ul className="space-y-2">
-                          {analysisResults.crossMatchResults.historicalData.map((ref, index) => (
+                          {(analysisResults.crossMatchResults?.historicalData || []).map((ref, index) => (
                             <li key={index} className="flex items-center gap-2 text-sm">
                               <CheckCircle className="h-4 w-4 text-green-600" />
                               {ref}
