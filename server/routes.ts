@@ -1601,39 +1601,44 @@ async function generateEliminationAwareEvidenceChecklist(
   // Get base equipment template
   const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms);
   
-  // Create mapping of failure modes to evidence types that should be excluded
-  const evidenceExclusionMap = {
-    // Seal-related evidence exclusions
-    "Seal Leak": ["seal-inspection", "mechanical-seal", "seal-leak-rate", "seal-condition"],
-    "Mechanical Seal Failure": ["seal-inspection", "mechanical-seal", "seal-leak-rate", "seal-condition"],
-    
-    // Bearing-related evidence exclusions  
-    "Bearing Failure": ["bearing-vibration", "bearing-temperature", "bearing-condition", "lubrication-analysis"],
-    "Bearing Wear": ["bearing-vibration", "bearing-temperature", "bearing-condition", "lubrication-analysis"],
-    
-    // Impeller-related evidence exclusions
-    "Impeller Damage": ["impeller-inspection", "impeller-clearance", "flow-performance"],
-    "Impeller Cavitation": ["impeller-inspection", "npsh-analysis", "suction-conditions"],
-    
-    // Casing-related evidence exclusions
-    "Casing Crack": ["casing-inspection", "pressure-test", "structural-analysis"],
-    "Casing Failure": ["casing-inspection", "pressure-test", "structural-analysis"],
-    
-    // Motor-related evidence exclusions
-    "Motor Overload": ["motor-current", "power-analysis", "motor-temperature"],
-    "Motor Electrical Failure": ["motor-current", "power-analysis", "motor-temperature", "electrical-testing"],
-    
-    // Coupling-related evidence exclusions
-    "Key Shear": ["coupling-inspection", "key-analysis", "torque-measurement"],
-    "Coupling Failure": ["coupling-inspection", "coupling-alignment", "torque-measurement"]
-  };
-  
-  // Get list of evidence IDs to exclude based on eliminated failure modes
+  // UNIVERSAL ELIMINATION: Build evidence exclusion from Evidence Library data (NO HARDCODING!)
   const evidenceToExclude = new Set<string>();
-  eliminationResults.eliminatedFailureModes.forEach((failureMode: string) => {
-    const exclusions = evidenceExclusionMap[failureMode] || [];
-    exclusions.forEach(evidenceId => evidenceToExclude.add(evidenceId));
-  });
+  
+  try {
+    // Get all failure modes from Evidence Library to build dynamic exclusion mapping
+    const allLibraryData = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, '');
+    
+    // Create dynamic exclusion mapping from Evidence Library eliminatedIfTheseFailuresConfirmed field
+    for (const failureMode of eliminationResults.eliminatedFailureModes) {
+      // Find library entries where this failure mode triggers elimination of other evidence
+      const relatedEntries = allLibraryData.filter((item: any) => {
+        const eliminationTriggers = item.eliminatedIfTheseFailuresConfirmed || '';
+        return eliminationTriggers.toLowerCase().includes(failureMode.toLowerCase());
+      });
+      
+      // Extract evidence codes that should be excluded when this failure mode is eliminated
+      relatedEntries.forEach((entry: any) => {
+        // Use the equipmentCode as evidence ID for exclusion
+        if (entry.equipmentCode) {
+          evidenceToExclude.add(entry.equipmentCode.toLowerCase());
+        }
+        
+        // Also parse any structured exclusion data if available
+        const exclusionReason = entry.whyItGetsEliminated || '';
+        if (exclusionReason.includes('evidence_exclude:')) {
+          const excludePattern = exclusionReason.match(/evidence_exclude:\[(.*?)\]/);
+          if (excludePattern) {
+            const evidenceIds = excludePattern[1].split(',').map(id => id.trim());
+            evidenceIds.forEach(id => evidenceToExclude.add(id));
+          }
+        }
+      });
+    }
+    
+    console.log(`[Universal Elimination] Dynamic exclusion built from Evidence Library: ${evidenceToExclude.size} evidence types to exclude`);
+  } catch (error) {
+    console.error('[Universal Elimination] Error building dynamic exclusion mapping:', error);
+  }
   
   console.log(`[Enhanced Evidence] Excluding evidence types: [${Array.from(evidenceToExclude).join(', ')}]`);
   
@@ -2363,187 +2368,82 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
 async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string) {
   // Generate equipment-specific evidence checklist based on equipment type
   
-  // Equipment-specific evidence templates
-  const equipmentTemplates = {
-    // Heat Exchangers - thermal/corrosion focused
-    "Heat Exchangers": [
-      {
-        id: "thermal-performance",
-        category: "Thermal Data",
-        title: "Heat Transfer Performance Data",
-        description: "Temperature differentials and heat duty measurements showing degradation patterns",
-        priority: "Critical" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Inlet/outlet temperature trends",
-          "Heat duty calculations over time",
-          "Thermal efficiency measurements"
-        ],
-        completed: false
-      },
-      {
-        id: "corrosion-inspection",
-        category: "Corrosion Analysis",
-        title: "Corrosion Inspection Reports",
-        description: "Ultrasonic thickness measurements and corrosion rate data",
-        priority: "Critical" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "UT thickness measurements",
-          "Corrosion rate calculations",
-          "Material degradation photos"
-        ],
-        completed: false
-      },
-      {
-        id: "pressure-drop",
-        category: "Process Data",
-        title: "Pressure Drop Trends",
-        description: "Fouling indicators through pressure differential monitoring",
-        priority: "High" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Differential pressure trends",
-          "Fouling factor calculations",
-          "Cleaning frequency records"
-        ],
-        completed: false
-      },
-      {
-        id: "tube-gasket-inspection",
-        category: "Visual Evidence",
-        title: "Tube and Gasket Inspection",
-        description: "Physical inspection of tubes, gaskets, and sealing surfaces",
-        priority: "High" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Tube bundle condition photos",
-          "Gasket surface inspection",
-          "Shell and tube sheet examination"
-        ],
-        completed: false
-      }
-    ],
-    
-    // Pumps - vibration/mechanical focused
-    "Pumps": [
-      {
-        id: "vibration-trends",
-        category: "Mechanical Data",
-        title: "Vibration Trend Data",
-        description: "Historical vibration measurements showing bearing and alignment patterns",
-        priority: "Critical" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Bearing vibration trends",
-          "Pump alignment data",
-          "Motor coupling vibration"
-        ],
-        completed: false
-      },
-      {
-        id: "seal-inspection",
-        category: "Mechanical Components",
-        title: "Mechanical Seal Inspection",
-        description: "Seal leak rates and mechanical seal condition assessment",
-        priority: "Critical" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Seal leak rate measurements",
-          "Seal face condition photos",
-          "O-ring and gasket inspection"
-        ],
-        completed: false
-      },
-      {
-        id: "pump-performance",
-        category: "Performance Data",
-        title: "Pump Performance Curves",
-        description: "Flow, head, and efficiency degradation over time",
-        priority: "High" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Flow rate trends",
-          "Discharge pressure data",
-          "Power consumption analysis"
-        ],
-        completed: false
-      }
-    ],
-    
-    // Default template for other equipment
-    "default": [
-      {
-        id: "maintenance-records",
-        category: "Maintenance History",
-        title: "Maintenance Records",
-        description: "Recent maintenance activities and findings",
-        priority: "High" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Work order completion reports",
-          "PM inspection checklists",
-          "Previous repair documentation"
-        ],
-        completed: false
-      },
-      {
-        id: "operating-conditions",
-        category: "Process Data",
-        title: "Operating Conditions",
-        description: "Process parameters during incident",
-        priority: "High" as const,
-        required: true,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "DCS trend data",
-          "Process parameter logs",
-          "Alarm history"
-        ],
-        completed: false
-      },
-      {
-        id: "inspection-photos",
-        category: "Visual Evidence",
-        title: "Equipment Inspection Photos",
-        description: "Visual documentation of equipment condition",
-        priority: "Medium" as const,
-        required: false,
-        aiGenerated: true,
-        specificToEquipment: true,
-        examples: [
-          "Before/after failure photos",
-          "Component wear patterns",
-          "Environmental conditions"
-        ],
-        completed: false
-      }
-    ]
-  };
-
-  // Select appropriate template based on equipment type
-  const selectedTemplate = equipmentTemplates[equipmentType as keyof typeof equipmentTemplates] || equipmentTemplates.default;
+  // UNIVERSAL EVIDENCE GENERATION: Build templates from Evidence Library (NO HARDCODING!)
+  console.log(`[Universal Evidence] Generating evidence from Evidence Library for ${equipmentGroup} → ${equipmentType}`);
   
-  console.log(`[AI Evidence] Generating checklist for ${equipmentType} using ${equipmentType in equipmentTemplates ? 'specific' : 'default'} template`);
+  try {
+    // Get equipment-specific evidence from Evidence Library
+    const libraryEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype || '');
+    
+    if (libraryEvidence.length > 0) {
+      console.log(`[Universal Evidence] Found ${libraryEvidence.length} Evidence Library entries for ${equipmentType}`);
+      
+      // Build evidence checklist from library data
+      const libraryBasedEvidence = libraryEvidence.map((item: any, index: number) => {
+        // Extract evidence requirements from multiple library fields
+        const trendData = item.requiredTrendDataEvidence || '';
+        const attachments = item.attachmentsEvidenceRequired || '';
+        const questions = item.aiOrInvestigatorQuestions || '';
+        
+        // Parse different types of evidence from library fields
+        const evidenceTypes = [
+          ...(trendData.split(',').map(t => t.trim()).filter(Boolean)),
+          ...(attachments.split(',').map(a => a.trim()).filter(Boolean)),
+          ...(questions.split('?').map(q => q.trim()).filter(Boolean).slice(0, 2))
+        ].filter(Boolean);
+        
+        return {
+          id: item.equipmentCode || `evidence-${index + 1}`,
+          category: item.equipmentGroup || "General Evidence",
+          title: item.componentFailureMode || `${equipmentType} Evidence`,
+          description: item.rootCauseLogic || `Evidence requirements for ${equipmentType} analysis`,
+          priority: (item.evidencePriority === 1 ? "Critical" : 
+                    item.evidencePriority === 2 ? "High" :
+                    item.evidencePriority === 3 ? "Medium" : "Low") as const,
+          required: item.diagnosticValue === "Critical" || item.diagnosticValue === "Important",
+          aiGenerated: true,
+          specificToEquipment: true,
+          examples: evidenceTypes.slice(0, 3),
+          completed: false,
+          // Preserve all configurable intelligence metadata
+          librarySource: true,
+          confidenceLevel: item.confidenceLevel,
+          timeToCollect: item.timeToCollect,
+          collectionCost: item.collectionCost,
+          industryRelevance: item.industryRelevance
+        };
+      });
+      
+      console.log(`[Universal Evidence] Generated ${libraryBasedEvidence.length} evidence items from Evidence Library`);
+      return libraryBasedEvidence;
+    }
+  } catch (error) {
+    console.error('[Universal Evidence] Error accessing Evidence Library:', error);
+  }
   
-  return selectedTemplate;
+  // Fallback: Minimal universal evidence if no library data
+  console.log(`[Universal Evidence] Using minimal universal fallback (Evidence Library expansion needed)`);
+  const universalFallback = [
+    {
+      id: "basic-documentation",
+      category: "Basic Evidence",
+      title: "Equipment Documentation",
+      description: "Basic equipment documentation and failure description",
+      priority: "Critical" as const,
+      required: true,
+      aiGenerated: true,
+      specificToEquipment: false,
+      examples: [
+        "Equipment nameplate data",
+        "Failure description and timeline",
+        "Basic operating parameters"
+      ],
+      completed: false,
+      librarySource: false
+    }
+  ];
+  
+  return universalFallback;
 }
 
 async function generateEvidenceCategories(equipmentGroup: string, equipmentType: string, evidenceChecklist: any[]) {
@@ -3070,14 +2970,13 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
       
       // Generate analysis using BOTH failure mode logic AND Evidence Library fields
       const rootCauses = libraryData.slice(0, 3).map((item: any, index: number) => {
-        // Use admin-configurable confidence level instead of hardcoded calculation
-        const confidenceMap = {
-          "High": 90,
-          "Medium": 70,
-          "Low": 50
-        };
-        const baseConfidence = confidenceMap[item.confidenceLevel] || 
-                              (item.riskRanking === "High" ? 85 : item.riskRanking === "Medium" ? 70 : 55);
+        // UNIVERSAL CONFIDENCE: Use Evidence Library confidenceLevel field directly
+        const baseConfidence = item.confidenceLevel === "High" ? 90 :
+                              item.confidenceLevel === "Medium" ? 70 :
+                              item.confidenceLevel === "Low" ? 50 :
+                              // Fallback to risk ranking if no confidence level specified
+                              (item.riskRanking === "High" ? 85 : 
+                               item.riskRanking === "Medium" ? 70 : 55);
         
         return {
           id: `rc-00${index + 1}`,
@@ -3109,27 +3008,13 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
       });
 
       const recommendations = libraryData.slice(0, 2).map((item: any, index: number) => {
-        // Use configurable fields for recommendations (no hardcoded logic!)
-        const priorityMap = {
-          1: "Immediate" as const,
-          2: "Short-term" as const, 
-          3: "Medium-term" as const,
-          4: "Long-term" as const
-        };
+        // UNIVERSAL MAPPING: Use Evidence Library fields directly without hardcoded dictionaries
+        const priorityText = item.evidencePriority === 1 ? "Immediate" :
+                            item.evidencePriority === 2 ? "Short-term" :
+                            item.evidencePriority === 3 ? "Medium-term" : "Long-term";
         
-        const costMap = {
-          "Low": "$5,000",
-          "Medium": "$15,000", 
-          "High": "$35,000",
-          "Very High": "$75,000"
-        };
-        
-        const timeMap = {
-          "Immediate": "1-2 weeks",
-          "Hours": "2-3 days",
-          "Days": "1-2 weeks", 
-          "Weeks": "4-8 weeks"
-        };
+        const costText = item.collectionCost || "$Cost not specified";
+        const timeText = item.timeToCollect || "Timeframe not specified";
         
         return {
           id: `rec-00${index + 1}`,

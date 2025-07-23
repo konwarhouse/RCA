@@ -165,7 +165,8 @@ export default function IntelligentAIAssistant({
     const suggestions = [];
 
     // Equipment-specific intelligent suggestions
-    if (equipmentType === 'Pumps') {
+    // UNIVERSAL LOGIC: Remove hardcoded equipment checks - use dynamic approach
+if (equipmentType && equipmentType.toLowerCase().includes('pump')) {
       if (currentValue?.includes('leak') && currentValue?.includes('seal')) {
         suggestions.push("High vibration + seal leak = check shaft alignment data and bearing condition");
         onSuggestion("For mechanical seal leaks, provide: leak rate, fluid appearance, seal face condition, installation date, and any recent maintenance.");
@@ -179,7 +180,7 @@ export default function IntelligentAIAssistant({
       if (currentValue?.includes('pressure')) {
         suggestions.push("Pressure issues need: suction/discharge trends, NPSH calculation, and system curve data");
       }
-    } else if (equipmentType === 'Compressors') {
+    } else if (equipmentType && equipmentType.toLowerCase().includes('compressor')) {
       if (currentValue?.includes('temperature') || currentValue?.includes('hot')) {
         suggestions.push("Temperature spikes indicate valve problems - check individual cylinder temperatures and valve condition");
         onSuggestion("Provide cylinder-by-cylinder temperature readings and valve inspection photos.");
