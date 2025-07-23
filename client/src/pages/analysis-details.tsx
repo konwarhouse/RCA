@@ -54,7 +54,22 @@ export default function AnalysisDetails() {
     );
   }
 
-  if (!incident || !analysis || Object.keys(analysis).length === 0) {
+  if (!incident) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="border-yellow-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 text-yellow-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Incident not found.</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!analysis || Object.keys(analysis).length === 0) {
     return (
       <div className="container mx-auto p-6">
         <Card className="border-yellow-200">
