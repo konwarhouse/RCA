@@ -65,14 +65,14 @@ export default function AnalysisDetails() {
     );
   }
 
-  if (!incident) {
+  if (!incident || !analysis) {
     return (
       <div className="container mx-auto p-6">
         <Card className="border-yellow-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 text-yellow-600">
               <AlertTriangle className="h-5 w-5" />
-              <span>Incident not found.</span>
+              <span>Incident or analysis not found.</span>
             </div>
           </CardContent>
         </Card>
@@ -95,8 +95,8 @@ export default function AnalysisDetails() {
     );
   }
 
-  const confidenceColor = analysis.overallConfidence >= 80 ? "text-green-600" : 
-                         analysis.overallConfidence >= 60 ? "text-yellow-600" : "text-red-600";
+  const confidenceColor = (analysis?.overallConfidence || 0) >= 80 ? "text-green-600" : 
+                         (analysis?.overallConfidence || 0) >= 60 ? "text-yellow-600" : "text-red-600";
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -130,8 +130,8 @@ export default function AnalysisDetails() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Analysis Details</h1>
             <p className="text-gray-600">
-              {incident.equipmentId} • {incident.equipmentGroup} → {incident.equipmentType}
-              {incident.equipmentSubtype ? ` → ${incident.equipmentSubtype}` : ''}
+              {incident?.equipmentId || 'N/A'} • {incident?.equipmentGroup || 'N/A'} → {incident?.equipmentType || 'N/A'}
+              {incident?.equipmentSubtype ? ` → ${incident.equipmentSubtype}` : ''}
             </p>
           </div>
         </div>
@@ -140,10 +140,10 @@ export default function AnalysisDetails() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Confidence:</span>
               <span className={`text-2xl font-bold ${confidenceColor}`}>
-                {analysis.overallConfidence}%
+                {analysis?.overallConfidence || 0}%
               </span>
             </div>
-            {getStatusBadge(incident.workflowStatus)}
+            {getStatusBadge(incident?.workflowStatus || 'in_progress')}
           </div>
           <Button className="flex items-center gap-2">
             <Download className="h-4 w-4" />
@@ -178,17 +178,17 @@ export default function AnalysisDetails() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900">{incident.title}</h4>
-                  <p className="text-gray-600 mt-2">{incident.description}</p>
+                  <h4 className="font-semibold text-gray-900">{incident?.title || 'No title'}</h4>
+                  <p className="text-gray-600 mt-2">{incident?.description || 'No description'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Reported:</span>
-                    <p className="font-medium">{formatDate(incident.incidentDateTime)}</p>
+                    <p className="font-medium">{incident?.incidentDateTime ? formatDate(incident.incidentDateTime) : 'N/A'}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Priority:</span>
-                    <p className="font-medium">{incident.priority}</p>
+                    <p className="font-medium">{incident?.priority || 'Medium'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -581,12 +581,12 @@ function EngineerReviewSection({ incident, analysis }: { incident: any, analysis
                 Engineer Review & Approval
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Investigation Status: {incident.workflowStatus === 'finalized' ? 'Approved' : 'Pending Review'}
+                Investigation Status: {incident?.workflowStatus === 'finalized' ? 'Approved' : 'Pending Review'}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant={incident.workflowStatus === 'finalized' ? 'default' : 'secondary'}>
-                {incident.workflowStatus === 'finalized' ? 'Finalized' : 'Needs Review'}
+              <Badge variant={incident?.workflowStatus === 'finalized' ? 'default' : 'secondary'}>
+                {incident?.workflowStatus === 'finalized' ? 'Finalized' : 'Needs Review'}
               </Badge>
               <Button
                 variant="outline"
@@ -638,23 +638,23 @@ function EngineerReviewSection({ incident, analysis }: { incident: any, analysis
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Confidence:</span>
-                <p className="font-medium">{analysis.overallConfidence}%</p>
+                <p className="font-medium">{analysis?.overallConfidence || 0}%</p>
               </div>
               <div>
                 <span className="text-gray-600">Failure Mode:</span>
-                <p className="font-medium">{analysis.failureMode}</p>
+                <p className="font-medium">{analysis?.failureMode || 'N/A'}</p>
               </div>
               <div>
                 <span className="text-gray-600">Severity:</span>
-                <p className="font-medium">{analysis.severity}</p>
+                <p className="font-medium">{analysis?.severity || 'N/A'}</p>
               </div>
             </div>
             <div className="mt-3">
               <span className="text-gray-600">Root Causes:</span>
               <ul className="list-disc list-inside mt-1">
-                {analysis.rootCauses?.slice(0, 3).map((cause: any, index: number) => (
-                  <li key={index} className="text-sm">{cause.description} ({cause.confidence}%)</li>
-                ))}
+                {analysis?.rootCauses?.slice(0, 3).map((cause: any, index: number) => (
+                  <li key={index} className="text-sm">{cause?.description || 'N/A'} ({cause?.confidence || 0}%)</li>
+                )) || <li className="text-sm">No root causes available</li>}
               </ul>
             </div>
           </div>
@@ -733,26 +733,26 @@ function EngineerReviewSection({ incident, analysis }: { incident: any, analysis
           )}
 
           {/* Current Review Status */}
-          {incident.engineerReview && !isEditing && (
+          {incident?.engineerReview && !isEditing && (
             <div className="border-t pt-6">
               <h4 className="font-semibold mb-4">Current Review Status</h4>
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-4 w-4" />
-                  <span className="font-medium">Reviewed by: {incident.engineerReview.reviewerName}</span>
+                  <span className="font-medium">Reviewed by: {incident?.engineerReview?.reviewerName || 'N/A'}</span>
                 </div>
-                <p className="text-sm text-gray-700 mb-2">{incident.engineerReview.comments}</p>
-                {incident.engineerReview.additionalFindings && (
+                <p className="text-sm text-gray-700 mb-2">{incident?.engineerReview?.comments || 'No comments'}</p>
+                {incident?.engineerReview?.additionalFindings && (
                   <p className="text-sm text-gray-700 mb-2">
                     <strong>Additional findings:</strong> {incident.engineerReview.additionalFindings}
                   </p>
                 )}
                 <div className="flex items-center gap-4 text-sm">
-                  <Badge variant={incident.engineerReview.approved ? 'default' : 'secondary'}>
-                    {incident.engineerReview.approved ? 'Approved' : 'Under Review'}
+                  <Badge variant={incident?.engineerReview?.approved ? 'default' : 'secondary'}>
+                    {incident?.engineerReview?.approved ? 'Approved' : 'Under Review'}
                   </Badge>
                   <span className="text-gray-600">
-                    Reviewed: {new Date(incident.engineerReview.reviewDate).toLocaleString()}
+                    Reviewed: {incident?.engineerReview?.reviewDate ? new Date(incident.engineerReview.reviewDate).toLocaleString() : 'N/A'}
                   </span>
                 </div>
               </div>
