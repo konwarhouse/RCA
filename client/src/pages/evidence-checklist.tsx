@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle, Circle, FileText, Upload, AlertTriangle, ChevronRight, Brain, Lightbulb, X } from "lucide-react";
+import { CheckCircle, Circle, FileText, Upload, AlertTriangle, ChevronRight, Brain, Lightbulb, X, AlertCircle } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,8 @@ interface EvidenceItem {
   completed: boolean;
   notes?: string;
   files?: File[];
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
 interface Incident {
@@ -122,10 +124,12 @@ export default function EvidenceChecklist() {
     }
   }, [incident]);
 
-  // Calculate completion percentage
+  // Calculate completion percentage - include unavailable evidence with reasons
   useEffect(() => {
     if (evidenceItems && Array.isArray(evidenceItems) && evidenceItems.length > 0) {
-      const completed = evidenceItems.filter(item => item.completed).length;
+      const completed = evidenceItems.filter(item => 
+        item.completed || (item.isUnavailable && item.unavailableReason?.trim())
+      ).length;
       const percentage = Math.round((completed / evidenceItems.length) * 100);
       setCompletionPercentage(percentage);
     }
@@ -170,6 +174,20 @@ export default function EvidenceChecklist() {
     );
   };
 
+  const handleUnavailabilityChange = (itemId: string, isUnavailable: boolean, reason?: string) => {
+    setEvidenceItems(prev => 
+      prev.map(item => 
+        item.id === itemId ? { 
+          ...item, 
+          isUnavailable,
+          unavailableReason: reason || '',
+          completed: isUnavailable && reason?.trim() ? true : item.completed, // Mark completed if unavailable with reason
+          files: isUnavailable ? [] : item.files // Clear files if marking unavailable
+        } : item
+      )
+    );
+  };
+
   const handleProceedToCollection = () => {
     if (incidentId && evidenceItems.length > 0) {
       updateProgressMutation.mutate({ 
@@ -188,8 +206,13 @@ export default function EvidenceChecklist() {
   const mediumItems = evidenceItems?.filter(item => item.priority === "Medium") || [];
   const lowItems = evidenceItems?.filter(item => item.priority === "Low") || [];
 
-  const canProceed = criticalItems.every(item => item.completed) && 
-                   highItems.filter(item => item.completed).length >= Math.ceil(highItems.length * 0.8);
+  // Updated logic: Allow progression if evidence completed OR marked unavailable with reason
+  const canProceed = criticalItems.every(item => 
+    item.completed || (item.isUnavailable && item.unavailableReason?.trim())
+  ) && 
+  highItems.filter(item => 
+    item.completed || (item.isUnavailable && item.unavailableReason?.trim())
+  ).length >= Math.ceil(highItems.length * 0.8);
 
   if (isLoading || !incident) {
     return (
@@ -281,7 +304,7 @@ export default function EvidenceChecklist() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-700">
                   <AlertTriangle className="h-5 w-5" />
-                  Critical Evidence ({criticalItems.filter(i => i.completed).length}/{criticalItems.length})
+                  Critical Evidence ({criticalItems.filter(i => i.completed || (i.isUnavailable && i.unavailableReason?.trim())).length}/{criticalItems.length})
                 </CardTitle>
                 <CardDescription>
                   Required for accurate analysis
@@ -296,6 +319,7 @@ export default function EvidenceChecklist() {
                     onNotesUpdate={handleNotesUpdate}
                     onFileUpload={handleFileUpload}
                     onFileRemove={handleFileRemove}
+                    onUnavailabilityChange={handleUnavailabilityChange}
                   />
                 ))}
               </CardContent>
@@ -308,7 +332,7 @@ export default function EvidenceChecklist() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-orange-700">
                   <AlertTriangle className="h-5 w-5" />
-                  High Priority Evidence ({highItems.filter(i => i.completed).length}/{highItems.length})
+                  High Priority Evidence ({highItems.filter(i => i.completed || (i.isUnavailable && i.unavailableReason?.trim())).length}/{highItems.length})
                 </CardTitle>
                 <CardDescription>
                   Complete at least 80% for optimal analysis
@@ -323,6 +347,7 @@ export default function EvidenceChecklist() {
                     onNotesUpdate={handleNotesUpdate}
                     onFileUpload={handleFileUpload}
                     onFileRemove={handleFileRemove}
+                    onUnavailabilityChange={handleUnavailabilityChange}
                   />
                 ))}
               </CardContent>
@@ -335,7 +360,7 @@ export default function EvidenceChecklist() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-yellow-700">
                   <FileText className="h-5 w-5" />
-                  Medium Priority Evidence ({mediumItems.filter(i => i.completed).length}/{mediumItems.length})
+                  Medium Priority Evidence ({mediumItems.filter(i => i.completed || (i.isUnavailable && i.unavailableReason?.trim())).length}/{mediumItems.length})
                 </CardTitle>
                 <CardDescription>
                   Helpful for comprehensive analysis
@@ -350,6 +375,7 @@ export default function EvidenceChecklist() {
                     onNotesUpdate={handleNotesUpdate}
                     onFileUpload={handleFileUpload}
                     onFileRemove={handleFileRemove}
+                    onUnavailabilityChange={handleUnavailabilityChange}
                   />
                 ))}
               </CardContent>
@@ -362,7 +388,7 @@ export default function EvidenceChecklist() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-green-700">
                   <FileText className="h-5 w-5" />
-                  Additional Evidence ({lowItems.filter(i => i.completed).length}/{lowItems.length})
+                  Additional Evidence ({lowItems.filter(i => i.completed || (i.isUnavailable && i.unavailableReason?.trim())).length}/{lowItems.length})
                 </CardTitle>
                 <CardDescription>
                   Optional but valuable context
@@ -377,6 +403,7 @@ export default function EvidenceChecklist() {
                     onNotesUpdate={handleNotesUpdate}
                     onFileUpload={handleFileUpload}
                     onFileRemove={handleFileRemove}
+                    onUnavailabilityChange={handleUnavailabilityChange}
                   />
                 ))}
               </CardContent>
@@ -416,7 +443,7 @@ export default function EvidenceChecklist() {
           <Alert className="mt-4 border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Requirements:</strong> Complete all Critical items and at least 80% of High priority items to proceed.
+              <strong>Requirements:</strong> Complete all Critical items and at least 80% of High priority items to proceed. Evidence can be completed by uploading files OR marking as unavailable with explanation.
             </AlertDescription>
           </Alert>
         )}
@@ -430,14 +457,18 @@ function EvidenceItemCard({
   onToggle, 
   onNotesUpdate,
   onFileUpload,
-  onFileRemove
+  onFileRemove,
+  onUnavailabilityChange
 }: { 
   item: EvidenceItem; 
   onToggle: (id: string, completed: boolean) => void;
   onNotesUpdate: (id: string, notes: string) => void;
   onFileUpload: (itemId: string, files: File[]) => void;
   onFileRemove: (itemId: string, fileIndex: number) => void;
+  onUnavailabilityChange: (itemId: string, isUnavailable: boolean, reason?: string) => void;
 }) {
+  const [unavailableReason, setUnavailableReason] = useState(item.unavailableReason || "");
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
@@ -452,15 +483,20 @@ function EvidenceItemCard({
       'image/*': ['.png', '.jpg', '.jpeg'],
       'text/plain': ['.txt']
     },
-    maxFiles: 5
+    maxFiles: 5,
+    disabled: item.isUnavailable
   });
   return (
-    <div className={`p-4 border rounded-lg ${item.completed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+    <div className={`p-4 border rounded-lg ${
+      item.isUnavailable ? 'bg-orange-50 border-orange-200' :
+      item.completed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+    }`}>
       <div className="flex items-start gap-3">
         <Checkbox
           checked={item.completed}
           onCheckedChange={(checked) => onToggle(item.id, !!checked)}
           className="mt-1"
+          disabled={item.isUnavailable}
         />
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
@@ -474,6 +510,11 @@ function EvidenceItemCard({
               <Badge variant="outline" className="text-xs">
                 <Brain className="h-3 w-3 mr-1" />
                 AI Generated
+              </Badge>
+            )}
+            {item.isUnavailable && (
+              <Badge variant="outline" className="bg-orange-100 border-orange-300 text-orange-800 text-xs">
+                Not Available
               </Badge>
             )}
           </div>
@@ -490,30 +531,77 @@ function EvidenceItemCard({
             </div>
           )}
 
-          {/* File Upload Zone */}
-          <div className="mb-3">
-            <Label className="text-xs font-medium">Upload Evidence Files</Label>
-            <div
-              {...getRootProps()}
-              className={`mt-1 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
-                isDragActive 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-gray-300 hover:border-primary/50'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-              <p className="text-xs text-gray-600">
-                {isDragActive ? 'Drop files here' : 'Drag files or click to browse'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                PDF, Excel, CSV, Images, Text files
-              </p>
+          {/* Evidence Not Available Option */}
+          <div className="mb-3 border rounded-lg p-3 bg-orange-50 border-orange-200">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id={`unavailable-${item.id}`}
+                checked={item.isUnavailable || false}
+                onCheckedChange={(checked) => {
+                  onUnavailabilityChange(item.id, checked as boolean, unavailableReason);
+                }}
+              />
+              <div className="flex-1">
+                <Label 
+                  htmlFor={`unavailable-${item.id}`} 
+                  className="text-xs font-medium cursor-pointer flex items-center gap-2"
+                >
+                  <AlertCircle className="h-3 w-3 text-orange-600" />
+                  This evidence is not available or accessible
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Check this if you cannot access this type of evidence due to system limitations, time constraints, or data availability
+                </p>
+                
+                {item.isUnavailable && (
+                  <div className="mt-2">
+                    <Label htmlFor={`reason-${item.id}`} className="text-xs font-medium">
+                      Why is this evidence unavailable? *
+                    </Label>
+                    <Textarea
+                      id={`reason-${item.id}`}
+                      placeholder="e.g., 'DCS system not recording vibration data', 'No maintenance logs available for this equipment', 'System shutdown - no trending data captured'..."
+                      value={unavailableReason}
+                      onChange={(e) => {
+                        setUnavailableReason(e.target.value);
+                        onUnavailabilityChange(item.id, true, e.target.value);
+                      }}
+                      className="mt-1 text-xs"
+                      rows={2}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Uploaded Files */}
-          {item.files && item.files.length > 0 && (
+          {/* File Upload Zone - Only show if evidence is available */}
+          {!item.isUnavailable && (
+            <div className="mb-3">
+              <Label className="text-xs font-medium">Upload Evidence Files</Label>
+              <div
+                {...getRootProps()}
+                className={`mt-1 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                  isDragActive 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-300 hover:border-primary/50'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                <p className="text-xs text-gray-600">
+                  {isDragActive ? 'Drop files here' : 'Drag files or click to browse'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  PDF, Excel, CSV, Images, Text files
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Uploaded Files - Only show if evidence is available */}
+          {!item.isUnavailable && item.files && item.files.length > 0 && (
             <div className="mb-3">
               <Label className="text-xs font-medium">Uploaded Files ({item.files.length})</Label>
               <div className="mt-1 space-y-1">
