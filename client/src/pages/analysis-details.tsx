@@ -31,8 +31,11 @@ import {
   User,
   Edit3,
   Save,
-  Shield
+  Shield,
+  GitBranch
 } from "lucide-react";
+import RCATreeVisualization from "@/components/rca-tree-visualization";
+import RCADiagramEngine from "@/components/rca-diagram-engine";
 
 export default function AnalysisDetails() {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -436,6 +439,58 @@ export default function AnalysisDetails() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* RCA Tree Tab */}
+        <TabsContent value="rca-tree" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5" />
+                RCA Tree Visualization
+              </CardTitle>
+              <p className="text-sm text-gray-600">Interactive root cause analysis tree with cause-and-effect relationships</p>
+            </CardHeader>
+            <CardContent>
+              {analysis ? (
+                <RCATreeVisualization analysis={analysis} />
+              ) : (
+                <div className="text-center py-8">
+                  <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No analysis data available for RCA Tree visualization</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Diagrams Tab */}
+        <TabsContent value="diagrams" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Interactive RCA Diagrams
+              </CardTitle>
+              <p className="text-sm text-gray-600">Multiple diagram views: Fault Tree, Fishbone, Timeline, and Bowtie analysis</p>
+            </CardHeader>
+            <CardContent>
+              {analysis ? (
+                <RCADiagramEngine 
+                  analysisData={analysis}
+                  investigationType="equipment_failure"
+                  onNodeUpdate={(nodeId, updates) => console.log('Node updated:', nodeId, updates)}
+                  onNodeAdd={(parentId, newNode) => console.log('Node added:', parentId, newNode)}
+                  onNodeDelete={(nodeId) => console.log('Node deleted:', nodeId)}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No analysis data available for diagram visualization</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Engineer Review Tab */}
