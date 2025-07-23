@@ -645,10 +645,10 @@ export default function IncidentReporting() {
                                           <>
                                             <button
                                               type="button"
-                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                              className={`px-3 py-2 text-xs rounded-md border-2 flex items-center gap-1 transition-all font-medium ${
                                                 currentConfidence === 'evidence' 
-                                                  ? 'bg-green-100 border-green-500 text-green-800' 
-                                                  : 'hover:bg-green-50 border-gray-300'
+                                                  ? 'bg-green-500 border-green-500 text-white shadow-md ring-2 ring-green-200' 
+                                                  : 'bg-white hover:bg-green-50 border-gray-300 text-gray-700 hover:border-green-300'
                                               }`}
                                               onClick={() => {
                                                 const currentData = form.getValues("timelineData") || {};
@@ -658,14 +658,14 @@ export default function IncidentReporting() {
                                                 });
                                               }}
                                             >
-                                              ✔️ Evidence
+                                              {currentConfidence === 'evidence' ? '✅' : '☐'} Evidence Backed
                                             </button>
                                             <button
                                               type="button"
-                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                              className={`px-3 py-2 text-xs rounded-md border-2 flex items-center gap-1 transition-all font-medium ${
                                                 currentConfidence === 'unknown' 
-                                                  ? 'bg-red-100 border-red-500 text-red-800' 
-                                                  : 'hover:bg-red-50 border-gray-300'
+                                                  ? 'bg-red-500 border-red-500 text-white shadow-md ring-2 ring-red-200' 
+                                                  : 'bg-white hover:bg-red-50 border-gray-300 text-gray-700 hover:border-red-300'
                                               }`}
                                               onClick={() => {
                                                 const currentData = form.getValues("timelineData") || {};
@@ -675,14 +675,14 @@ export default function IncidentReporting() {
                                                 });
                                               }}
                                             >
-                                              ❌ Not known
+                                              {currentConfidence === 'unknown' ? '❌' : '☐'} Not Known
                                             </button>
                                             <button
                                               type="button"
-                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                              className={`px-3 py-2 text-xs rounded-md border-2 flex items-center gap-1 transition-all font-medium ${
                                                 currentConfidence === 'estimated' 
-                                                  ? 'bg-yellow-100 border-yellow-500 text-yellow-800' 
-                                                  : 'hover:bg-yellow-50 border-gray-300'
+                                                  ? 'bg-yellow-500 border-yellow-500 text-white shadow-md ring-2 ring-yellow-200' 
+                                                  : 'bg-white hover:bg-yellow-50 border-gray-300 text-gray-700 hover:border-yellow-300'
                                               }`}
                                               onClick={() => {
                                                 const currentData = form.getValues("timelineData") || {};
@@ -692,7 +692,7 @@ export default function IncidentReporting() {
                                                 });
                                               }}
                                             >
-                                              🟡 Estimated
+                                              {currentConfidence === 'estimated' ? '🟡' : '☐'} Estimated
                                             </button>
                                           </>
                                         );
