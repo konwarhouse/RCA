@@ -2388,7 +2388,7 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
 async function generateUniversalTimelineQuestions(equipmentGroup: string, equipmentType: string, equipmentSubtype: string) {
   console.log(`[Universal Timeline] Generating timeline questions from Evidence Library for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
   
-  // Universal Timeline Anchors (Apply to All Equipment)
+  // Universal Timeline Anchors (Apply to All Equipment) - Enhanced with Confidence Tracking
   const universalQuestions = [
     {
       id: "timeline-universal-001",
@@ -2398,7 +2398,9 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       type: "datetime-local",
       required: true,
       purpose: "Timeline anchor - first detection",
-      sequenceOrder: 1
+      sequenceOrder: 1,
+      hasConfidenceField: true,
+      hasOptionalExplanation: true
     },
     {
       id: "timeline-universal-002", 
@@ -2408,7 +2410,9 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       type: "datetime-local",
       required: false,
       purpose: "System detection timing",
-      sequenceOrder: 2
+      sequenceOrder: 2,
+      hasConfidenceField: true,
+      hasOptionalExplanation: true
     },
     {
       id: "timeline-universal-003",
@@ -2418,7 +2422,9 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       type: "text",
       required: false,
       purpose: "Human response timing",
-      sequenceOrder: 3
+      sequenceOrder: 3,
+      hasConfidenceField: true,
+      hasOptionalExplanation: false // Already text field
     },
     {
       id: "timeline-universal-004",
@@ -2428,7 +2434,9 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       type: "datetime-local",
       required: true,
       purpose: "Primary failure timing",
-      sequenceOrder: 4
+      sequenceOrder: 4,
+      hasConfidenceField: true,
+      hasOptionalExplanation: true
     },
     {
       id: "timeline-universal-005",
@@ -2438,7 +2446,9 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       type: "datetime-local", 
       required: false,
       purpose: "Recovery timing",
-      sequenceOrder: 5
+      sequenceOrder: 5,
+      hasConfidenceField: true,
+      hasOptionalExplanation: true
     }
   ];
 
@@ -2449,76 +2459,115 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
     if (libraryEvidence.length > 0) {
       console.log(`[Universal Timeline] Found ${libraryEvidence.length} Evidence Library entries for timeline generation`);
       
-      // Generate equipment-specific timeline questions from Evidence Library
-      const equipmentSpecificQuestions = libraryEvidence.map((item: any, index: number) => {
+      // Generate equipment-specific timeline questions from Evidence Library with DEDUPLICATION
+      const equipmentSpecificQuestionsMap = new Map();
+      let sequenceCounter = 10;
+      
+      libraryEvidence.forEach((item: any, index: number) => {
         // Extract timeline-relevant information from Evidence Library fields
         const trendData = item.requiredTrendDataEvidence || '';
         const questions = item.aiOrInvestigatorQuestions || '';
         const failureMode = item.componentFailureMode || '';
         
-        // Build equipment-specific timeline questions based on failure modes and trend data
-        const timelineQuestions = [];
-        
-        // Generate timing questions based on trend data requirements
+        // Generate timing questions based on trend data requirements with DEDUPLICATION
         if (trendData.toLowerCase().includes('vibration')) {
-          timelineQuestions.push({
-            id: `timeline-equipment-vibration-${index}`,
-            category: "Equipment-Specific Timeline",
-            label: "Vibration spike time",
-            description: "When was abnormal vibration first detected?",
-            type: "datetime-local",
-            required: false,
-            purpose: "Link to shaft/bearing issues",
-            equipmentContext: `${equipmentType} vibration monitoring`,
-            sequenceOrder: 10 + index
-          });
+          const key = `vibration-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+          if (!equipmentSpecificQuestionsMap.has(key)) {
+            equipmentSpecificQuestionsMap.set(key, {
+              id: `timeline-equipment-vibration`,
+              category: "Equipment-Specific Timeline",
+              label: "Vibration spike time",
+              description: "When was abnormal vibration first detected?",
+              type: "datetime-local",
+              required: false,
+              purpose: "Link to shaft/bearing issues",
+              equipmentContext: `${equipmentType} vibration monitoring`,
+              sequenceOrder: sequenceCounter++,
+              hasConfidenceField: true,
+              hasOptionalExplanation: true
+            });
+          }
         }
         
         if (trendData.toLowerCase().includes('pressure')) {
-          timelineQuestions.push({
-            id: `timeline-equipment-pressure-${index}`,
-            category: "Equipment-Specific Timeline", 
-            label: "Pressure deviation time",
-            description: "When did pressure readings become abnormal?",
-            type: "datetime-local",
-            required: false,
-            purpose: "Detect process parameter changes",
-            equipmentContext: `${equipmentType} pressure monitoring`,
-            sequenceOrder: 11 + index
-          });
+          const key = `pressure-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+          if (!equipmentSpecificQuestionsMap.has(key)) {
+            equipmentSpecificQuestionsMap.set(key, {
+              id: `timeline-equipment-pressure`,
+              category: "Equipment-Specific Timeline", 
+              label: "Pressure deviation time",
+              description: "When did pressure readings become abnormal?",
+              type: "datetime-local",
+              required: false,
+              purpose: "Detect process parameter changes",
+              equipmentContext: `${equipmentType} pressure monitoring`,
+              sequenceOrder: sequenceCounter++,
+              hasConfidenceField: true,
+              hasOptionalExplanation: true
+            });
+          }
         }
         
         if (trendData.toLowerCase().includes('temperature')) {
-          timelineQuestions.push({
-            id: `timeline-equipment-temperature-${index}`,
-            category: "Equipment-Specific Timeline",
-            label: "Temperature spike time", 
-            description: "When was abnormal temperature detected?",
-            type: "datetime-local",
-            required: false,
-            purpose: "Thermal failure detection",
-            equipmentContext: `${equipmentType} temperature monitoring`,
-            sequenceOrder: 12 + index
-          });
+          const key = `temperature-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+          if (!equipmentSpecificQuestionsMap.has(key)) {
+            equipmentSpecificQuestionsMap.set(key, {
+              id: `timeline-equipment-temperature`,
+              category: "Equipment-Specific Timeline",
+              label: "Temperature deviation time", 
+              description: "When did temperature readings become abnormal?",
+              type: "datetime-local",
+              required: false,
+              purpose: "Thermal failure detection",
+              equipmentContext: `${equipmentType} temperature monitoring`,
+              sequenceOrder: sequenceCounter++,
+              hasConfidenceField: true,
+              hasOptionalExplanation: true
+            });
+          }
         }
         
-        // Add failure-mode-specific timing questions
+        // Add failure-mode-specific timing questions with DEDUPLICATION
         if (failureMode.toLowerCase().includes('seal')) {
-          timelineQuestions.push({
-            id: `timeline-equipment-seal-${index}`,
-            category: "Equipment-Specific Timeline",
-            label: "Seal leak observation time",
-            description: "When was seal leakage first observed?", 
-            type: "datetime-local",
-            required: false,
-            purpose: "Link to seal degradation timeline",
-            equipmentContext: `${equipmentType} seal monitoring`,
-            sequenceOrder: 13 + index
-          });
+          const key = `seal-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+          if (!equipmentSpecificQuestionsMap.has(key)) {
+            equipmentSpecificQuestionsMap.set(key, {
+              id: `timeline-equipment-seal`,
+              category: "Equipment-Specific Timeline",
+              label: "Seal leak observation time",
+              description: "When was seal leakage first observed?", 
+              type: "datetime-local",
+              required: false,
+              purpose: "Seal integrity timeline",
+              equipmentContext: `${equipmentType} seal monitoring`,
+              sequenceOrder: sequenceCounter++,
+              hasConfidenceField: true,
+              hasOptionalExplanation: true
+            });
+          }
         }
         
-        return timelineQuestions;
-      }).flat().filter(Boolean);
+        if (failureMode.toLowerCase().includes('bearing')) {
+          const key = `bearing-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+          if (!equipmentSpecificQuestionsMap.has(key)) {
+            equipmentSpecificQuestionsMap.set(key, {
+              id: `timeline-equipment-bearing`,
+              category: "Equipment-Specific Timeline",
+              label: "Bearing distress time",
+              description: "When were bearing issues first detected?",
+              type: "datetime-local",
+              required: false,
+              purpose: "Bearing failure progression",
+              equipmentContext: `${equipmentType} bearing monitoring`,
+              sequenceOrder: sequenceCounter++,
+              hasConfidenceField: true,
+              hasOptionalExplanation: true
+            });
+          }
+        }
+      });
+      
+      const equipmentSpecificQuestions = Array.from(equipmentSpecificQuestionsMap.values());
       
       console.log(`[Universal Timeline] Generated ${equipmentSpecificQuestions.length} equipment-specific timeline questions`);
       

@@ -602,33 +602,105 @@ export default function IncidentReporting() {
                                 {question.label}
                                 {question.required && <span className="text-red-500 ml-1">*</span>}
                               </label>
-                              <p className="text-xs text-slate-500 mb-2">{question.description}</p>
-                              {question.type === "datetime-local" ? (
-                                <Input
-                                  type="datetime-local"
-                                  className="w-full"
-                                  onChange={(e) => {
-                                    const currentData = form.getValues("timelineData") || {};
-                                    form.setValue("timelineData", {
-                                      ...currentData,
-                                      [question.id]: e.target.value
-                                    });
-                                  }}
-                                />
-                              ) : (
-                                <Textarea
-                                  placeholder="Describe what happened and when..."
-                                  className="w-full"
-                                  onChange={(e) => {
-                                    const currentData = form.getValues("timelineData") || {};
-                                    form.setValue("timelineData", {
-                                      ...currentData,
-                                      [question.id]: e.target.value
-                                    });
-                                  }}
-                                />
-                              )}
-                              <p className="text-xs text-slate-400 mt-1">Purpose: {question.purpose}</p>
+                              <p className="text-xs text-slate-500 mb-3">{question.description}</p>
+                              
+                              <div className="space-y-3">
+                                {/* Main Input Field */}
+                                {question.type === "datetime-local" ? (
+                                  <Input
+                                    type="datetime-local"
+                                    className="w-full"
+                                    onChange={(e) => {
+                                      const currentData = form.getValues("timelineData") || {};
+                                      form.setValue("timelineData", {
+                                        ...currentData,
+                                        [question.id]: e.target.value
+                                      });
+                                    }}
+                                  />
+                                ) : (
+                                  <Textarea
+                                    placeholder="Describe what happened and when..."
+                                    className="w-full"
+                                    onChange={(e) => {
+                                      const currentData = form.getValues("timelineData") || {};
+                                      form.setValue("timelineData", {
+                                        ...currentData,
+                                        [question.id]: e.target.value
+                                      });
+                                    }}
+                                  />
+                                )}
+
+                                {/* Data Confidence Selector */}
+                                {question.hasConfidenceField && (
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-medium text-slate-600">Data Confidence:</span>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        className="px-2 py-1 text-xs rounded border hover:bg-green-50 flex items-center gap-1"
+                                        onClick={() => {
+                                          const currentData = form.getValues("timelineData") || {};
+                                          form.setValue("timelineData", {
+                                            ...currentData,
+                                            [`${question.id}_confidence`]: 'evidence'
+                                          });
+                                        }}
+                                      >
+                                        ✔️ Evidence
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="px-2 py-1 text-xs rounded border hover:bg-red-50 flex items-center gap-1"
+                                        onClick={() => {
+                                          const currentData = form.getValues("timelineData") || {};
+                                          form.setValue("timelineData", {
+                                            ...currentData,
+                                            [`${question.id}_confidence`]: 'unknown'
+                                          });
+                                        }}
+                                      >
+                                        ❌ Not known
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="px-2 py-1 text-xs rounded border hover:bg-yellow-50 flex items-center gap-1"
+                                        onClick={() => {
+                                          const currentData = form.getValues("timelineData") || {};
+                                          form.setValue("timelineData", {
+                                            ...currentData,
+                                            [`${question.id}_confidence`]: 'estimated'
+                                          });
+                                        }}
+                                      >
+                                        🟡 Estimated
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Optional Explanation Field */}
+                                {question.hasOptionalExplanation && (
+                                  <div>
+                                    <label className="text-xs text-slate-500 mb-1 block">Optional explanation or context:</label>
+                                    <Textarea
+                                      placeholder="Additional details, operator memory, DCS limitations..."
+                                      className="w-full text-sm"
+                                      rows={2}
+                                      onChange={(e) => {
+                                        const currentData = form.getValues("timelineData") || {};
+                                        form.setValue("timelineData", {
+                                          ...currentData,
+                                          [`${question.id}_explanation`]: e.target.value
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <p className="text-xs text-slate-400 mt-2">Purpose: {question.purpose}</p>
                             </div>
                           ))}
                       </div>
@@ -647,19 +719,91 @@ export default function IncidentReporting() {
                                   {question.label}
                                   {question.required && <span className="text-red-500 ml-1">*</span>}
                                 </label>
-                                <p className="text-xs text-slate-500 mb-2">{question.description}</p>
-                                <Input
-                                  type="datetime-local"
-                                  className="w-full"
-                                  onChange={(e) => {
-                                    const currentData = form.getValues("timelineData") || {};
-                                    form.setValue("timelineData", {
-                                      ...currentData,
-                                      [question.id]: e.target.value
-                                    });
-                                  }}
-                                />
-                                <p className="text-xs text-blue-600 mt-1">
+                                <p className="text-xs text-slate-500 mb-3">{question.description}</p>
+                                
+                                <div className="space-y-3">
+                                  {/* Main Input Field */}
+                                  <Input
+                                    type="datetime-local"
+                                    className="w-full"
+                                    onChange={(e) => {
+                                      const currentData = form.getValues("timelineData") || {};
+                                      form.setValue("timelineData", {
+                                        ...currentData,
+                                        [question.id]: e.target.value
+                                      });
+                                    }}
+                                  />
+
+                                  {/* Data Confidence Selector */}
+                                  {question.hasConfidenceField && (
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-medium text-slate-600">Data Confidence:</span>
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          className="px-2 py-1 text-xs rounded border hover:bg-green-50 flex items-center gap-1"
+                                          onClick={() => {
+                                            const currentData = form.getValues("timelineData") || {};
+                                            form.setValue("timelineData", {
+                                              ...currentData,
+                                              [`${question.id}_confidence`]: 'evidence'
+                                            });
+                                          }}
+                                        >
+                                          ✔️ Evidence
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="px-2 py-1 text-xs rounded border hover:bg-red-50 flex items-center gap-1"
+                                          onClick={() => {
+                                            const currentData = form.getValues("timelineData") || {};
+                                            form.setValue("timelineData", {
+                                              ...currentData,
+                                              [`${question.id}_confidence`]: 'unknown'
+                                            });
+                                          }}
+                                        >
+                                          ❌ Not known
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="px-2 py-1 text-xs rounded border hover:bg-yellow-50 flex items-center gap-1"
+                                          onClick={() => {
+                                            const currentData = form.getValues("timelineData") || {};
+                                            form.setValue("timelineData", {
+                                              ...currentData,
+                                              [`${question.id}_confidence`]: 'estimated'
+                                            });
+                                          }}
+                                        >
+                                          🟡 Estimated
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Optional Explanation Field */}
+                                  {question.hasOptionalExplanation && (
+                                    <div>
+                                      <label className="text-xs text-slate-500 mb-1 block">Optional explanation or context:</label>
+                                      <Textarea
+                                        placeholder="Additional details, operator memory, DCS limitations..."
+                                        className="w-full text-sm"
+                                        rows={2}
+                                        onChange={(e) => {
+                                          const currentData = form.getValues("timelineData") || {};
+                                          form.setValue("timelineData", {
+                                            ...currentData,
+                                            [`${question.id}_explanation`]: e.target.value
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <p className="text-xs text-blue-600 mt-2">
                                   {question.equipmentContext} - {question.purpose}
                                 </p>
                               </div>
@@ -670,14 +814,21 @@ export default function IncidentReporting() {
 
                     <div className="bg-slate-100 rounded-lg p-4 mt-6">
                       <p className="text-sm text-slate-600">
-                        <strong>Timeline Analysis:</strong> The AI will use this structured data to:
+                        <strong>Enhanced Timeline Analysis:</strong> The AI will use this structured data to:
                       </p>
                       <ul className="text-xs text-slate-500 mt-2 space-y-1">
-                        <li>• Reconstruct the sequence of events</li>
+                        <li>• Reconstruct the sequence of events with confidence scoring</li>
                         <li>• Detect lead-lag relationships between symptoms and failures</li>
+                        <li>• Calculate timeline data quality and flag "Low Evidence Certainty"</li>
                         <li>• Disqualify failure modes that occurred after the primary event</li>
-                        <li>• Map evidence directly to the failure window</li>
+                        <li>• Track evidence quality: ✔️ Evidence-backed, 🟡 Estimated, ❌ Unknown</li>
                       </ul>
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+                        <p className="text-xs text-blue-700">
+                          <strong>Data Confidence Impact:</strong> Questions marked as "Not known" or "Estimated" 
+                          will reduce AI confidence scores and flag investigation gaps that may require additional evidence collection.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}

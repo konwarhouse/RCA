@@ -16,15 +16,17 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### STRUCTURED TIMELINE SYSTEM IMPLEMENTATION COMPLETED - UNIVERSAL EVIDENCE LIBRARY INTELLIGENCE (LATEST ACHIEVEMENT)
+### ENHANCED TIMELINE SYSTEM WITH CONFIDENCE TRACKING COMPLETED - UNIVERSAL EVIDENCE LIBRARY INTELLIGENCE (LATEST ACHIEVEMENT)
 - **Date**: January 23, 2025 (Latest Major Feature)
-- **Feature Implemented**: Complete structured timeline question system with universal + equipment-specific intelligence
-- **Revolutionary Change**: Incident reporting now includes AI-powered timeline question generation based on Evidence Library data for precise sequence reconstruction
+- **Feature Implemented**: Complete structured timeline question system with deduplication, confidence tracking, and optional explanations
+- **Revolutionary Change**: Incident reporting now includes AI-powered timeline question generation with data quality assessment and evidence confidence scoring
 - **Technical Architecture**: 
-  - **Universal Timeline Anchors**: 5 mandatory timeline questions applied to all equipment types (first abnormality, alarm trigger, operator intervention, failure time, recovery time)
-  - **Equipment-Specific Timeline Logic**: Dynamic question generation based on Evidence Library `requiredTrendDataEvidence` and `componentFailureMode` fields
-  - **Zero Hardcoding Maintained**: All timeline intelligence generated from Evidence Library database queries - no equipment-specific hardcoded templates
-  - **Multi-Equipment Testing Success**: Validated across Centrifugal Pumps (13 questions), Heat Exchangers (7 questions), Induction Motors (6 questions)
+  - **Universal Timeline Anchors**: 5 mandatory timeline questions applied to all equipment types with confidence tracking (first abnormality, alarm trigger, operator intervention, failure time, recovery time)
+  - **Equipment-Specific Timeline Logic**: Dynamic question generation with DEDUPLICATION based on Equipment Group + Type + Subtype combinations
+  - **Data Confidence Tracking**: ✔️ Evidence-backed, ❌ Not known, 🟡 Estimated buttons for each question
+  - **Optional Text Explanations**: Flexible additional context fields for situations where exact data isn't available
+  - **Zero Hardcoding Maintained**: All timeline intelligence generated from Evidence Library database queries
+  - **Multi-Equipment Testing Success**: Validated across Centrifugal Pumps (9 questions, zero duplicates), Heat Exchangers (7 questions), Induction Motors (6 questions)
 - **Evidence Library Integration**:
   - **Keyword Analysis**: System analyzes trend data fields for vibration, pressure, temperature keywords to generate appropriate timing questions
   - **Failure Mode Intelligence**: Examines component failure modes (seal, bearing, shaft) to create failure-specific timeline questions
@@ -41,7 +43,7 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - **Heat Exchangers**: Generated pressure deviation time focusing on thermal/process parameters
   - **Motors**: Generated vibration spike time focusing on electrical/mechanical parameters
 - **Database Schema**: Added `timelineData` JSONB field to incidents table for structured timeline data storage
-- **Impact**: **STRUCTURED INCIDENT TIMELINE CAPTURE** - RCA investigations now capture precise timing relationships between symptoms and failures, enabling AI to reconstruct accurate event sequences and eliminate impossible failure modes based on temporal logic. System provides structured data foundation for professional timeline-based root cause analysis.
+- **Impact**: **ENTERPRISE-GRADE TIMELINE DATA CAPTURE WITH CONFIDENCE SCORING** - RCA investigations now capture precise timing relationships with data quality indicators, enabling AI to calculate confidence scores, flag "Low Evidence Certainty", and focus investigations on areas with reliable timeline data. System provides structured foundation for professional timeline-based root cause analysis with full evidence quality assessment.
 
 ### Previous: CRITICAL HARDCODING ELIMINATION COMPLETED - UNIVERSAL SYSTEM ACHIEVED
 - **Date**: January 23, 2025 (Latest Critical Achievement)
