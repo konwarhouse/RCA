@@ -637,45 +637,66 @@ export default function IncidentReporting() {
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs font-medium text-slate-600">Data Confidence:</span>
                                     <div className="flex gap-2">
-                                      <button
-                                        type="button"
-                                        className="px-2 py-1 text-xs rounded border hover:bg-green-50 flex items-center gap-1"
-                                        onClick={() => {
-                                          const currentData = form.getValues("timelineData") || {};
-                                          form.setValue("timelineData", {
-                                            ...currentData,
-                                            [`${question.id}_confidence`]: 'evidence'
-                                          });
-                                        }}
-                                      >
-                                        ✔️ Evidence
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="px-2 py-1 text-xs rounded border hover:bg-red-50 flex items-center gap-1"
-                                        onClick={() => {
-                                          const currentData = form.getValues("timelineData") || {};
-                                          form.setValue("timelineData", {
-                                            ...currentData,
-                                            [`${question.id}_confidence`]: 'unknown'
-                                          });
-                                        }}
-                                      >
-                                        ❌ Not known
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="px-2 py-1 text-xs rounded border hover:bg-yellow-50 flex items-center gap-1"
-                                        onClick={() => {
-                                          const currentData = form.getValues("timelineData") || {};
-                                          form.setValue("timelineData", {
-                                            ...currentData,
-                                            [`${question.id}_confidence`]: 'estimated'
-                                          });
-                                        }}
-                                      >
-                                        🟡 Estimated
-                                      </button>
+                                      {(() => {
+                                        const currentData = form.watch("timelineData") || {};
+                                        const currentConfidence = currentData[`${question.id}_confidence`];
+                                        
+                                        return (
+                                          <>
+                                            <button
+                                              type="button"
+                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                                currentConfidence === 'evidence' 
+                                                  ? 'bg-green-100 border-green-500 text-green-800' 
+                                                  : 'hover:bg-green-50 border-gray-300'
+                                              }`}
+                                              onClick={() => {
+                                                const currentData = form.getValues("timelineData") || {};
+                                                form.setValue("timelineData", {
+                                                  ...currentData,
+                                                  [`${question.id}_confidence`]: 'evidence'
+                                                });
+                                              }}
+                                            >
+                                              ✔️ Evidence
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                                currentConfidence === 'unknown' 
+                                                  ? 'bg-red-100 border-red-500 text-red-800' 
+                                                  : 'hover:bg-red-50 border-gray-300'
+                                              }`}
+                                              onClick={() => {
+                                                const currentData = form.getValues("timelineData") || {};
+                                                form.setValue("timelineData", {
+                                                  ...currentData,
+                                                  [`${question.id}_confidence`]: 'unknown'
+                                                });
+                                              }}
+                                            >
+                                              ❌ Not known
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className={`px-2 py-1 text-xs rounded border flex items-center gap-1 transition-colors ${
+                                                currentConfidence === 'estimated' 
+                                                  ? 'bg-yellow-100 border-yellow-500 text-yellow-800' 
+                                                  : 'hover:bg-yellow-50 border-gray-300'
+                                              }`}
+                                              onClick={() => {
+                                                const currentData = form.getValues("timelineData") || {};
+                                                form.setValue("timelineData", {
+                                                  ...currentData,
+                                                  [`${question.id}_confidence`]: 'estimated'
+                                                });
+                                              }}
+                                            >
+                                              🟡 Estimated
+                                            </button>
+                                          </>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 )}

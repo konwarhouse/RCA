@@ -36,7 +36,7 @@ export class EliminationEngine {
     );
 
     // Step 2: Analyze symptoms to detect confirmed failure patterns
-    const symptomAnalysis = this.analyzeSymptoms(symptomDescription);
+    const symptomAnalysis = await this.analyzeSymptoms(symptomDescription);
     console.log(`[Elimination Engine] Detected symptoms:`, symptomAnalysis.detectedSymptoms);
 
     // Step 3: Apply elimination logic based on confirmed failures
@@ -65,7 +65,7 @@ export class EliminationEngine {
   /**
    * Universal symptom analysis - detects failure patterns from any description
    */
-  private static analyzeSymptoms(symptomDescription: string): SymptomAnalysis {
+  private static async analyzeSymptoms(symptomDescription: string): Promise<SymptomAnalysis> {
     // CRITICAL FIX: Handle undefined/null symptom descriptions
     if (!symptomDescription || typeof symptomDescription !== 'string') {
       console.log(`[Elimination Engine] Warning: Invalid symptom description received: ${symptomDescription}`);
@@ -82,15 +82,15 @@ export class EliminationEngine {
     let primaryFailureMode: string | null = null;
 
     // UNIVERSAL EVIDENCE LIBRARY-DRIVEN PATTERN DETECTION - NO HARDCODING!
-    const { storage } = await import("./storage");
+    const { investigationStorage } = await import("./storage");
     
     // Get ALL failure patterns from Evidence Library dynamically
     try {
-      const allEvidenceEntries = await storage.searchEvidenceLibrary('');
+      const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
       const failurePatterns = new Map();
       
       // Build universal patterns from Evidence Library data
-      allEvidenceEntries.forEach(entry => {
+      allEvidenceEntries.forEach((entry: any) => {
         const mode = entry.componentFailureMode || '';
         const questions = entry.aiOrInvestigatorQuestions || '';
         const symptoms = entry.faultSignaturePattern || '';
@@ -133,7 +133,7 @@ export class EliminationEngine {
       });
       
       // Detect symptoms using Evidence Library patterns
-      for (const [failureMode, pattern] of failurePatterns.entries()) {
+      for (const [failureMode, pattern] of Array.from(failurePatterns.entries())) {
         for (const keyword of pattern.keywords) {
           if (text.toLowerCase().includes(keyword)) {
             detectedSymptoms.push(failureMode);
@@ -172,7 +172,7 @@ export class EliminationEngine {
     }
 
     return {
-      detectedSymptoms: [...new Set(detectedSymptoms)], // Remove duplicates
+      detectedSymptoms: Array.from(new Set(detectedSymptoms)), // Remove duplicates
       severityLevel,
       primaryFailureMode
     };
@@ -290,7 +290,7 @@ export class EliminationEngine {
     });
 
     // Generate category-specific questions
-    for (const [category, failureModes] of failureCategories.entries()) {
+    for (const [category, failureModes] of Array.from(failureCategories.entries())) {
       const categoryQuestions = this.generateCategoryQuestions(category, failureModes);
       questions.push(...categoryQuestions);
     }
