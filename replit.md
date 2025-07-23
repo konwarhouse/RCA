@@ -16,7 +16,29 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### CRITICAL HARDCODED TIMELINE LOGIC ELIMINATION COMPLETED (LATEST FIX)
+### EVIDENCE NOT AVAILABLE FUNCTIONALITY IMPLEMENTED (LATEST CRITICAL WORKFLOW FIX)
+- **Date**: January 23, 2025 (Latest Critical Workflow Enhancement)
+- **User Issue Resolved**: Evidence collection workflow was blocking investigations when required evidence types weren't accessible in real-world scenarios
+- **Critical Problem**: Users getting stuck when data systems down, historical records missing, or equipment inaccessible - unable to proceed to AI analysis
+- **Technical Solution**: 
+  - **Evidence Unavailability Checkbox**: Each evidence category now includes "Evidence not available or accessible" option
+  - **Documentation Requirement**: Mandatory text area for explaining why evidence unavailable (system limitations, time constraints, data availability)
+  - **Visual Status Indicators**: Orange styling and badges clearly show unavailable evidence status across UI
+  - **Flexible Progression Logic**: Modified canProceed logic to allow progression with documented unavailable evidence + reason
+  - **File Management**: Users can keep uploaded files even when marking category unavailable, with clear warnings
+- **Enhanced User Experience**:
+  - **Completion Calculation**: Updated to include documented unavailable evidence in completion percentage
+  - **Status Tracking**: Sidebar shows "Not Available" badges and "Documented" status for unavailable categories
+  - **Professional Documentation**: Unavailable evidence reasons included in final analysis for transparency
+  - **Requirements Alert**: Updated messaging to clarify "upload files OR mark unavailable with explanation"
+- **Real-World Impact**: 
+  - **Scenarios Supported**: DCS system failures, missing maintenance logs, equipment shutdowns, time-critical investigations
+  - **Workflow Continuity**: Investigations no longer stalled by missing evidence - can proceed with documented limitations
+  - **Professional Standards**: Maintains audit trail and transparency about evidence gaps
+- **Testing Results**: Users can now complete investigations even when critical evidence unavailable, with proper documentation
+- **Impact**: **CRITICAL WORKFLOW BLOCKER ELIMINATED** - Evidence collection now supports real-world industrial scenarios where some evidence types genuinely unavailable. System allows professional progression with documented limitations while maintaining investigation quality and auditability.
+
+### Previous: CRITICAL HARDCODED TIMELINE LOGIC ELIMINATION COMPLETED
 - **Date**: January 23, 2025 (Latest Critical Architecture Fix)
 - **User Requirement Validated**: Confirmed zero hardcoding principle - all logic must be "Group+Type+Subtype" Evidence Library-driven
 - **Critical Hardcoding Discovered**: Timeline generation had hardcoded keyword matching (vibration, pressure, temperature, seal, bearing) violating universal architecture
