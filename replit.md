@@ -16,7 +16,22 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### ENGINEER REVIEW & APPROVAL INTERFACE ADDED TO ANALYSIS DETAILS PAGE (LATEST)
+### EVIDENCE LIBRARY FORM-TABLE CONSISTENCY COMPLETELY RESOLVED (LATEST)
+- **Date**: January 23, 2025 (Latest Critical Data Integrity Fix)
+- **User Issue Resolved**: Evidence Library form had comprehensive enriched fields but table only showed basic fields - major inconsistency causing user confusion
+- **Critical Problem**: Form included 7 enriched fields (Primary Root Cause, Contributing Factor, Latent Cause, Detection Gap, Fault Signature Pattern, Applicable to Other Equipment, Evidence Gap Flag) plus 12 configurable intelligence fields, but table only displayed 4 basic fields
+- **Complete Resolution**: 
+  - **Database Schema Enhanced**: Added all missing enriched fields from CSV import to shared/schema.ts with proper column definitions
+  - **Form Schema Updated**: Added enriched fields to Zod validation schema and TypeScript interfaces for complete type safety
+  - **Table Structure Expanded**: Added all enriched fields and configurable intelligence fields to Evidence Library table with proper column headers
+  - **Visual Consistency**: Table now displays 19+ comprehensive columns matching exactly what's available in the form
+  - **Column Width Optimization**: Increased table width from 2500px to 4000px to accommodate all new columns with proper horizontal scrolling
+  - **Professional Display**: Added color-coded badges for Confidence Level, Diagnostic Value, Collection Cost, Evidence Priority for better visual organization
+- **Testing Results**: Evidence Library table now shows complete field coverage matching form capabilities
+- **Data Integrity Restored**: Form and table are now completely consistent - all fields available in form are visible in table
+- **Impact**: **COMPLETE EVIDENCE LIBRARY CONSISTENCY ACHIEVED** - Users can now see all comprehensive enriched fields and configurable intelligence fields in both form and table views. No more confusion about missing fields. Professional enterprise-grade data management interface with full transparency of all available evidence parameters.
+
+### Previous: ENGINEER REVIEW & APPROVAL INTERFACE ADDED TO ANALYSIS DETAILS PAGE
 - **Date**: January 23, 2025 (Latest Critical Feature Addition)
 - **User Request Fulfilled**: "How do I proceed to provide comment or approve it from this page as investigation engineer"
 - **Complete Engineer Review Interface**: Added comprehensive "Engineer Review" tab to analysis details page with full approval workflow

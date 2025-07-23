@@ -1482,8 +1482,8 @@ export default function EvidenceLibraryManagement() {
                   }
                   
                   .force-wide-table {
-                    min-width: 2500px !important;
-                    width: 2500px !important;
+                    min-width: 4000px !important;
+                    width: 4000px !important;
                   }
                   `}</style>
                   <Table className="force-wide-table">
@@ -1532,7 +1532,18 @@ export default function EvidenceLibraryManagement() {
                         <TableHead className="w-48 min-w-[12rem]">Root Cause Logic</TableHead>
                         <TableHead className="w-32 min-w-[8rem]">Primary Root Cause</TableHead>
                         <TableHead className="w-32 min-w-[8rem]">Contributing Factor</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Latent Cause</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Detection Gap</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Fault Signature Pattern</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Applicable to Other Equipment</TableHead>
+                        <TableHead className="w-32 min-w-[8rem]">Evidence Gap Flag</TableHead>
                         <TableHead className="w-24 min-w-[6rem]">Confidence Level</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Diagnostic Value</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Industry Relevance</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Evidence Priority</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Time to Collect</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Collection Cost</TableHead>
+                        <TableHead className="w-24 min-w-[6rem]">Analysis Complexity</TableHead>
                         <TableHead className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10 w-24">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1579,19 +1590,74 @@ export default function EvidenceLibraryManagement() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="truncate" title={item.relatedFailureModes || ''}>
-                              {item.relatedFailureModes || '-'}
+                            <div className="truncate" title={item.primaryRootCause || ''}>
+                              {item.primaryRootCause || '-'}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="truncate" title={item.prerequisiteEvidence || ''}>
-                              {item.prerequisiteEvidence || '-'}
+                            <div className="truncate" title={item.contributingFactor || ''}>
+                              {item.contributingFactor || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.latentCause || ''}>
+                              {item.latentCause || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.detectionGap || ''}>
+                              {item.detectionGap || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.faultSignaturePattern || ''}>
+                              {item.faultSignaturePattern || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.applicableToOtherEquipment || ''}>
+                              {item.applicableToOtherEquipment || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate" title={item.evidenceGapFlag || ''}>
+                              {item.evidenceGapFlag || '-'}
                             </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant={item.confidenceLevel === 'High' ? 'default' : item.confidenceLevel === 'Medium' ? 'secondary' : 'outline'}>
                               {item.confidenceLevel || 'Medium'}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.diagnosticValue === 'Critical' ? 'destructive' : item.diagnosticValue === 'Important' ? 'default' : 'secondary'}>
+                              {item.diagnosticValue || 'Important'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate">
+                              {item.industryRelevance || 'All'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {item.evidencePriority ? `P${item.evidencePriority}` : 'P3'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate">
+                              {item.timeToCollect || 'Days'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.collectionCost === 'High' || item.collectionCost === 'Very High' ? 'destructive' : 'secondary'}>
+                              {item.collectionCost || 'Medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate">
+                              {item.analysisComplexity || 'Moderate'}
+                            </div>
                           </TableCell>
                           <TableCell className="sticky right-0 bg-white dark:bg-gray-800 border-l z-10">
                             <div className="flex space-x-1">
