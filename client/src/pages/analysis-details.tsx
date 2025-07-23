@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   ArrowLeft, 
   FileText, 
@@ -20,7 +27,11 @@ import {
   BarChart3,
   Download,
   History,
-  Zap
+  Zap,
+  User,
+  Edit3,
+  Save,
+  Shield
 } from "lucide-react";
 
 export default function AnalysisDetails() {
@@ -143,12 +154,13 @@ export default function AnalysisDetails() {
 
       {/* Analysis Content */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="diagrams">Diagrams</TabsTrigger>
           <TabsTrigger value="rca-tree">RCA Tree</TabsTrigger>
           <TabsTrigger value="evidence">Evidence</TabsTrigger>
           <TabsTrigger value="reasoning">AI Reasoning</TabsTrigger>
+          <TabsTrigger value="engineer-review">Engineer Review</TabsTrigger>
           <TabsTrigger value="export">Export</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -426,6 +438,11 @@ export default function AnalysisDetails() {
           )}
         </TabsContent>
 
+        {/* Engineer Review Tab */}
+        <TabsContent value="engineer-review" className="space-y-6">
+          <EngineerReviewSection incident={incident} analysis={analysis} />
+        </TabsContent>
+
         {/* Export Tab */}
         <TabsContent value="export" className="space-y-6">
           <Card>
@@ -495,6 +512,254 @@ export default function AnalysisDetails() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Engineer Review Section Component
+function EngineerReviewSection({ incident, analysis }: { incident: any, analysis: any }) {
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [reviewData, setReviewData] = useState({
+    reviewerId: "",
+    reviewerName: "",
+    reviewDate: new Date().toISOString(),
+    approved: false,
+    comments: "",
+    additionalFindings: "",
+    signoffRequired: false
+  });
+
+  // Submit engineer review mutation
+  const submitReviewMutation = useMutation({
+    mutationFn: async (reviewData: any) => {
+      return apiRequest(`/api/incidents/${incident.id}/engineer-review`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...reviewData,
+          workflowStatus: reviewData.approved ? "finalized" : "under_review"
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Review Submitted",
+        description: reviewData.approved ? "Investigation approved and finalized." : "Review comments saved.",
+      });
+      setIsEditing(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to submit review: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!reviewData.reviewerName || !reviewData.reviewerId) {
+      toast({
+        title: "Required Fields",
+        description: "Please provide reviewer name and ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+    submitReviewMutation.mutate(reviewData);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Review Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Engineer Review & Approval
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Investigation Status: {incident.workflowStatus === 'finalized' ? 'Approved' : 'Pending Review'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={incident.workflowStatus === 'finalized' ? 'default' : 'secondary'}>
+                {incident.workflowStatus === 'finalized' ? 'Finalized' : 'Needs Review'}
+              </Badge>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(!isEditing)}
+                className="flex items-center gap-2"
+              >
+                <Edit3 className="h-4 w-4" />
+                {isEditing ? "View Mode" : "Review Mode"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Review Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Investigation Review</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Provide professional engineering review and approval for this RCA investigation
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Reviewer Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Reviewer Name</Label>
+              <Input
+                value={reviewData.reviewerName}
+                onChange={(e) => setReviewData(prev => ({ ...prev, reviewerName: e.target.value }))}
+                disabled={!isEditing}
+                placeholder="Enter your full name"
+              />
+            </div>
+            <div>
+              <Label>Reviewer ID / License</Label>
+              <Input
+                value={reviewData.reviewerId}
+                onChange={(e) => setReviewData(prev => ({ ...prev, reviewerId: e.target.value }))}
+                disabled={!isEditing}
+                placeholder="Engineer ID or License #"
+              />
+            </div>
+          </div>
+
+          {/* Analysis Summary for Review */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-semibold mb-3">AI Analysis Summary</h4>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Confidence:</span>
+                <p className="font-medium">{analysis.overallConfidence}%</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Failure Mode:</span>
+                <p className="font-medium">{analysis.failureMode}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Severity:</span>
+                <p className="font-medium">{analysis.severity}</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-gray-600">Root Causes:</span>
+              <ul className="list-disc list-inside mt-1">
+                {analysis.rootCauses?.slice(0, 3).map((cause: any, index: number) => (
+                  <li key={index} className="text-sm">{cause.description} ({cause.confidence}%)</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Review Comments */}
+          <div>
+            <Label>Review Comments & Professional Assessment</Label>
+            <Textarea
+              placeholder="Provide detailed engineering review of the AI analysis, evidence quality, methodology, and conclusions..."
+              value={reviewData.comments}
+              onChange={(e) => setReviewData(prev => ({ ...prev, comments: e.target.value }))}
+              disabled={!isEditing}
+              rows={4}
+              className="mt-2"
+            />
+          </div>
+
+          {/* Additional Findings */}
+          <div>
+            <Label>Additional Engineering Findings</Label>
+            <Textarea
+              placeholder="Any additional findings, observations, or recommendations not captured by the AI analysis..."
+              value={reviewData.additionalFindings}
+              onChange={(e) => setReviewData(prev => ({ ...prev, additionalFindings: e.target.value }))}
+              disabled={!isEditing}
+              rows={3}
+              className="mt-2"
+            />
+          </div>
+
+          {/* Approval Section */}
+          {isEditing && (
+            <div className="border-t pt-6">
+              <h4 className="font-semibold mb-4">Final Approval</h4>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="approved"
+                    checked={reviewData.approved}
+                    onCheckedChange={(checked) => setReviewData(prev => ({ ...prev, approved: !!checked }))}
+                  />
+                  <Label htmlFor="approved" className="font-medium">
+                    I approve this RCA investigation and findings
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="signoff"
+                    checked={reviewData.signoffRequired}
+                    onCheckedChange={(checked) => setReviewData(prev => ({ ...prev, signoffRequired: !!checked }))}
+                  />
+                  <Label htmlFor="signoff">
+                    Additional management signoff required
+                  </Label>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitReviewMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {submitReviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Current Review Status */}
+          {incident.engineerReview && !isEditing && (
+            <div className="border-t pt-6">
+              <h4 className="font-semibold mb-4">Current Review Status</h4>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4" />
+                  <span className="font-medium">Reviewed by: {incident.engineerReview.reviewerName}</span>
+                </div>
+                <p className="text-sm text-gray-700 mb-2">{incident.engineerReview.comments}</p>
+                {incident.engineerReview.additionalFindings && (
+                  <p className="text-sm text-gray-700 mb-2">
+                    <strong>Additional findings:</strong> {incident.engineerReview.additionalFindings}
+                  </p>
+                )}
+                <div className="flex items-center gap-4 text-sm">
+                  <Badge variant={incident.engineerReview.approved ? 'default' : 'secondary'}>
+                    {incident.engineerReview.approved ? 'Approved' : 'Under Review'}
+                  </Badge>
+                  <span className="text-gray-600">
+                    Reviewed: {new Date(incident.engineerReview.reviewDate).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
