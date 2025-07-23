@@ -1631,6 +1631,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to test elimination logic
+  app.post("/api/debug-elimination", async (req, res) => {
+    try {
+      const { equipmentGroup, equipmentType, equipmentSubtype, symptoms } = req.body;
+      
+      console.log(`[Debug] Testing elimination for: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
+      console.log(`[Debug] Detected symptoms:`, symptoms);
+      
+      // Get Evidence Library entries for this equipment
+      const evidenceEntries = await investigationStorage.searchEvidenceLibraryByEquipment(
+        equipmentGroup, equipmentType, equipmentSubtype
+      );
+      
+      const eliminationResults = [];
+      
+      for (const entry of evidenceEntries) {
+        if (entry.eliminatedIfTheseFailuresConfirmed && entry.whyItGetsEliminated) {
+          const triggers = entry.eliminatedIfTheseFailuresConfirmed
+            .split(',')
+            .map(t => t.trim().toLowerCase());
+            
+          console.log(`[Debug] Checking ${entry.componentFailureMode} - Triggers: [${triggers.join(', ')}]`);
+          
+          let matches = [];
+          for (const symptom of symptoms) {
+            for (const trigger of triggers) {
+              if (trigger.includes(symptom.toLowerCase()) || symptom.toLowerCase().includes(trigger)) {
+                matches.push({ symptom, trigger });
+              }
+            }
+          }
+          
+          eliminationResults.push({
+            failureMode: entry.componentFailureMode,
+            eliminationTriggers: triggers,
+            detectedMatches: matches,
+            shouldEliminate: matches.length > 0,
+            reason: entry.whyItGetsEliminated
+          });
+        }
+      }
+      
+      res.json({
+        equipmentCombination: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+        detectedSymptoms: symptoms,
+        eliminationResults: eliminationResults,
+        summary: {
+          totalFailureModes: evidenceEntries.length,
+          modesWithEliminationRules: eliminationResults.length,
+          modesEliminated: eliminationResults.filter(r => r.shouldEliminate).length
+        }
+      });
+      
+    } catch (error) {
+      console.error("[Debug] Elimination test error:", error);
+      res.status(500).json({ message: "Debug test failed: " + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

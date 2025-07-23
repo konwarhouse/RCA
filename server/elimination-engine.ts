@@ -204,25 +204,20 @@ export class EliminationEngine {
           .split(',')
           .map(trigger => trigger.trim().toLowerCase());
 
-        // Check if any detected symptoms match elimination triggers
+        // UNIVERSAL ELIMINATION LOGIC - NO HARDCODED MAPPINGS!
+        // Check if any detected symptoms match elimination triggers from Evidence Library
         for (const symptom of symptomAnalysis.detectedSymptoms) {
-          const symptomMappings = {
-            'shaft_breakage': ['shaft breakage', 'shaft broke', 'shaft failure'],
-            'bearing_failure': ['bearing failure', 'bearing seized', 'bearing damage'],
-            'component_rupture': ['rupture', 'burst', 'catastrophic failure'],
-            'major_leak': ['major leak', 'significant leak'],
-            'overheating': ['overheating', 'thermal failure'],
-            'electrical_failure': ['electrical failure', 'winding failure']
-          };
-
-          const mappedTerms = symptomMappings[symptom] || [symptom.replace('_', ' ')];
+          // Create universal symptom matching terms dynamically
+          const symptomVariations = this.generateSymptomVariations(symptom);
           
-          for (const mappedTerm of mappedTerms) {
+          for (const variation of symptomVariations) {
             for (const trigger of eliminationTriggers) {
-              if (trigger.includes(mappedTerm) || mappedTerm.includes(trigger)) {
+              // Universal matching logic - case insensitive and flexible
+              if (this.isSymptomMatch(variation, trigger)) {
                 shouldEliminate = true;
                 eliminationReason = failureMode.whyItGetsEliminated;
                 eliminatedBy = symptom;
+                console.log(`[Universal Elimination] "${failureMode.componentFailureMode}" eliminated by confirmed "${symptom}" - Reason: ${eliminationReason}`);
                 break;
               }
             }
@@ -267,6 +262,89 @@ export class EliminationEngine {
     if (eliminationPercentage > 0) return 5;    // Minimal elimination
     
     return 0; // No elimination
+  }
+
+  /**
+   * Universal symptom variation generator - works for ANY failure mode
+   * Generates multiple linguistic variations of a symptom for matching
+   */
+  private static generateSymptomVariations(symptom: string): string[] {
+    const baseSymptom = symptom.toLowerCase().trim();
+    const variations = new Set<string>();
+    
+    // Add base symptom
+    variations.add(baseSymptom);
+    
+    // Add variations without underscores/dashes
+    variations.add(baseSymptom.replace(/[_-]/g, ' '));
+    variations.add(baseSymptom.replace(/[_-]/g, ''));
+    
+    // Add past tense variations dynamically
+    if (baseSymptom.endsWith('breakage')) {
+      variations.add(baseSymptom.replace('breakage', 'broke'));
+      variations.add(baseSymptom.replace('breakage', 'broken'));
+      variations.add(baseSymptom.replace('breakage', 'break'));
+    }
+    
+    if (baseSymptom.endsWith('failure')) {
+      variations.add(baseSymptom.replace('failure', 'failed'));
+      variations.add(baseSymptom.replace('failure', 'fail'));
+    }
+    
+    if (baseSymptom.endsWith('damage')) {
+      variations.add(baseSymptom.replace('damage', 'damaged'));
+    }
+    
+    if (baseSymptom.endsWith('leak')) {
+      variations.add(baseSymptom.replace('leak', 'leaking'));
+      variations.add(baseSymptom.replace('leak', 'leaked'));
+    }
+    
+    // Add component-specific variations
+    if (baseSymptom.includes('shaft')) {
+      variations.add(baseSymptom.replace('shaft', 'shaft'));
+      variations.add('shaft ' + baseSymptom.split(' ').slice(1).join(' '));
+    }
+    
+    if (baseSymptom.includes('bearing')) {
+      variations.add(baseSymptom.replace('bearing', 'bearing'));
+      variations.add('bearing ' + baseSymptom.split(' ').slice(1).join(' '));
+    }
+    
+    return Array.from(variations);
+  }
+
+  /**
+   * Universal symptom matching logic - fuzzy matching for Evidence Library terms
+   */
+  private static isSymptomMatch(symptomVariation: string, eliminationTrigger: string): boolean {
+    const symptom = symptomVariation.toLowerCase().trim();
+    const trigger = eliminationTrigger.toLowerCase().trim();
+    
+    // Exact match
+    if (symptom === trigger) return true;
+    
+    // Contains match (either direction)
+    if (symptom.includes(trigger) || trigger.includes(symptom)) return true;
+    
+    // Fuzzy match for similar terms (allows for slight differences)
+    const symptomWords = symptom.split(/\s+/);
+    const triggerWords = trigger.split(/\s+/);
+    
+    // Check if significant words overlap
+    let matchCount = 0;
+    for (const sWord of symptomWords) {
+      for (const tWord of triggerWords) {
+        if (sWord.length > 2 && tWord.length > 2) {
+          if (sWord === tWord || sWord.includes(tWord) || tWord.includes(sWord)) {
+            matchCount++;
+          }
+        }
+      }
+    }
+    
+    // Require at least 1 significant word match for multi-word terms
+    return matchCount > 0 && matchCount >= Math.min(symptomWords.length, triggerWords.length) * 0.5;
   }
 
   /**
