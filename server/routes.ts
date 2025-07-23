@@ -451,6 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const evidenceItems = await generateEliminationAwareEvidenceChecklist(
         equipmentGroup, 
         equipmentType, 
+        equipmentSubtype || '',
         symptomDescription, 
         eliminationResults
       );
@@ -1593,13 +1594,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 async function generateEliminationAwareEvidenceChecklist(
   equipmentGroup: string, 
   equipmentType: string, 
+  equipmentSubtype: string,
   symptoms: string, 
   eliminationResults: any
 ) {
   console.log(`[Enhanced Evidence] Generating elimination-aware checklist for ${equipmentType}`);
   
   // Get base equipment template
-  const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms);
+  const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms, equipmentSubtype);
   
   // UNIVERSAL ELIMINATION: Build evidence exclusion from Evidence Library data (NO HARDCODING!)
   const evidenceToExclude = new Set<string>();
@@ -2365,7 +2367,7 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
 }
 
 // Helper functions for evidence generation
-async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string) {
+async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string, equipmentSubtype?: string) {
   // Generate equipment-specific evidence checklist based on equipment type
   
   // UNIVERSAL EVIDENCE GENERATION: Build templates from Evidence Library (NO HARDCODING!)
@@ -3020,10 +3022,10 @@ async function generateFallbackAnalysis(equipmentGroup: string, equipmentType: s
           id: `rec-00${index + 1}`,
           title: `Address ${item.componentFailureMode}`,
           description: `${item.rootCauseLogic || 'Implement evidence-based solution'}. ${item.followupActions || 'Follow standard procedures'}.`,
-          priority: priorityMap[item.evidencePriority] || "Medium-term" as const,
+          priority: priorityText as const,
           category: item.equipmentGroup,
-          estimatedCost: costMap[item.collectionCost] || "$20,000",
-          timeframe: timeMap[item.timeToCollect] || "3-4 weeks",
+          estimatedCost: costText,
+          timeframe: timeText,
           responsible: item.analysisComplexity === "Expert Required" ? "Subject Matter Expert" : 
                       item.equipmentGroup === "Electrical" ? "Electrical Engineer" : "Maintenance Manager",
           preventsProbability: item.diagnosticValue === "Critical" ? 95 : 
