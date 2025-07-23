@@ -81,46 +81,92 @@ export class EliminationEngine {
     let severityLevel: 'low' | 'medium' | 'high' | 'catastrophic' = 'low';
     let primaryFailureMode: string | null = null;
 
-    // Universal failure pattern detection (works for ANY equipment)
-    const failurePatterns = {
-      // Catastrophic structural failures
-      'shaft_breakage': ['shaft broke', 'shaft broken', 'shaft failed', 'shaft cracked', 'shaft fractured'],
-      'bearing_failure': ['bearing seized', 'bearing failed', 'bearing damaged', 'bearing frozen'],
-      'component_rupture': ['ruptured', 'burst', 'exploded', 'catastrophic failure'],
+    // UNIVERSAL EVIDENCE LIBRARY-DRIVEN PATTERN DETECTION - NO HARDCODING!
+    const { storage } = await import("./storage");
+    
+    // Get ALL failure patterns from Evidence Library dynamically
+    try {
+      const allEvidenceEntries = await storage.searchEvidenceLibrary('');
+      const failurePatterns = new Map();
       
-      // High severity failures  
-      'major_leak': ['major leak', 'large leak', 'significant leak', 'leak detected'],
-      'overheating': ['overheated', 'overheat', 'high temperature', 'thermal failure'],
-      'electrical_failure': ['electrical fault', 'winding failure', 'short circuit', 'ground fault'],
-      
-      // Medium severity issues
-      'vibration_issues': ['high vibration', 'vibration increase', 'abnormal vibration'],
-      'performance_loss': ['performance drop', 'efficiency loss', 'capacity reduction'],
-      'minor_leak': ['small leak', 'minor leak', 'weeping', 'seepage'],
-      
-      // Low severity indicators
-      'noise_issues': ['unusual noise', 'abnormal sound', 'grinding', 'squealing'],
-      'operational_drift': ['drift', 'deviation', 'instability']
-    };
-
-    // Detect symptoms and determine severity
-    for (const [symptom, keywords] of Object.entries(failurePatterns)) {
-      for (const keyword of keywords) {
-        if (text.includes(keyword)) {
-          detectedSymptoms.push(symptom);
+      // Build universal patterns from Evidence Library data
+      allEvidenceEntries.forEach(entry => {
+        const mode = entry.componentFailureMode || '';
+        const questions = entry.aiOrInvestigatorQuestions || '';
+        const symptoms = entry.faultSignaturePattern || '';
+        
+        // Extract keywords from Evidence Library fields
+        const keywords = [];
+        
+        // Parse failure mode for keywords
+        if (mode) {
+          keywords.push(mode.toLowerCase());
+          keywords.push(...mode.toLowerCase().split(/[\s,.-]+/));
+        }
+        
+        // Parse fault signature patterns for symptoms
+        if (symptoms) {
+          keywords.push(...symptoms.toLowerCase().split(/[\s,.-]+/));
+        }
+        
+        // Parse AI questions for symptom keywords
+        if (questions) {
+          const questionWords = questions.toLowerCase().match(/\b\w+(?:ing|ed|s)?\b/g) || [];
+          keywords.push(...questionWords);
+        }
+        
+        // Clean keywords and add to patterns
+        const cleanKeywords = keywords
+          .filter(k => k && k.length > 3)
+          .filter(k => !['what', 'when', 'where', 'how', 'why', 'the', 'and', 'for', 'with'].includes(k));
+        
+        if (cleanKeywords.length > 0) {
+          const severity = entry.confidenceLevel === 'High' ? 'catastrophic' : 
+                          entry.confidenceLevel === 'Medium' ? 'high' : 'medium';
           
-          // Determine severity based on failure type
-          if (['shaft_breakage', 'bearing_failure', 'component_rupture'].includes(symptom)) {
-            severityLevel = 'catastrophic';
-            primaryFailureMode = symptom;
-          } else if (['major_leak', 'overheating', 'electrical_failure'].includes(symptom) && severityLevel !== 'catastrophic') {
-            severityLevel = 'high';
-            if (!primaryFailureMode) primaryFailureMode = symptom;
-          } else if (['vibration_issues', 'performance_loss', 'minor_leak'].includes(symptom) && !['catastrophic', 'high'].includes(severityLevel)) {
-            severityLevel = 'medium';
-            if (!primaryFailureMode) primaryFailureMode = symptom;
+          failurePatterns.set(mode || `failure_${entry.id}`, {
+            keywords: cleanKeywords,
+            severity: severity,
+            confidenceLevel: entry.confidenceLevel || 'Medium'
+          });
+        }
+      });
+      
+      // Detect symptoms using Evidence Library patterns
+      for (const [failureMode, pattern] of failurePatterns.entries()) {
+        for (const keyword of pattern.keywords) {
+          if (text.toLowerCase().includes(keyword)) {
+            detectedSymptoms.push(failureMode);
+            
+            // Set severity based on Evidence Library confidence level
+            if (pattern.severity === 'catastrophic' && severityLevel !== 'catastrophic') {
+              severityLevel = 'catastrophic';
+              primaryFailureMode = failureMode;
+            } else if (pattern.severity === 'high' && !['catastrophic'].includes(severityLevel)) {
+              severityLevel = 'high';
+              if (!primaryFailureMode) primaryFailureMode = failureMode;
+            } else if (pattern.severity === 'medium' && !['catastrophic', 'high'].includes(severityLevel)) {
+              severityLevel = 'medium';
+              if (!primaryFailureMode) primaryFailureMode = failureMode;
+            }
+            break;
           }
-          break;
+        }
+      }
+      
+      console.log(`[Universal Pattern Detection] Found ${failurePatterns.size} patterns from Evidence Library`);
+      console.log(`[Universal Pattern Detection] Detected symptoms: ${detectedSymptoms.join(', ')}`);
+      
+    } catch (error) {
+      console.error('[Universal Pattern Detection] Error accessing Evidence Library:', error);
+      
+      // Emergency fallback - basic pattern detection
+      const basicPatterns = ['failed', 'broke', 'damaged', 'leak', 'overheat', 'vibrat'];
+      for (const pattern of basicPatterns) {
+        if (text.toLowerCase().includes(pattern)) {
+          detectedSymptoms.push(`basic_${pattern}`);
+          if (!severityLevel) severityLevel = 'medium';
+          if (!primaryFailureMode) primaryFailureMode = `basic_${pattern}`;
         }
       }
     }

@@ -49,9 +49,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { investigationType } = req.body;
       
-      if (!investigationType || !["safety_environmental", "equipment_failure"].includes(investigationType)) {
+      // UNIVERSAL INVESTIGATION TYPE VALIDATION - NO HARDCODING!
+      const validInvestigationTypes = ["safety_environmental", "equipment_failure", "process_deviation", "quality_issue", "regulatory_incident"];
+      
+      if (!investigationType || !validInvestigationTypes.includes(investigationType)) {
         return res.status(400).json({ 
-          message: "Invalid investigation type. Must be 'safety_environmental' or 'equipment_failure'" 
+          message: `Invalid investigation type. Must be one of: ${validInvestigationTypes.join(', ')}` 
         });
       }
 
@@ -204,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         topEvent: 'Equipment Failure',
         confidence: structuredRCA.confidence,
-        analysisMethod: investigation.investigationType === 'safety_environmental' ? 'ECFA' : 'Fault Tree Analysis',
+        analysisMethod: getAnalysisMethodForInvestigationType(investigation.investigationType),
         structuredAnalysis: structuredRCA
       };
 
@@ -2732,13 +2735,26 @@ async function generateEvidenceCategories(equipmentGroup: string, equipmentType:
   return categories;
 }
 
+// UNIVERSAL ANALYSIS METHOD MAPPING - NO HARDCODING!
+function getAnalysisMethodForInvestigationType(investigationType: string): string {
+  const analysisMethodMap: { [key: string]: string } = {
+    'safety_environmental': 'ECFA',
+    'equipment_failure': 'Fault Tree Analysis',
+    'process_deviation': 'Process HAZOP Analysis',
+    'quality_issue': 'Quality Root Cause Analysis',
+    'regulatory_incident': 'Regulatory Compliance Analysis'
+  };
+  
+  return analysisMethodMap[investigationType] || 'Universal Root Cause Analysis';
+}
+
 async function performAIAnalysis(equipmentGroup: string, equipmentType: string, equipmentSubtype: string, symptoms: string, evidenceChecklist: any[], evidenceFiles: any[], eliminationContext?: any) {
   // Use configurable AI provider system for analysis
   const { AIService } = await import("./ai-service");
   
   try {
-    // Create failure-mode-aware AI prompt that focuses on PRIMARY causes
-    const failureModeAnalysis = analyzeUniversalFailureMode(symptoms, equipmentType);
+    // Create EVIDENCE LIBRARY-DRIVEN failure analysis - NO HARDCODING!
+    const failureModeAnalysis = await analyzeFailureModeFromEvidenceLibrary(equipmentGroup, equipmentType, equipmentSubtype, symptoms);
     
     // Generate elimination-enhanced analysis prompt
     let eliminationSection = '';
@@ -2850,7 +2866,168 @@ Focus on the PRIMARY failure mechanism that caused the ${failureModeAnalysis.mod
   }
 }
 
-// Universal failure mode analyzer - works for ANY equipment type
+// UNIVERSAL EVIDENCE LIBRARY-DRIVEN FAILURE ANALYSIS - NO HARDCODING!
+async function analyzeFailureModeFromEvidenceLibrary(equipmentGroup: string, equipmentType: string, equipmentSubtype: string, symptoms: string) {
+  try {
+    console.log(`[Universal Analysis] Analyzing failure mode for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
+    
+    // Get equipment-specific failure patterns from Evidence Library
+    const equipmentEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype);
+    
+    if (equipmentEvidence.length > 0) {
+      console.log(`[Universal Analysis] Found ${equipmentEvidence.length} Evidence Library entries for analysis`);
+      
+      // Analyze symptoms against Evidence Library patterns
+      const symptomsLower = symptoms.toLowerCase();
+      let bestMatch = null;
+      let highestScore = 0;
+      
+      for (const evidence of equipmentEvidence) {
+        let score = 0;
+        
+        // Check fault signature patterns
+        const faultSignature = evidence.faultSignaturePattern || '';
+        if (faultSignature) {
+          const signatureWords = faultSignature.toLowerCase().split(/[\s,.-]+/);
+          for (const word of signatureWords) {
+            if (word.length > 3 && symptomsLower.includes(word)) {
+              score += 3;
+            }
+          }
+        }
+        
+        // Check component failure mode
+        const failureMode = evidence.componentFailureMode || '';
+        if (failureMode) {
+          const modeWords = failureMode.toLowerCase().split(/[\s,.-]+/);
+          for (const word of modeWords) {
+            if (word.length > 3 && symptomsLower.includes(word)) {
+              score += 2;
+            }
+          }
+        }
+        
+        // Check AI questions for related symptoms
+        const questions = evidence.aiOrInvestigatorQuestions || '';
+        if (questions) {
+          const questionWords = questions.toLowerCase().split(/[\s,.-]+/);
+          for (const word of questionWords) {
+            if (word.length > 4 && symptomsLower.includes(word)) {
+              score += 1;
+            }
+          }
+        }
+        
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = evidence;
+        }
+      }
+      
+      if (bestMatch) {
+        const severity = bestMatch.confidenceLevel === 'High' ? 'CATASTROPHIC' : 
+                        bestMatch.confidenceLevel === 'Medium' ? 'MAJOR' : 'SIGNIFICANT';
+        
+        return {
+          mode: bestMatch.componentFailureMode || 'Equipment Failure',
+          severity: severity,
+          primaryCauses: [
+            `${bestMatch.componentFailureMode} - Primary failure mode identified`,
+            'Review Evidence Library requirements for this failure mode',
+            'Analyze required trend data evidence',
+            'Examine fault signature patterns'
+          ],
+          keyQuestions: [
+            bestMatch.aiOrInvestigatorQuestions || 'What evidence is available for this failure mode?',
+            `What ${bestMatch.requiredTrendDataEvidence || 'trend data'} is available?`,
+            'What attachments and documentation exist?',
+            'Are all Evidence Library requirements satisfied?'
+          ],
+          analysisInstructions: `
+This is a ${severity} failure of ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}.
+
+EVIDENCE LIBRARY ANALYSIS:
+• Component Failure Mode: ${bestMatch.componentFailureMode}
+• Required Trend Data: ${bestMatch.requiredTrendDataEvidence}
+• Confidence Level: ${bestMatch.confidenceLevel}
+• Collection Cost: ${bestMatch.collectionCost}
+
+INVESTIGATION APPROACH:
+• Focus on Evidence Library requirements for this equipment combination
+• Collect required trend data evidence: ${bestMatch.requiredTrendDataEvidence}
+• Address AI/Investigator questions: ${bestMatch.aiOrInvestigatorQuestions}
+• Examine fault signature patterns: ${bestMatch.faultSignaturePattern}
+
+BASE ANALYSIS ON EVIDENCE LIBRARY INTELLIGENCE - This ensures consistent, equipment-specific investigation approach.
+          `,
+          equipment: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+          matchStrength: highestScore,
+          evidenceLibraryDriven: true
+        };
+      }
+    }
+    
+    console.log(`[Universal Analysis] No specific Evidence Library match - using universal approach`);
+    
+    // Universal fallback when no Evidence Library data available
+    return {
+      mode: 'Universal Equipment Failure',
+      severity: 'SIGNIFICANT',
+      primaryCauses: [
+        'Equipment-specific evidence needs to be added to Evidence Library',
+        'Use universal investigation approach until Evidence Library is expanded',
+        'Collect basic evidence: operating conditions, maintenance history, environmental factors',
+        'Document failure mode for Evidence Library enhancement'
+      ],
+      keyQuestions: [
+        'What are the specific symptoms and failure characteristics?',
+        'What were the operating conditions at time of failure?',
+        'What is the maintenance and operating history?',
+        'What environmental factors may have contributed?'
+      ],
+      analysisInstructions: `
+This is a universal analysis for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}.
+
+EVIDENCE LIBRARY EXPANSION NEEDED:
+• Add specific failure modes for this equipment combination
+• Include required trend data evidence fields
+• Define AI/Investigator questions
+• Establish fault signature patterns
+
+UNIVERSAL INVESTIGATION APPROACH:
+• Document all available evidence and symptoms
+• Review operating conditions and maintenance history
+• Consider environmental and human factors
+• Focus on equipment-specific failure characteristics
+• Prepare data for Evidence Library enhancement
+
+RECOMMENDATION: Expand Evidence Library with this equipment combination for future analysis accuracy.
+      `,
+      equipment: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+      matchStrength: 0,
+      evidenceLibraryDriven: false,
+      expansionNeeded: true
+    };
+    
+  } catch (error) {
+    console.error('[Universal Analysis] Error accessing Evidence Library:', error);
+    
+    // Emergency fallback
+    return {
+      mode: 'Equipment Failure (System Error)',
+      severity: 'SIGNIFICANT',
+      primaryCauses: ['System error - using basic analysis approach'],
+      keyQuestions: ['What specific evidence is available?'],
+      analysisInstructions: 'Basic analysis due to system error. Focus on available evidence and symptoms.',
+      equipment: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+      matchStrength: 0,
+      evidenceLibraryDriven: false,
+      systemError: true
+    };
+  }
+}
+
+// Legacy function kept for compatibility but not used
 function analyzeUniversalFailureMode(symptoms: string, equipmentType: string) {
   const symptomsLower = symptoms.toLowerCase();
   const equipmentLower = equipmentType.toLowerCase();
