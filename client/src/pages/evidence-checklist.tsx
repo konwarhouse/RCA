@@ -35,7 +35,7 @@ interface Incident {
   equipmentType: string;
   equipmentSubtype?: string; // FIXED: Added missing equipmentSubtype field
   equipmentId: string;
-  symptoms: string;
+  symptomDescription?: string; // FIXED: Use correct database field name
   currentStep: number;
   workflowStatus: string;
 }
@@ -73,7 +73,7 @@ export default function EvidenceChecklist() {
           equipmentGroup: incidentData.equipmentGroup,
           equipmentType: incidentData.equipmentType,
           equipmentSubtype: incidentData.equipmentSubtype, // FIXED: Added missing equipmentSubtype
-          symptoms: incidentData.symptoms,
+          symptoms: incidentData.symptomDescription || '', // FIXED: Use correct database field name
         }),
         headers: { 'Content-Type': 'application/json' },
       });

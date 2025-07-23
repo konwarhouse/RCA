@@ -66,6 +66,16 @@ export class EliminationEngine {
    * Universal symptom analysis - detects failure patterns from any description
    */
   private static analyzeSymptoms(symptomDescription: string): SymptomAnalysis {
+    // CRITICAL FIX: Handle undefined/null symptom descriptions
+    if (!symptomDescription || typeof symptomDescription !== 'string') {
+      console.log(`[Elimination Engine] Warning: Invalid symptom description received: ${symptomDescription}`);
+      return {
+        detectedSymptoms: [],
+        severityLevel: 'low',
+        primaryFailureMode: null
+      };
+    }
+    
     const text = symptomDescription.toLowerCase();
     const detectedSymptoms: string[] = [];
     let severityLevel: 'low' | 'medium' | 'high' | 'catastrophic' = 'low';

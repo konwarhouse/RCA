@@ -422,7 +422,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { equipmentGroup, equipmentType, equipmentSubtype, symptoms } = req.body;
 
       console.log(`[Evidence Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
-      console.log(`[Evidence Generation] Symptoms: ${symptoms}`);
+      console.log(`[Evidence Generation] Symptoms: ${symptoms || 'No symptoms provided'}`);
+
+      // CRITICAL FIX: Handle missing symptoms by fetching from incident record if needed
+      let symptomDescription = symptoms || '';
+      if (!symptomDescription) {
+        try {
+          const incident = await investigationStorage.getIncident(id);
+          symptomDescription = incident?.symptomDescription || incident?.description || '';
+          console.log(`[Evidence Generation] Fallback symptoms from incident: ${symptomDescription}`);
+        } catch (error) {
+          console.log(`[Evidence Generation] Could not fetch incident for symptoms fallback`);
+        }
+      }
 
       // Step 1: Get elimination results to filter evidence requirements
       const { EliminationEngine } = await import("./elimination-engine");
@@ -430,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipmentGroup, 
         equipmentType, 
         equipmentSubtype || '', 
-        symptoms
+        symptomDescription
       );
 
       console.log(`[Evidence Generation] Eliminated modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
@@ -439,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const evidenceItems = await generateEliminationAwareEvidenceChecklist(
         equipmentGroup, 
         equipmentType, 
-        symptoms, 
+        symptomDescription, 
         eliminationResults
       );
       
