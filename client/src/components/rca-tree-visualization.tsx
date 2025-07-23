@@ -7,6 +7,7 @@ import { GitBranch, ZoomIn, ZoomOut, RotateCcw, Download } from "lucide-react";
 
 interface RCATreeProps {
   analysis: any;
+  incident?: any;
   onEdit?: (analysis: any) => void;
 }
 
@@ -19,7 +20,7 @@ interface TreeNode {
   type: 'root' | 'primary' | 'secondary' | 'evidence';
 }
 
-export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps) {
+export default function RCATreeVisualization({ analysis, incident, onEdit }: RCATreeProps) {
   const [viewMode, setViewMode] = useState<'tree' | 'fishbone'>('tree');
   const [zoom, setZoom] = useState(1);
 
@@ -45,6 +46,9 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
     const equipmentContext = analysis.equipmentGroup && analysis.equipmentType 
       ? `${analysis.equipmentGroup} → ${analysis.equipmentType}${analysis.equipmentSubtype ? ` → ${analysis.equipmentSubtype}` : ''}`
       : 'Equipment Type Not Specified';
+      
+    // Universal equipment ID/tag extraction from incident data
+    const equipmentId = analysis.equipmentId || incident?.equipmentId || analysis.equipmentTag || 'ID Not Specified';
       
     const rootCause = analysis.failureMode || analysis.rootCause || 'Equipment Failure';
     
@@ -167,6 +171,7 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       type: 'root',
       children: contributingFactors,
       equipmentContext,
+      equipmentId,
       evidenceAdequacy,
       eliminatedCauses,
       originalSymptoms,
@@ -176,29 +181,62 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
 
   const treeData = generateTreeData();
 
-  // Render causal arrow connector (universal for all failure types)
-  const renderCausalArrow = (fromType: string, toType: string) => {
+  // Enhanced causal arrow connector with cause → effect indicators (universal for all failure types)
+  const renderCausalArrow = (fromType: string, toType: string, parentLabel?: string, childLabel?: string) => {
     const getArrowColor = () => {
-      if (fromType === 'root' && toType === 'primary') return 'text-red-500';
-      if (fromType === 'primary' && toType === 'secondary') return 'text-orange-500';
-      return 'text-blue-500';
+      if (fromType === 'root' && toType === 'primary') return 'text-red-600';
+      if (fromType === 'primary' && toType === 'secondary') return 'text-orange-600';
+      return 'text-blue-600';
+    };
+    
+    const getArrowLabel = () => {
+      if (fromType === 'root') return 'causes';
+      if (fromType === 'primary') return 'leads to';
+      return 'results in';
     };
     
     return (
-      <div className={`flex items-center justify-center my-2 ${getArrowColor()}`}>
-        <div className="text-lg">↓</div>
-        <span className="text-xs ml-1">leads to</span>
+      <div className={`flex items-center justify-center my-3 ${getArrowColor()}`}>
+        <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
+          <div className="text-lg font-bold">↓</div>
+          <span className="text-xs font-medium">{getArrowLabel()}</span>
+          <div className="text-lg font-bold">→</div>
+        </div>
       </div>
     );
   };
 
-  // Render tree node recursively with enhanced universal logic
+  // Enhanced tree node rendering with color coding and tooltips (universal logic)
   const renderTreeNode = (node: TreeNode, depth: number = 0, parentType?: string): JSX.Element => {
+    // Universal color coding system based on node type and confidence
     const getNodeColor = (type: string, confidence: number) => {
-      if (type === 'root') return 'bg-red-100 border-red-300 text-red-800';
-      if (type === 'primary') return confidence >= 80 ? 'bg-orange-100 border-orange-300 text-orange-800' : 'bg-yellow-100 border-yellow-300 text-yellow-800';
-      if (type === 'secondary') return 'bg-blue-100 border-blue-300 text-blue-800';
-      return 'bg-gray-100 border-gray-300 text-gray-800';
+      const baseColors = {
+        root: 'bg-red-50 border-red-400 text-red-900 shadow-red-100',
+        primary: 'bg-orange-50 border-orange-400 text-orange-900 shadow-orange-100', 
+        secondary: 'bg-blue-50 border-blue-400 text-blue-900 shadow-blue-100',
+        evidence: 'bg-green-50 border-green-400 text-green-900 shadow-green-100',
+        recommendation: 'bg-purple-50 border-purple-400 text-purple-900 shadow-purple-100'
+      };
+      
+      // Low confidence gets muted colors (universal rule)
+      if (confidence < 60) {
+        return baseColors[type as keyof typeof baseColors]?.replace('50', '25').replace('400', '300') || 'bg-gray-50 border-gray-300 text-gray-700';
+      }
+      
+      return baseColors[type as keyof typeof baseColors] || 'bg-gray-50 border-gray-400 text-gray-800';
+    };
+    
+    // Universal confidence explanation generator
+    const getConfidenceExplanation = (node: TreeNode) => {
+      const factors = [];
+      if (node.evidence && node.evidence.length > 0) factors.push(`${node.evidence.length} evidence item(s)`);
+      if (analysis?.crossMatchResults?.libraryMatches) factors.push('Library pattern match');
+      if (analysis?.eliminationResults?.eliminationReasons?.length) factors.push('Elimination logic applied');
+      if (node.confidence >= 80) factors.push('High data quality');
+      else if (node.confidence >= 60) factors.push('Moderate data quality');
+      else factors.push('Limited data available');
+      
+      return `Confidence ${node.confidence}% based on: ${factors.join(', ')}`;
     };
 
     return (
@@ -206,25 +244,40 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
         {/* Causal arrow from parent (universal logic) */}
         {parentType && depth > 0 && renderCausalArrow(parentType, node.type)}
         
-        <div className={`inline-block p-3 rounded-lg border-2 ${getNodeColor(node.type, node.confidence)} max-w-md`}>
-          <div className="flex items-center justify-between mb-1">
+        <div 
+          className={`inline-block p-4 rounded-lg border-2 shadow-lg ${getNodeColor(node.type, node.confidence)} max-w-md hover:shadow-xl transition-shadow cursor-help`}
+          title={getConfidenceExplanation(node)}
+        >
+          <div className="flex items-center justify-between mb-2">
             <h4 className="font-semibold text-sm">{node.label}</h4>
-            <Badge variant="outline" className="text-xs">
-              {node.confidence}%
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs font-medium">
+                {node.confidence}%
+              </Badge>
+              <div className="text-xs px-2 py-1 bg-white/70 rounded-full">
+                {node.type.charAt(0).toUpperCase() + node.type.slice(1)}
+              </div>
+            </div>
           </div>
+          
           {node.evidence && node.evidence.length > 0 && (
-            <div className="text-xs opacity-75">
+            <div className="text-xs opacity-90 bg-white/50 p-2 rounded border mb-2">
               <strong>Evidence:</strong> {node.evidence[0]}
+              {node.evidence.length > 1 && <span className="text-gray-600"> (+{node.evidence.length - 1} more)</span>}
             </div>
           )}
           
           {/* Show failure logic connection for root nodes */}
           {node.type === 'root' && node.children && node.children.length > 0 && (
-            <div className="text-xs mt-2 p-2 bg-white/50 rounded border">
+            <div className="text-xs mt-2 p-2 bg-white/70 rounded border border-dashed">
               <strong>Failure Logic:</strong> {node.children.length} contributing factor{node.children.length > 1 ? 's' : ''} identified
             </div>
           )}
+          
+          {/* Confidence explanation tooltip on hover */}
+          <div className="text-xs mt-1 opacity-60">
+            Hover for confidence explanation
+          </div>
         </div>
         
         {node.children && node.children.map(child => renderTreeNode(child, depth + 1, node.type))}
@@ -273,23 +326,57 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       <div className="bg-white border rounded-lg p-6 min-h-[400px] overflow-auto" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
         {viewMode === 'tree' ? (
           <div className="space-y-4">
-            {/* Enhanced header with equipment context and evidence adequacy */}
-            <div className="text-center mb-8">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Root Cause Analysis Tree</h3>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  <strong>Equipment:</strong> {treeData.equipmentContext || 'Equipment type not specified'} | 
-                  <strong> Analysis Confidence:</strong> {analysis?.overallConfidence || 0}%
-                </p>
-                <div className="flex justify-center items-center gap-4">
-                  <Badge variant={treeData.evidenceAdequacy >= 80 ? 'default' : treeData.evidenceAdequacy >= 60 ? 'secondary' : 'destructive'}>
-                    Evidence Adequacy: {treeData.evidenceAdequacy}%
+            {/* Enhanced header with equipment ID/type and comprehensive context */}
+            <div className="text-center mb-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Root Cause Analysis Tree</h3>
+              
+              {/* Equipment ID and Type Display (Universal) */}
+              <div className="bg-white p-4 rounded-lg border shadow-sm mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <strong className="text-blue-700">Equipment ID:</strong> 
+                    <span className="ml-2 font-mono bg-blue-50 px-2 py-1 rounded">{treeData.equipmentId}</span>
+                  </div>
+                  <div>
+                    <strong className="text-green-700">Equipment Type:</strong> 
+                    <span className="ml-2 text-green-800">{treeData.equipmentContext}</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-center">
+                  <strong className="text-purple-700">Analysis Confidence:</strong> 
+                  <span className="ml-2 text-purple-800 font-semibold">{analysis?.overallConfidence || 0}%</span>
+                </div>
+              </div>
+              
+              {/* Quality Indicators */}
+              <div className="flex justify-center items-center gap-4 flex-wrap">
+                <Badge variant={treeData.evidenceAdequacy >= 80 ? 'default' : treeData.evidenceAdequacy >= 60 ? 'secondary' : 'destructive'} className="text-sm">
+                  Evidence Quality: {treeData.evidenceAdequacy}%
+                </Badge>
+                {treeData.eliminatedCauses && treeData.eliminatedCauses.length > 0 && (
+                  <Badge variant="outline" className="text-sm">
+                    {treeData.eliminatedCauses.length} Causes Eliminated
                   </Badge>
-                  {treeData.eliminatedCauses && treeData.eliminatedCauses.length > 0 && (
-                    <Badge variant="outline">
-                      {treeData.eliminatedCauses.length} Causes Eliminated
-                    </Badge>
-                  )}
+                )}
+                
+                {/* Node Type Legend */}
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-red-200 border border-red-400 rounded"></div>
+                    <span>Root</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-orange-200 border border-orange-400 rounded"></div>
+                    <span>Primary</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-blue-200 border border-blue-400 rounded"></div>
+                    <span>Secondary</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-200 border border-green-400 rounded"></div>
+                    <span>Evidence</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -297,13 +384,21 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
             {/* Original symptoms and operating context (universal) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {treeData.originalSymptoms && treeData.originalSymptoms.length > 0 && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <h4 className="font-semibold text-sm text-blue-800 mb-2">🔧 Original Symptoms</h4>
-                  <ul className="text-xs text-blue-700 space-y-1">
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg border-2 border-blue-300 shadow-md">
+                  <h4 className="font-bold text-sm text-blue-900 mb-3 flex items-center gap-2">
+                    <span className="text-lg">🔍</span> Initial Symptoms
+                    <Badge variant="default" className="text-xs">Starting Point</Badge>
+                  </h4>
+                  <div className="space-y-2">
                     {treeData.originalSymptoms.map((symptom, index) => (
-                      <li key={index}>• {symptom}</li>
+                      <div key={index} className="flex items-center gap-2 bg-white p-2 rounded border border-blue-200">
+                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                          {index + 1}
+                        </div>
+                        <span className="text-xs font-medium text-blue-800">{symptom}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               
@@ -322,20 +417,32 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
             {/* Main RCA Tree */}
             {renderTreeNode(treeData)}
             
-            {/* Eliminated causes section (universal logic) */}
+            {/* Enhanced eliminated causes section with professional styling */}
             {treeData.eliminatedCauses && treeData.eliminatedCauses.length > 0 && (
-              <div className="mt-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-sm text-gray-800 mb-3">📉 Eliminated Causes</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="mt-8 bg-gradient-to-r from-gray-50 to-red-50 p-6 rounded-lg border-2 border-dashed border-gray-300">
+                <h4 className="font-semibold text-lg text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-red-500">❌</span> 
+                  Rejected/Eliminated Causes
+                  <Badge variant="outline" className="ml-2">{treeData.eliminatedCauses.length} eliminated</Badge>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {treeData.eliminatedCauses.map((cause, index) => (
-                    <div key={index} className="bg-white p-2 rounded border border-gray-300 opacity-60">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm line-through">{cause.label}</span>
-                        <Badge variant="outline" className="text-xs">Eliminated</Badge>
+                    <div key={index} className="bg-white/60 p-4 rounded-lg border-2 border-dashed border-gray-400 opacity-70 hover:opacity-90 transition-opacity">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                        </div>
+                        <span className="text-sm font-medium line-through text-gray-700">{cause.label}</span>
+                        <Badge variant="destructive" className="text-xs ml-auto">REJECTED</Badge>
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">{cause.evidence[0]}</div>
+                      <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded border-l-4 border-l-red-400 ml-7">
+                        <strong>Reason:</strong> {cause.evidence[0] || 'Engineering logic elimination'}
+                      </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-4 text-xs text-gray-600 text-center italic">
+                  These failure modes were systematically eliminated through engineering analysis and evidence review
                 </div>
               </div>
             )}

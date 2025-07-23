@@ -453,7 +453,7 @@ export default function AnalysisDetails() {
             </CardHeader>
             <CardContent>
               {analysis ? (
-                <RCATreeVisualization analysis={analysis} />
+                <RCATreeVisualization analysis={analysis} incident={incident} />
               ) : (
                 <div className="text-center py-8">
                   <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
