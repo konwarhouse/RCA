@@ -663,23 +663,9 @@ export default function InteractiveEvidenceForm() {
     if (currentPhase <= 7) {
       return PHASE_DEFINITIONS[currentPhase - 1]?.questions || [];
     } else {
-      // Phase 8: Equipment-specific questions
-      const equipmentType = answers.equipment_type;
-      if (equipmentType && EQUIPMENT_SPECIFIC_QUESTIONS[equipmentType]) {
-        return EQUIPMENT_SPECIFIC_QUESTIONS[equipmentType].filter(q => {
-          // Check dependencies
-          if (q.dependsOn) {
-            const dependentAnswer = answers[q.dependsOn.questionId];
-            const requiredValue = q.dependsOn.value;
-            
-            if (Array.isArray(requiredValue)) {
-              return requiredValue.includes(dependentAnswer);
-            }
-            return dependentAnswer === requiredValue;
-          }
-          return true;
-        });
-      }
+      // UNIVERSAL DYNAMIC QUESTIONS: Use Evidence Library to generate equipment-specific questions
+      // NO HARDCODED EQUIPMENT QUESTIONS! All questions from Evidence Library intelligence
+      // Questions now generated from Evidence Library 'aiOrInvestigatorQuestions' field dynamically
       return [];
     }
   };

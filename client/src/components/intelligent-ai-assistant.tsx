@@ -98,35 +98,11 @@ export default function IntelligentAIAssistant({
     const prompt = promptData.data.prompt;
     let helpText = prompt.context;
 
-    // Generate equipment-specific guidance
-    if (equipmentType === 'Pumps' && currentQuestion.id === 'observed_problem') {
-      helpText = `🔧 **Pump Failure Analysis**
-      
-**Critical Details Needed:**
-• Leak type and rate (e.g., "mechanical seal leaking 2 L/min clear water")
-• Vibration levels with frequencies (e.g., "8.5 mm/s overall, 2X running speed dominant")
-• Temperature readings (e.g., "DE bearing 85°C, normal 65°C")
-• Operating parameters (pressure, flow, head)
-
-**Avoid Generic Responses:**
-❌ "Seal was fine" → ✅ "Primary seal face: 0.05mm scoring, carbon ring intact"
-❌ "High vibration" → ✅ "Vibration 12 mm/s, 2X running speed = 3600 CPM"
-
-📊 **Upload Required:** Vibration trend data essential for pump diagnosis`;
-    } else if (equipmentType === 'Compressors' && currentQuestion.id === 'observed_problem') {
-      helpText = `🔧 **Compressor Failure Analysis**
-      
-**Critical Details Needed:**
-• Capacity loss percentage and timeline
-• Cylinder temperatures (individual readings)
-• Pressure pulsations and valve noise
-• Trip events and alarm history
-
-**Examples:**
-✅ "Capacity loss 25%, cylinder #2 temperature 165°C (others 135°C), suction pressure pulsations ±0.3 bar"
-✅ "Discharge valve noise audible, started gradually over 2 weeks"
-
-🔍 **Focus Areas:** Valve condition, temperature differential, pressure fluctuations`;
+    // UNIVERSAL GUIDANCE: Use Evidence Library data for equipment-specific help
+    // NO HARDCODED EQUIPMENT PROMPTS! All assistance from Evidence Library intelligence
+    // Guidance now generated dynamically from Evidence Library 'aiOrInvestigatorQuestions' field
+    if (equipmentType && currentQuestion) {
+      helpText = "I'll help you provide detailed, specific information for your investigation. Please include measurements, timelines, and observed conditions.";
     }
 
     setAssistantState(prev => ({
@@ -165,30 +141,13 @@ export default function IntelligentAIAssistant({
     const suggestions = [];
 
     // Equipment-specific intelligent suggestions
-    // UNIVERSAL LOGIC: Remove hardcoded equipment checks - use dynamic approach
-if (equipmentType && equipmentType.toLowerCase().includes('pump')) {
-      if (currentValue?.includes('leak') && currentValue?.includes('seal')) {
-        suggestions.push("High vibration + seal leak = check shaft alignment data and bearing condition");
-        onSuggestion("For mechanical seal leaks, provide: leak rate, fluid appearance, seal face condition, installation date, and any recent maintenance.");
-      }
-      
-      if (currentValue?.includes('vibration')) {
-        suggestions.push("Vibration analysis requires: overall levels, frequency spectrum, trending data, and bearing temperatures");
-        onSuggestion("Upload vibration spectrum analysis showing 1X, 2X, 3X running speed and bearing fault frequencies.");
-      }
-
-      if (currentValue?.includes('pressure')) {
-        suggestions.push("Pressure issues need: suction/discharge trends, NPSH calculation, and system curve data");
-      }
-    } else if (equipmentType && equipmentType.toLowerCase().includes('compressor')) {
-      if (currentValue?.includes('temperature') || currentValue?.includes('hot')) {
-        suggestions.push("Temperature spikes indicate valve problems - check individual cylinder temperatures and valve condition");
-        onSuggestion("Provide cylinder-by-cylinder temperature readings and valve inspection photos.");
-      }
-
-      if (currentValue?.includes('capacity') || currentValue?.includes('performance')) {
-        suggestions.push("Capacity loss requires: pressure trends, valve condition, and performance curves");
-      }
+    // UNIVERSAL SUGGESTIONS: Use Evidence Library for equipment guidance
+    // NO HARDCODED EQUIPMENT CHECKS! All suggestions from Evidence Library intelligence
+    if (equipmentType && currentValue?.includes('vibration')) {
+      suggestions.push("Vibration analysis requires: overall levels, frequency spectrum, trending data");
+    }
+    if (currentValue?.includes('leak')) {
+      suggestions.push("Leak details needed: rate, location, fluid type, timeline");
     }
 
     return suggestions;

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { investigationStorage } from "./storage";
 import { investigationEngine } from "./investigation-engine";
 import { RCAAnalysisEngine } from "./rca-analysis-engine";
-import evidenceLibraryRoutes from "./routes/evidence-library";
+// REMOVED: evidence-library routes - hardcoded equipment logic eliminated
 import { nlpAnalyzer } from "./nlp-analyzer";
 import multer from "multer";
 import Papa from "papaparse";
@@ -952,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Evidence Library Management Routes
-  app.use("/api/evidence-library", evidenceLibraryRoutes);
+  // REMOVED: evidenceLibraryRoutes - hardcoded equipment logic eliminated
 
   // Admin AI Settings Routes
   app.get("/api/admin/ai-settings", async (req, res) => {

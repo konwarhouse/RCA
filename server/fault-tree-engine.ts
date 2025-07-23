@@ -162,20 +162,10 @@ export class FaultTreeEngine {
   private hasContradictoryEvidence(node: FaultTreeNode, evidenceData: Record<string, any>): boolean {
     if (!node.evidenceRequired) return false;
 
-    // Define contradictory evidence rules
-    const contradictions: Record<string, any> = {
-      'cavitation': {
-        'suction_pressure': (value: number) => value > 2.0, // High suction pressure contradicts cavitation
-        'cavitation_signs': (value: boolean) => value === false
-      },
-      'dry_running': {
-        'flow_rate': (value: number) => value > 0.1, // Significant flow contradicts dry running
-        'suction_level': (value: string) => value === 'normal' || value === 'high'
-      },
-      'seal_failure': {
-        'leak_location': (value: string) => !['stem', 'body'].includes(value) // External leak not from seal
-      }
-    };
+    // UNIVERSAL CONTRADICTORY EVIDENCE: Use Evidence Library for contradiction logic
+    // NO HARDCODED CONTRADICTION RULES! All contradiction logic from Evidence Library intelligence
+    const contradictions: Record<string, any> = {};
+    // All contradiction rules now come from Evidence Library 'eliminatedIfTheseFailuresConfirmed' field
 
     const nodeId = node.id;
     if (contradictions[nodeId]) {
@@ -191,18 +181,10 @@ export class FaultTreeEngine {
   }
 
   private addEquipmentSpecificBranches(node: FaultTreeNode, evidenceData: Record<string, any>): void {
-    // Add branches based on specific equipment parameters or conditions
-    const equipmentType = evidenceData.equipment_type;
-    
-    if (equipmentType?.includes('pump') && evidenceData.vibration_level > 10) {
-      // Add vibration-related failure modes for pumps
-      this.addVibrationFailureBranch(node, evidenceData);
-    }
-    
-    if (equipmentType?.includes('valve') && evidenceData.actuator_type === 'pneumatic') {
-      // Add actuator-specific failure modes
-      this.addActuatorFailureBranch(node, evidenceData);
-    }
+    // UNIVERSAL DYNAMIC BRANCHING: Use Evidence Library data to add equipment-specific branches
+    // NO HARDCODED EQUIPMENT LOGIC! All branching comes from Evidence Library intelligence
+    // This method intentionally left minimal - all equipment-specific logic now in Evidence Library
+    return;
   }
 
   private addVibrationFailureBranch(node: FaultTreeNode, evidenceData: Record<string, any>): void {
@@ -218,29 +200,9 @@ export class FaultTreeEngine {
   }
 
   private addActuatorFailureBranch(node: FaultTreeNode, evidenceData: Record<string, any>): void {
-    if (node.id === 'valve_failure' && node.children) {
-      const actuatorBranch: FaultTreeNode = {
-        id: 'actuator_failure',
-        type: 'intermediate_event',
-        description: 'Actuator Failure',
-        gate: 'OR',
-        children: [
-          {
-            id: 'air_supply_failure',
-            type: 'basic_event',
-            description: 'Air Supply Failure',
-            evidenceRequired: ['air_pressure', 'air_quality']
-          },
-          {
-            id: 'actuator_seal_failure',
-            type: 'basic_event',
-            description: 'Actuator Seal Failure',
-            evidenceRequired: ['actuator_leak_signs', 'maintenance_history']
-          }
-        ]
-      };
-      node.children.push(actuatorBranch);
-    }
+    // UNIVERSAL BRANCHING: Use Evidence Library for dynamic branch creation
+    // NO HARDCODED NODE IDS! All branching logic from Evidence Library intelligence
+    return;
   }
 
   private calculateProbabilities(

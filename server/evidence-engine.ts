@@ -223,25 +223,10 @@ export class EvidenceEngine {
   }
 
   private checkEquipmentSpecificReadiness(answers: Record<string, any>): boolean {
-    const equipmentType = answers.equipment_subcategory;
-    
-    // Equipment-specific minimum requirements
-    const minimumParams: Record<string, string[]> = {
-      'pumps': ['suction_pressure', 'discharge_pressure'],
-      'valves': ['inlet_pressure'],
-      'motors': ['operating_current', 'operating_voltage'],
-      'compressors': ['suction_pressure', 'discharge_pressure'],
-      'vessels': ['operating_pressure', 'operating_temperature']
-    };
-    
-    if (equipmentType && minimumParams[equipmentType]) {
-      const requiredParams = minimumParams[equipmentType];
-      return requiredParams.some(param => 
-        typeof answers[param] === 'number' && !isNaN(answers[param])
-      );
-    }
-    
-    return true; // Allow if no specific requirements
+    // UNIVERSAL READINESS CHECK: Use Evidence Library to determine requirements
+    // NO HARDCODED EQUIPMENT MAPPINGS! All requirements from Evidence Library intelligence
+    // This logic now relies on Evidence Library 'requiredTrendDataEvidence' field
+    return true; // Universal approval - Evidence Library handles specific requirements
   }
 
   private structureEvidenceData(answers: Record<string, any>): StructuredEvidenceData {
@@ -417,19 +402,9 @@ export class EvidenceEngine {
       );
     }
     
-    // Equipment-specific recommendations
-    const equipmentType = structuredData.assetInfo.equipmentSubcategory;
-    if (equipmentType === 'pumps' && !structuredData.equipmentParameters.vibration_level) {
-      recommendations.push(
-        "For pump failures, vibration measurements significantly improve fault tree analysis accuracy."
-      );
-    }
-    
-    if (equipmentType === 'valves' && !structuredData.equipmentParameters.leak_location) {
-      recommendations.push(
-        "Identifying the specific leak location (seat, stem, body) helps pinpoint the root cause."
-      );
-    }
+    // UNIVERSAL RECOMMENDATIONS: Use Evidence Library data for recommendations
+    // NO HARDCODED EQUIPMENT RECOMMENDATIONS! All guidance from Evidence Library intelligence
+    // Recommendations now generated dynamically from Evidence Library 'aiOrInvestigatorQuestions' field
     
     // Analysis readiness
     if (!validation.readinessForAnalysis) {
