@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Upload, FileText, Camera, Download, CheckCircle, AlertTriangle, ChevronRight, Brain, X } from "lucide-react";
+import { Upload, FileText, Camera, Download, CheckCircle, AlertTriangle, ChevronRight, Brain, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useDropzone } from "react-dropzone";
@@ -34,6 +35,8 @@ interface EvidenceCategory {
   maxFiles: number;
   files: UploadedFile[];
   priority: "Critical" | "High" | "Medium" | "Low";
+  isUnavailable?: boolean;
+  unavailableReason?: string;
 }
 
 interface Incident {
@@ -142,13 +145,17 @@ export default function EvidenceCollection() {
     }
   }, [incident]);
 
-  // Calculate completion percentage
+  // Calculate completion percentage - includes evidence marked as unavailable with reasons
   useEffect(() => {
     if (Array.isArray(evidenceCategories) && evidenceCategories.length > 0) {
       const requiredCategories = evidenceCategories.filter(cat => cat.required);
-      const completedRequired = requiredCategories.filter(cat => cat.files.length > 0);
+      const completedRequired = requiredCategories.filter(cat => 
+        cat.files.length > 0 || (cat.isUnavailable && cat.unavailableReason?.trim())
+      );
       const optionalCategories = evidenceCategories.filter(cat => !cat.required);
-      const completedOptional = optionalCategories.filter(cat => cat.files.length > 0);
+      const completedOptional = optionalCategories.filter(cat => 
+        cat.files.length > 0 || (cat.isUnavailable && cat.unavailableReason?.trim())
+      );
       
       // 70% weight for required, 30% for optional
       const requiredScore = requiredCategories.length > 0 ? (completedRequired.length / requiredCategories.length) * 70 : 70;
@@ -175,7 +182,26 @@ export default function EvidenceCollection() {
     );
   };
 
-  const canProceed = evidenceCategories.filter(cat => cat.required).every(cat => cat.files.length > 0);
+  const handleUnavailabilityChange = (categoryId: string, isUnavailable: boolean, reason?: string) => {
+    setEvidenceCategories(prev => 
+      prev.map(cat => 
+        cat.id === categoryId 
+          ? { 
+              ...cat, 
+              isUnavailable, 
+              unavailableReason: reason || '',
+              // Clear files if marking as unavailable
+              files: isUnavailable ? [] : cat.files
+            }
+          : cat
+      )
+    );
+  };
+
+  // Updated logic: Allow progression if files uploaded OR evidence marked unavailable with reason
+  const canProceed = evidenceCategories.filter(cat => cat.required).every(cat => 
+    cat.files.length > 0 || (cat.isUnavailable && cat.unavailableReason?.trim())
+  );
 
   const handleProceedToAnalysis = () => {
     if (incidentId) {
@@ -267,11 +293,13 @@ export default function EvidenceCollection() {
                       activeCategory === category.id 
                         ? 'border-primary bg-primary/5' 
                         : 'border-border hover:border-primary/50'
-                    }`}
+                    } ${category.isUnavailable ? 'bg-orange-50 border-orange-200' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium text-sm">{category.name}</span>
-                      {category.files.length > 0 ? (
+                      {category.isUnavailable ? (
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                      ) : category.files.length > 0 ? (
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : category.required ? (
                         <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -286,8 +314,16 @@ export default function EvidenceCollection() {
                       >
                         {category.required ? "Required" : "Optional"}
                       </Badge>
+                      {category.isUnavailable && (
+                        <Badge variant="outline" className="text-xs bg-orange-100 border-orange-300">
+                          Not Available
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground">
-                        {category.files.length}/{category.maxFiles} files
+                        {category.isUnavailable 
+                          ? "Documented" 
+                          : `${category.files.length}/${category.maxFiles} files`
+                        }
                       </span>
                     </div>
                   </button>
@@ -308,13 +344,21 @@ export default function EvidenceCollection() {
                         <Badge variant={activeCategoryData.required ? "destructive" : "secondary"}>
                           {activeCategoryData.required ? "Required" : "Optional"}
                         </Badge>
+                        {activeCategoryData.isUnavailable && (
+                          <Badge variant="outline" className="bg-orange-100 border-orange-300 text-orange-800">
+                            Not Available
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>
                         {activeCategoryData.description}
                       </CardDescription>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {activeCategoryData.files.length} / {activeCategoryData.maxFiles} files
+                      {activeCategoryData.isUnavailable 
+                        ? "Evidence documented as unavailable" 
+                        : `${activeCategoryData.files.length} / ${activeCategoryData.maxFiles} files`
+                      }
                     </div>
                   </div>
                 </CardHeader>
@@ -324,6 +368,7 @@ export default function EvidenceCollection() {
                     onFileUpload={handleFileUpload}
                     onRemoveFile={handleRemoveFile}
                     isUploading={isUploading}
+                    onUnavailabilityChange={handleUnavailabilityChange}
                   />
                 </CardContent>
               </Card>
@@ -354,7 +399,7 @@ export default function EvidenceCollection() {
           <Alert className="mt-4 border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Requirements:</strong> Upload at least one file to each required evidence category to proceed.
+              <strong>Requirements:</strong> For each required evidence category, either upload files OR mark as unavailable with explanation.
             </AlertDescription>
           </Alert>
         )}
@@ -367,14 +412,17 @@ function EvidenceUploadZone({
   category, 
   onFileUpload, 
   onRemoveFile, 
-  isUploading 
+  isUploading,
+  onUnavailabilityChange
 }: { 
   category: EvidenceCategory;
   onFileUpload: (files: File[], categoryId: string, description?: string) => void;
   onRemoveFile: (categoryId: string, fileId: string) => void;
   isUploading: boolean;
+  onUnavailabilityChange: (categoryId: string, isUnavailable: boolean, reason?: string) => void;
 }) {
   const [fileDescription, setFileDescription] = useState("");
+  const [unavailableReason, setUnavailableReason] = useState(category.unavailableReason || "");
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
@@ -393,8 +441,53 @@ function EvidenceUploadZone({
 
   return (
     <div className="space-y-4">
-      {/* File Upload Area */}
-      {category.files.length < category.maxFiles && (
+      {/* Evidence Not Available Option */}
+      <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
+        <div className="flex items-start space-x-3">
+          <Checkbox
+            id={`unavailable-${category.id}`}
+            checked={category.isUnavailable || false}
+            onCheckedChange={(checked) => {
+              onUnavailabilityChange(category.id, checked as boolean, unavailableReason);
+            }}
+          />
+          <div className="flex-1">
+            <Label 
+              htmlFor={`unavailable-${category.id}`} 
+              className="text-sm font-medium cursor-pointer flex items-center gap-2"
+            >
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              This evidence is not available or accessible
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Check this if you cannot access this type of evidence due to system limitations, time constraints, or data availability
+            </p>
+            
+            {category.isUnavailable && (
+              <div className="mt-3">
+                <Label htmlFor={`reason-${category.id}`} className="text-sm font-medium">
+                  Why is this evidence unavailable? *
+                </Label>
+                <Textarea
+                  id={`reason-${category.id}`}
+                  placeholder="e.g., 'DCS system not recording vibration data', 'No maintenance logs available for this equipment', 'System shutdown - no trending data captured'..."
+                  value={unavailableReason}
+                  onChange={(e) => {
+                    setUnavailableReason(e.target.value);
+                    onUnavailabilityChange(category.id, true, e.target.value);
+                  }}
+                  className="mt-1"
+                  rows={2}
+                  required
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* File Upload Area - Only show if evidence is available */}
+      {!category.isUnavailable && category.files.length < category.maxFiles && (
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
@@ -419,8 +512,8 @@ function EvidenceUploadZone({
         </div>
       )}
 
-      {/* File Description */}
-      {category.files.length < category.maxFiles && (
+      {/* File Description - Only show if evidence is available */}
+      {!category.isUnavailable && category.files.length < category.maxFiles && (
         <div>
           <Label htmlFor="file-description" className="text-sm font-medium">
             Optional Description
@@ -436,14 +529,23 @@ function EvidenceUploadZone({
         </div>
       )}
 
-      {/* Uploaded Files */}
+      {/* Uploaded Files - Show even if marked unavailable to allow user to manage */}
       {category.files.length > 0 && (
         <div className="space-y-3">
-          <h4 className="font-medium text-sm">Uploaded Files</h4>
+          <h4 className="font-medium text-sm flex items-center gap-2">
+            Uploaded Files
+            {category.isUnavailable && (
+              <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300">
+                Files uploaded but evidence marked unavailable
+              </Badge>
+            )}
+          </h4>
           {category.files.map((file) => (
-            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200">
+            <div key={file.id} className={`flex items-center justify-between p-3 border rounded-lg ${
+              category.isUnavailable ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
+            }`}>
               <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-green-600" />
+                <FileText className={`h-5 w-5 ${category.isUnavailable ? 'text-amber-600' : 'text-green-600'}`} />
                 <div>
                   <p className="font-medium text-sm">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -470,6 +572,28 @@ function EvidenceUploadZone({
               </div>
             </div>
           ))}
+          {category.isUnavailable && (
+            <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+              <strong>Note:</strong> Evidence is marked as unavailable but files are still uploaded. 
+              You can remove files or uncheck "not available" to use uploaded evidence.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Unavailable Evidence Summary */}
+      {category.isUnavailable && category.unavailableReason && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-orange-800 mb-2 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Evidence Unavailability Documentation
+          </h4>
+          <p className="text-sm text-orange-700 mb-2">
+            <strong>Reason:</strong> {category.unavailableReason}
+          </p>
+          <p className="text-xs text-orange-600">
+            This documentation will be included in the final analysis to explain evidence limitations.
+          </p>
         </div>
       )}
 

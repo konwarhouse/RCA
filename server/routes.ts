@@ -179,11 +179,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { completeness, isValid } = await investigationStorage.validateEvidenceCompleteness(investigation.id);
       
+      // FLEXIBLE EVIDENCE VALIDATION: Allow progression with documented evidence gaps
       if (!isValid) {
-        return res.status(400).json({ 
-          message: "Evidence collection incomplete. Minimum 80% required.",
-          completeness 
-        });
+        // Check if user has documented evidence unavailability  
+        const evidenceData = investigation.evidenceData as any || {};
+        const unavailableCount = Object.keys(evidenceData).filter(key => 
+          key.includes('_unavailable') && evidenceData[key] === true
+        ).length;
+        
+        const documentedReasons = Object.keys(evidenceData).filter(key =>
+          key.includes('_unavailable_reason') && evidenceData[key]
+        ).length;
+        
+        // Allow progression if:
+        // 1. At least 60% evidence collected, OR
+        // 2. User documented why evidence is unavailable with reasons
+        const flexibleThreshold = completeness >= 60 || (unavailableCount > 0 && documentedReasons > 0);
+        
+        if (!flexibleThreshold) {
+          return res.status(400).json({ 
+            message: "Evidence collection incomplete. Either collect 60% of evidence OR document why evidence is unavailable.",
+            completeness,
+            availableOptions: [
+              "Upload available evidence files",
+              "Mark unavailable evidence with explanations", 
+              "Provide alternative evidence sources",
+              "Document evidence accessibility constraints"
+            ]
+          });
+        }
       }
 
       // Update status to processing
