@@ -415,14 +415,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate AI evidence checklist (Step 3)
+  // Generate AI evidence checklist (Step 3) - Enhanced with Elimination Logic
   app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { equipmentGroup, equipmentType, symptoms } = req.body;
+      const { equipmentGroup, equipmentType, equipmentSubtype, symptoms } = req.body;
 
-      // Generate equipment-specific evidence checklist using AI or library data
-      const evidenceItems = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms);
+      console.log(`[Evidence Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
+      console.log(`[Evidence Generation] Symptoms: ${symptoms}`);
+
+      // Step 1: Get elimination results to filter evidence requirements
+      const { EliminationEngine } = await import("./elimination-engine");
+      const eliminationResults = await EliminationEngine.performEliminationAnalysis(
+        equipmentGroup, 
+        equipmentType, 
+        equipmentSubtype || '', 
+        symptoms
+      );
+
+      console.log(`[Evidence Generation] Eliminated modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
+      
+      // Step 2: Generate elimination-aware evidence checklist
+      const evidenceItems = await generateEliminationAwareEvidenceChecklist(
+        equipmentGroup, 
+        equipmentType, 
+        symptoms, 
+        eliminationResults
+      );
       
       res.json({ evidenceItems });
     } catch (error) {
@@ -1556,6 +1575,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// ENHANCED: Elimination-Aware Evidence Checklist Generation
+async function generateEliminationAwareEvidenceChecklist(
+  equipmentGroup: string, 
+  equipmentType: string, 
+  symptoms: string, 
+  eliminationResults: any
+) {
+  console.log(`[Enhanced Evidence] Generating elimination-aware checklist for ${equipmentType}`);
+  
+  // Get base equipment template
+  const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms);
+  
+  // Create mapping of failure modes to evidence types that should be excluded
+  const evidenceExclusionMap = {
+    // Seal-related evidence exclusions
+    "Seal Leak": ["seal-inspection", "mechanical-seal", "seal-leak-rate", "seal-condition"],
+    "Mechanical Seal Failure": ["seal-inspection", "mechanical-seal", "seal-leak-rate", "seal-condition"],
+    
+    // Bearing-related evidence exclusions  
+    "Bearing Failure": ["bearing-vibration", "bearing-temperature", "bearing-condition", "lubrication-analysis"],
+    "Bearing Wear": ["bearing-vibration", "bearing-temperature", "bearing-condition", "lubrication-analysis"],
+    
+    // Impeller-related evidence exclusions
+    "Impeller Damage": ["impeller-inspection", "impeller-clearance", "flow-performance"],
+    "Impeller Cavitation": ["impeller-inspection", "npsh-analysis", "suction-conditions"],
+    
+    // Casing-related evidence exclusions
+    "Casing Crack": ["casing-inspection", "pressure-test", "structural-analysis"],
+    "Casing Failure": ["casing-inspection", "pressure-test", "structural-analysis"],
+    
+    // Motor-related evidence exclusions
+    "Motor Overload": ["motor-current", "power-analysis", "motor-temperature"],
+    "Motor Electrical Failure": ["motor-current", "power-analysis", "motor-temperature", "electrical-testing"],
+    
+    // Coupling-related evidence exclusions
+    "Key Shear": ["coupling-inspection", "key-analysis", "torque-measurement"],
+    "Coupling Failure": ["coupling-inspection", "coupling-alignment", "torque-measurement"]
+  };
+  
+  // Get list of evidence IDs to exclude based on eliminated failure modes
+  const evidenceToExclude = new Set<string>();
+  eliminationResults.eliminatedFailureModes.forEach((failureMode: string) => {
+    const exclusions = evidenceExclusionMap[failureMode] || [];
+    exclusions.forEach(evidenceId => evidenceToExclude.add(evidenceId));
+  });
+  
+  console.log(`[Enhanced Evidence] Excluding evidence types: [${Array.from(evidenceToExclude).join(', ')}]`);
+  
+  // Filter out eliminated evidence requirements
+  let filteredTemplate = baseTemplate.filter((evidence: any) => {
+    const isExcluded = evidenceToExclude.has(evidence.id);
+    if (isExcluded) {
+      console.log(`[Enhanced Evidence] ❌ Excluded: ${evidence.title} (${evidence.id})`);
+    } else {
+      console.log(`[Enhanced Evidence] ✅ Retained: ${evidence.title} (${evidence.id})`);
+    }
+    return !isExcluded;
+  });
+  
+  // If too many items were eliminated, ensure we have minimum evidence requirements
+  const criticalEvidence = filteredTemplate.filter((e: any) => e.priority === "Critical");
+  if (criticalEvidence.length === 0) {
+    console.log(`[Enhanced Evidence] ⚠️ No critical evidence remaining, adding essential vibration analysis`);
+    
+    // Add essential evidence that's always needed regardless of eliminations
+    filteredTemplate.unshift({
+      id: "essential-vibration",
+      category: "Essential Data", 
+      title: "Vibration Analysis Data",
+      description: "Essential vibration measurements for mechanical failure analysis",
+      priority: "Critical" as const,
+      required: true,
+      aiGenerated: true,
+      specificToEquipment: true,
+      examples: [
+        "Overall vibration levels",
+        "Frequency spectrum analysis",
+        "Trending data from monitoring system"
+      ],
+      completed: false
+    });
+  }
+  
+  // Add elimination context information
+  if (eliminationResults.eliminatedFailureModes.length > 0) {
+    filteredTemplate.push({
+      id: "elimination-summary",
+      category: "Analysis Context",
+      title: "Eliminated Failure Modes Documentation", 
+      description: `Professional elimination logic excluded ${eliminationResults.eliminatedFailureModes.length} failure modes from investigation`,
+      priority: "Medium" as const,
+      required: false,
+      aiGenerated: true,
+      specificToEquipment: false,
+      examples: [
+        `Eliminated: ${eliminationResults.eliminatedFailureModes.slice(0, 3).join(', ')}`,
+        `Reasoning: Engineering chain analysis`,
+        `Confidence boost: +${eliminationResults.confidenceBoost}%`
+      ],
+      completed: false
+    });
+  }
+  
+  console.log(`[Enhanced Evidence] Final checklist: ${filteredTemplate.length} items (${filteredTemplate.filter((e: any) => e.priority === 'Critical').length} critical)`);
+  
+  return filteredTemplate;
 }
 
 // Safe JSON parsing helper

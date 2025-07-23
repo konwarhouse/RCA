@@ -33,6 +33,7 @@ interface Incident {
   title: string;
   equipmentGroup: string;
   equipmentType: string;
+  equipmentSubtype?: string; // FIXED: Added missing equipmentSubtype field
   equipmentId: string;
   symptoms: string;
   currentStep: number;
@@ -61,14 +62,17 @@ export default function EvidenceChecklist() {
     enabled: !!incidentId,
   });
 
-  // Generate AI evidence checklist
+  // Generate AI evidence checklist - Enhanced with Elimination Logic
   const generateChecklistMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
+      console.log(`[Frontend Evidence] Requesting elimination-aware checklist for ${incidentData.equipmentGroup}→${incidentData.equipmentType}→${incidentData.equipmentSubtype || ''}`);
+      
       const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-checklist`, {
         method: 'POST',
         body: JSON.stringify({
           equipmentGroup: incidentData.equipmentGroup,
           equipmentType: incidentData.equipmentType,
+          equipmentSubtype: incidentData.equipmentSubtype, // FIXED: Added missing equipmentSubtype
           symptoms: incidentData.symptoms,
         }),
         headers: { 'Content-Type': 'application/json' },
