@@ -464,21 +464,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { equipmentGroup, equipmentType, equipmentSubtype, symptoms } = req.body;
+      
+      // UNIVERSAL FIX: Always fetch incident data for equipment details and symptoms
+      const incident = await investigationStorage.getIncident(id);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      // Extract equipment details from incident (not request body)
+      const equipmentGroup = incident.equipmentGroup;
+      const equipmentType = incident.equipmentType;
+      const equipmentSubtype = incident.equipmentSubtype;
+      const symptomDescription = incident.symptomDescription || incident.description || '';
 
       console.log(`[Evidence Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
-      console.log(`[Evidence Generation] Symptoms: ${symptoms || 'No symptoms provided'}`);
+      console.log(`[Evidence Generation] Symptoms: ${symptomDescription}`);
 
-      // CRITICAL FIX: Handle missing symptoms by fetching from incident record if needed
-      let symptomDescription = symptoms || '';
-      if (!symptomDescription) {
-        try {
-          const incident = await investigationStorage.getIncident(id);
-          symptomDescription = incident?.symptomDescription || incident?.description || '';
-          console.log(`[Evidence Generation] Fallback symptoms from incident: ${symptomDescription}`);
-        } catch (error) {
-          console.log(`[Evidence Generation] Could not fetch incident for symptoms fallback`);
-        }
+      // Validate that equipment details exist
+      if (!equipmentGroup || !equipmentType) {
+        return res.status(400).json({ 
+          message: "Equipment classification incomplete. Please complete equipment selection first." 
+        });
       }
 
       // Step 1: Get elimination results to filter evidence requirements
@@ -1738,28 +1744,19 @@ async function generateEliminationAwareEvidenceChecklist(
     }
   });
   
-  // If too many items were eliminated, ensure we have minimum evidence requirements
+  // UNIVERSAL LOGIC: No hardcoded fallbacks! 
+  // If no critical evidence remains after elimination, that's legitimate for equipment like tanks
   const criticalEvidence = filteredTemplate.filter((e: any) => e.priority === "Critical");
   if (criticalEvidence.length === 0) {
-    console.log(`[Enhanced Evidence] ⚠️ No critical evidence remaining, adding essential vibration analysis`);
+    console.log(`[Enhanced Evidence] ⚠️ No critical evidence remaining after elimination - legitimate for static equipment`);
     
-    // Add essential evidence that's always needed regardless of eliminations
-    filteredTemplate.unshift({
-      id: "essential-vibration",
-      category: "Essential Data", 
-      title: "Vibration Analysis Data",
-      description: "Essential vibration measurements for mechanical failure analysis",
-      priority: "Critical" as const,
-      required: true,
-      aiGenerated: true,
-      specificToEquipment: true,
-      examples: [
-        "Overall vibration levels",
-        "Frequency spectrum analysis",
-        "Trending data from monitoring system"
-      ],
-      completed: false
-    });
+    // Check if we have ANY evidence items left
+    if (filteredTemplate.length === 0) {
+      console.log(`[Enhanced Evidence] ⚠️ No evidence items remaining, using original Evidence Library requirements`);
+      // Fall back to original Evidence Library requirements without elimination
+      filteredTemplate = baseTemplate;
+    }
+    // DO NOT ADD HARDCODED VIBRATION ANALYSIS - Let elimination logic work naturally
   }
   
   // Add eliminated failure modes for reference (grayed out with tooltips)

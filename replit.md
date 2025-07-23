@@ -16,7 +16,24 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### EVIDENCE NOT AVAILABLE FUNCTIONALITY IMPLEMENTED (LATEST CRITICAL WORKFLOW FIX)
+### CRITICAL HARDCODED VIBRATION FALLBACK BUG COMPLETELY ELIMINATED (LATEST)
+- **Date**: January 23, 2025 (Latest Critical Architecture Fix)
+- **User Issue Resolved**: Tank leak was incorrectly generating vibration analysis requirements due to hardcoded fallback logic that violated universal architecture
+- **Root Cause**: Lines 1743-1763 in server/routes.ts contained hardcoded fallback that added "Vibration Analysis Data" whenever no critical evidence remained after elimination
+- **Critical Problem**: This hardcoding completely undermined the universal Evidence Library-driven architecture by applying vibration analysis to ALL equipment types including static equipment like tanks
+- **Technical Solution**: 
+  - **Eliminated Hardcoded Vibration Fallback**: Removed lines that unconditionally added vibration analysis when no critical evidence remained
+  - **Universal Logic Restored**: Modified logic to accept legitimate scenarios where static equipment has no critical evidence after elimination
+  - **Equipment Parameter Fix**: Fixed evidence generation route to properly extract equipment details from incident record instead of undefined request parameters
+  - **Legitimate Elimination Handling**: System now correctly handles cases where elimination logic removes inappropriate evidence requirements
+- **Confirmed Results**: 
+  - **Before**: Tank leak generated "Vibration Analysis Data" (inappropriate for static equipment)
+  - **After**: Tank leak generates only "Equipment Documentation" and "Roof Corrosion/Leak" evidence (appropriate for tanks)
+  - **Zero Hardcoding**: All evidence requirements now come exclusively from Evidence Library database queries
+- **Universal Architecture Preserved**: System maintains zero hardcoded equipment-specific logic, works for ANY equipment combination through Evidence Library intelligence
+- **Impact**: **UNIVERSAL ARCHITECTURE INTEGRITY RESTORED** - Platform now truly shows only equipment-appropriate evidence requirements without any hardcoded fallbacks. Tank leak investigations no longer incorrectly ask for vibration data, maintaining professional engineering standards.
+
+### Previous: EVIDENCE NOT AVAILABLE FUNCTIONALITY IMPLEMENTED
 - **Date**: January 23, 2025 (Latest Critical Workflow Enhancement)
 - **User Issue Resolved**: Evidence collection workflow was blocking investigations when required evidence types weren't accessible in real-world scenarios
 - **Critical Problem**: Users getting stuck when data systems down, historical records missing, or equipment inaccessible - unable to proceed to AI analysis
