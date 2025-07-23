@@ -752,18 +752,22 @@ export default function EvidenceLibraryManagement() {
 
         {/* Dialog for Adding/Editing Items */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>
+                      <DialogTitle className="text-xl font-bold text-center">
                         {selectedItem ? "Edit Evidence Item" : "Add Evidence Item"}
                       </DialogTitle>
+                      <div className="bg-blue-600 text-white p-3 rounded-lg mt-2 text-center">
+                        <p className="font-semibold">👇 SCROLL DOWN TO SEE FIELD EXPLANATIONS BELOW 👇</p>
+                        <p className="text-sm mt-1">Each field has detailed explanations and importance badges</p>
+                      </div>
                     </DialogHeader>
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                         
-                        {/* FIELD IMPORTANCE LEGEND - ALWAYS VISIBLE */}
-                        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-6 rounded-lg mb-6 border-2 border-blue-300 shadow-lg">
-                          <h3 className="text-xl font-bold mb-4 text-blue-800 dark:text-blue-300">📚 Field Importance & Usage Guide</h3>
+                        {/* FIELD IMPORTANCE LEGEND - ALWAYS VISIBLE AT TOP */}
+                        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-4 rounded-lg mb-4 border-2 border-blue-400 shadow-md sticky top-0 z-10">
+                          <h3 className="text-lg font-bold mb-3 text-blue-800 dark:text-blue-300">📚 FIELD IMPORTANCE GUIDE - PLEASE READ</h3>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                             <div className="space-y-2">
@@ -795,9 +799,12 @@ export default function EvidenceLibraryManagement() {
                             </div>
                           </div>
                           
-                          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-700">
-                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                              <strong>💡 Pro Tip:</strong> Look for colored badges and explanation boxes below each field for detailed usage guidance.
+                          <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded border-2 border-red-400 dark:border-red-600">
+                            <p className="text-sm text-red-800 dark:text-red-200 font-bold text-center">
+                              ⚠️ IMPORTANT: Every field below has detailed explanations with colored badges and purpose descriptions ⚠️
+                            </p>
+                            <p className="text-xs text-red-600 dark:text-red-300 text-center mt-1">
+                              Look for explanation boxes under each field
                             </p>
                           </div>
                         </div>
