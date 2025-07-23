@@ -493,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[Evidence Generation] Eliminated modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
       
       // Step 2: Generate elimination-aware evidence checklist
-      const evidenceItems = await generateEliminationAwareEvidenceChecklist(
+      const evidenceResult = await generateEliminationAwareEvidenceChecklist(
         equipmentGroup, 
         equipmentType, 
         equipmentSubtype || '',
@@ -501,7 +501,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eliminationResults
       );
       
-      res.json({ evidenceItems });
+      // Return structured response with active and eliminated evidence
+      res.json({
+        evidenceItems: evidenceResult.activeEvidence,
+        eliminatedEvidence: evidenceResult.eliminatedEvidence,
+        eliminationSummary: evidenceResult.eliminationSummary
+      });
     } catch (error) {
       console.error("[RCA] Error generating evidence checklist:", error);
       res.status(500).json({ message: "Failed to generate evidence checklist" });
@@ -1703,60 +1708,34 @@ async function generateEliminationAwareEvidenceChecklist(
   eliminationResults: any
 ) {
   console.log(`[Enhanced Evidence] Generating elimination-aware checklist for ${equipmentType}`);
+  console.log(`[Enhanced Evidence] Eliminated failure modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
   
   // Get base equipment template
   const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms, equipmentSubtype);
   
-  // UNIVERSAL ELIMINATION: Build evidence exclusion from Evidence Library data (NO HARDCODING!)
-  const evidenceToExclude = new Set<string>();
+  // CORRECT ELIMINATION LOGIC: Filter out evidence for eliminated failure modes
+  const eliminatedFailures = new Set(eliminationResults.eliminatedFailureModes.map((f: string) => f.toLowerCase()));
   
-  try {
-    // Get all failure modes from Evidence Library to build dynamic exclusion mapping
-    const allLibraryData = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, '');
-    
-    // Create dynamic exclusion mapping from Evidence Library eliminatedIfTheseFailuresConfirmed field
-    for (const failureMode of eliminationResults.eliminatedFailureModes) {
-      // Find library entries where this failure mode triggers elimination of other evidence
-      const relatedEntries = allLibraryData.filter((item: any) => {
-        const eliminationTriggers = item.eliminatedIfTheseFailuresConfirmed || '';
-        return eliminationTriggers.toLowerCase().includes(failureMode.toLowerCase());
-      });
-      
-      // Extract evidence codes that should be excluded when this failure mode is eliminated
-      relatedEntries.forEach((entry: any) => {
-        // Use the equipmentCode as evidence ID for exclusion
-        if (entry.equipmentCode) {
-          evidenceToExclude.add(entry.equipmentCode.toLowerCase());
-        }
-        
-        // Also parse any structured exclusion data if available
-        const exclusionReason = entry.whyItGetsEliminated || '';
-        if (exclusionReason.includes('evidence_exclude:')) {
-          const excludePattern = exclusionReason.match(/evidence_exclude:\[(.*?)\]/);
-          if (excludePattern) {
-            const evidenceIds = excludePattern[1].split(',').map(id => id.trim());
-            evidenceIds.forEach(id => evidenceToExclude.add(id));
-          }
-        }
-      });
-    }
-    
-    console.log(`[Universal Elimination] Dynamic exclusion built from Evidence Library: ${evidenceToExclude.size} evidence types to exclude`);
-  } catch (error) {
-    console.error('[Universal Elimination] Error building dynamic exclusion mapping:', error);
-  }
-  
-  console.log(`[Enhanced Evidence] Excluding evidence types: [${Array.from(evidenceToExclude).join(', ')}]`);
-  
-  // Filter out eliminated evidence requirements
+  // Filter out evidence items that correspond to eliminated failure modes
   let filteredTemplate = baseTemplate.filter((evidence: any) => {
-    const isExcluded = evidenceToExclude.has(evidence.id);
-    if (isExcluded) {
-      console.log(`[Enhanced Evidence] ❌ Excluded: ${evidence.title} (${evidence.id})`);
+    // Check if this evidence item corresponds to an eliminated failure mode
+    const evidenceTitle = evidence.title.toLowerCase();
+    const evidenceDescription = evidence.description?.toLowerCase() || '';
+    
+    // Check if evidence is for an eliminated failure mode
+    const isForEliminatedMode = Array.from(eliminatedFailures).some(eliminatedMode => {
+      return evidenceTitle.includes(eliminatedMode) || 
+             eliminatedMode.includes(evidenceTitle.split(' ')[0]) ||
+             evidenceDescription.includes(eliminatedMode);
+    });
+    
+    if (isForEliminatedMode) {
+      console.log(`[Enhanced Evidence] ❌ Excluded: ${evidence.title} - corresponds to eliminated failure mode`);
+      return false;
     } else {
-      console.log(`[Enhanced Evidence] ✅ Retained: ${evidence.title} (${evidence.id})`);
+      console.log(`[Enhanced Evidence] ✅ Retained: ${evidence.title}`);
+      return true;
     }
-    return !isExcluded;
   });
   
   // If too many items were eliminated, ensure we have minimum evidence requirements
@@ -1783,12 +1762,46 @@ async function generateEliminationAwareEvidenceChecklist(
     });
   }
   
-  // Add elimination context information
+  // Add eliminated failure modes for reference (grayed out with tooltips)
+  const eliminatedEvidence = [];
   if (eliminationResults.eliminatedFailureModes.length > 0) {
+    // Get Evidence Library entries for eliminated modes to show what was excluded
+    const allLibraryData = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype || '');
+    
+    for (const eliminatedMode of eliminationResults.eliminatedFailureModes) {
+      const libraryEntry = allLibraryData.find((item: any) => 
+        item.componentFailureMode.toLowerCase() === eliminatedMode.toLowerCase()
+      );
+      
+      if (libraryEntry) {
+        // Find the elimination reason
+        const eliminationReason = eliminationResults.eliminationReasons?.find((r: any) => 
+          r.failureMode.toLowerCase() === eliminatedMode.toLowerCase()
+        )?.reason || 'Eliminated by engineering logic';
+        
+        eliminatedEvidence.push({
+          id: `eliminated-${libraryEntry.equipmentCode}`,
+          category: "Eliminated Evidence",
+          title: `${eliminatedMode} Evidence`,
+          description: libraryEntry.requiredTrendDataEvidence || 'Evidence requirements for eliminated failure mode',
+          priority: "Low" as const,
+          required: false,
+          aiGenerated: true,
+          specificToEquipment: true,
+          examples: libraryEntry.aiOrInvestigatorQuestions ? [libraryEntry.aiOrInvestigatorQuestions] : [],
+          completed: false,
+          eliminated: true,
+          eliminationReason: eliminationReason,
+          originalFailureMode: eliminatedMode
+        });
+      }
+    }
+    
+    // Add elimination summary
     filteredTemplate.push({
       id: "elimination-summary",
       category: "Analysis Context",
-      title: "Eliminated Failure Modes Documentation", 
+      title: "Elimination Analysis Results", 
       description: `Professional elimination logic excluded ${eliminationResults.eliminatedFailureModes.length} failure modes from investigation`,
       priority: "Medium" as const,
       required: false,
@@ -1797,15 +1810,25 @@ async function generateEliminationAwareEvidenceChecklist(
       examples: [
         `Eliminated: ${eliminationResults.eliminatedFailureModes.slice(0, 3).join(', ')}`,
         `Reasoning: Engineering chain analysis`,
-        `Confidence boost: +${eliminationResults.confidenceBoost}%`
+        `Confidence boost: +${eliminationResults.confidenceBoost || 25}%`
       ],
       completed: false
     });
   }
   
   console.log(`[Enhanced Evidence] Final checklist: ${filteredTemplate.length} items (${filteredTemplate.filter((e: any) => e.priority === 'Critical').length} critical)`);
+  console.log(`[Enhanced Evidence] Eliminated evidence items: ${eliminatedEvidence.length}`);
   
-  return filteredTemplate;
+  // Return both active evidence and eliminated evidence for UI display
+  return {
+    activeEvidence: filteredTemplate,
+    eliminatedEvidence: eliminatedEvidence,
+    eliminationSummary: {
+      totalEliminated: eliminationResults.eliminatedFailureModes.length,
+      confidenceBoost: eliminationResults.confidenceBoost || 25,
+      eliminatedModes: eliminationResults.eliminatedFailureModes
+    }
+  };
 }
 
 // Safe JSON parsing helper

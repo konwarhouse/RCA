@@ -28,6 +28,9 @@ interface EvidenceItem {
   files?: File[];
   isUnavailable?: boolean;
   unavailableReason?: string;
+  eliminated?: boolean;
+  eliminationReason?: string;
+  originalFailureMode?: string;
 }
 
 interface Incident {
@@ -46,8 +49,11 @@ export default function EvidenceChecklist() {
   const [, setLocation] = useLocation();
   const [incidentId, setIncidentId] = useState<number | null>(null);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [eliminatedEvidence, setEliminatedEvidence] = useState<EvidenceItem[]>([]);
+  const [eliminationSummary, setEliminationSummary] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [showEliminatedEvidence, setShowEliminatedEvidence] = useState(false);
 
   // Extract incident ID from URL parameters
   useEffect(() => {
@@ -88,8 +94,24 @@ export default function EvidenceChecklist() {
     },
     onSuccess: (data) => {
       console.log('Evidence checklist generated:', data);
-      if (data && data.evidenceItems && Array.isArray(data.evidenceItems)) {
-        setEvidenceItems(data.evidenceItems);
+      
+      // Handle new response structure with elimination data
+      if (data && data.evidenceItems) {
+        if (Array.isArray(data.evidenceItems)) {
+          setEvidenceItems(data.evidenceItems);
+        } else if (data.evidenceItems.activeEvidence) {
+          // New structured response
+          setEvidenceItems(data.evidenceItems.activeEvidence || []);
+          setEliminatedEvidence(data.evidenceItems.eliminatedEvidence || []);
+          setEliminationSummary(data.evidenceItems.eliminationSummary || null);
+        } else {
+          setEvidenceItems([]);
+        }
+      } else if (data.eliminatedEvidence) {
+        // Direct response structure
+        setEvidenceItems(data.evidenceItems || []);
+        setEliminatedEvidence(data.eliminatedEvidence || []);
+        setEliminationSummary(data.eliminationSummary || null);
       } else {
         console.error('Invalid evidence items format:', data);
         setEvidenceItems([]);
@@ -286,15 +308,70 @@ export default function EvidenceChecklist() {
           </Alert>
         )}
 
-        {/* AI Insights */}
+        {/* AI Insights and Elimination Summary */}
         {evidenceItems.length > 0 && (
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Lightbulb className="h-4 w-4" />
             <AlertDescription>
               <strong>AI Generated Checklist:</strong> Based on your equipment type ({(incident as Incident)?.equipmentType}) and reported symptoms, 
               our AI has identified {evidenceItems?.length || 0} evidence items. Focus on completing all Critical items and at least 80% of High priority items.
+              {eliminationSummary && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-green-800">
+                  <strong>Elimination Analysis:</strong> Professional engineering logic eliminated {eliminationSummary.totalEliminated} failure modes, 
+                  providing +{eliminationSummary.confidenceBoost}% confidence boost to focus investigation on primary causes.
+                </div>
+              )}
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Eliminated Evidence Section */}
+        {eliminatedEvidence.length > 0 && (
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between text-orange-800">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Eliminated Failure Modes ({eliminatedEvidence.length})
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowEliminatedEvidence(!showEliminatedEvidence)}
+                  className="text-orange-700 hover:text-orange-900"
+                >
+                  {showEliminatedEvidence ? 'Hide' : 'Show'} Details
+                </Button>
+              </CardTitle>
+              <CardDescription className="text-orange-700">
+                These failure modes were automatically eliminated by engineering logic and do not require evidence collection.
+              </CardDescription>
+            </CardHeader>
+            {showEliminatedEvidence && (
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {eliminatedEvidence.map((item) => (
+                    <div key={item.id} className="p-3 bg-white rounded border border-orange-200 opacity-75">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-600 line-through">{item.title}</h4>
+                          <p className="text-sm text-gray-500 mt-1">{item.description}</p>
+                          {item.eliminationReason && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                              <strong>Eliminated:</strong> {item.eliminationReason}
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                          Eliminated
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            )}
+          </Card>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
