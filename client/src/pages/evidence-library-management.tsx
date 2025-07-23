@@ -760,6 +760,47 @@ export default function EvidenceLibraryManagement() {
                     </DialogHeader>
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                        
+                        {/* FIELD IMPORTANCE LEGEND - ALWAYS VISIBLE */}
+                        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-6 rounded-lg mb-6 border-2 border-blue-300 shadow-lg">
+                          <h3 className="text-xl font-bold mb-4 text-blue-800 dark:text-blue-300">📚 Field Importance & Usage Guide</h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-800 dark:text-gray-200">Field Priority Levels:</h4>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">🔍 Critical</span>
+                                <span className="text-gray-700 dark:text-gray-300">Essential for accurate analysis</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">⚠️ Important</span>
+                                <span className="text-gray-700 dark:text-gray-300">Significantly impacts results</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">🔧 System</span>
+                                <span className="text-gray-700 dark:text-gray-300">System-level considerations</span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-800 dark:text-gray-200">Database Operations:</h4>
+                              <div className="bg-white/70 dark:bg-gray-800/70 p-3 rounded border-l-4 border-red-400">
+                                <p className="text-sm text-red-700 dark:text-red-300 font-semibold">
+                                  🔑 Equipment Code = UNIQUE KEY
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                  Only field used for CSV updates. All others can have duplicates.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-700">
+                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                              <strong>💡 Pro Tip:</strong> Look for colored badges and explanation boxes below each field for detailed usage guidance.
+                            </p>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -844,9 +885,9 @@ export default function EvidenceLibraryManagement() {
                                   <Input {...field} placeholder="e.g., PMP-CEN-001 (Must be unique - used for updates)" />
                                 </FormControl>
                                 <FormMessage />
-                                <p className="text-xs text-blue-600 mt-1">
-                                  📋 <strong>CRITICAL:</strong> Equipment Code is the ONLY unique field. CSV imports will UPDATE existing records with same Equipment Code.
-                                </p>
+                                <div className="text-xs text-red-700 bg-red-50 p-3 rounded border-l-4 border-red-400 mt-2">
+                                  <strong>🔑 CRITICAL IMPORTANCE:</strong> This is the ONLY unique field in the database. All CSV imports and updates use Equipment Code as the primary key. All other fields can have duplicates across records.
+                                </div>
                               </FormItem>
                             )}
                           />
@@ -977,9 +1018,9 @@ export default function EvidenceLibraryManagement() {
                               name="confidenceLevel"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="flex items-center">
+                                  <FormLabel className="flex items-center gap-2">
                                     Confidence Level
-                                    <span className="ml-2 text-xs text-gray-500" title="Expected analysis confidence when this evidence is collected">📊</span>
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full" title="Expected analysis confidence when this evidence is collected">📊 Intelligence</span>
                                   </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
@@ -1002,9 +1043,9 @@ export default function EvidenceLibraryManagement() {
                               name="diagnosticValue"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="flex items-center">
+                                  <FormLabel className="flex items-center gap-2">
                                     Diagnostic Value
-                                    <span className="ml-2 text-xs text-gray-500" title="How critical this evidence is for accurate diagnosis">🎯</span>
+                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full" title="How critical this evidence is for accurate diagnosis">🎯 Priority</span>
                                   </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
@@ -1271,15 +1312,22 @@ export default function EvidenceLibraryManagement() {
                               name="primaryRootCause"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Primary Root Cause</FormLabel>
+                                  <FormLabel className="flex items-center gap-2">
+                                    Primary Root Cause
+                                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full" title="The primary engineering cause that leads to this failure mode">🔍 Critical</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       {...field} 
                                       placeholder="Primary engineering root cause for this failure mode (e.g., 'Material degradation due to corrosive environment')"
                                       rows={2}
+                                      className="border-2 border-red-200 focus:border-red-400"
                                     />
                                   </FormControl>
                                   <FormMessage />
+                                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded mt-1">
+                                    <strong>🎯 PURPOSE:</strong> This field identifies the primary engineering cause that directly leads to this failure mode. Essential for accurate root cause analysis.
+                                  </div>
                                 </FormItem>
                               )}
                             />
@@ -1288,21 +1336,22 @@ export default function EvidenceLibraryManagement() {
                               name="contributingFactor"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="flex items-center">
+                                  <FormLabel className="flex items-center gap-2">
                                     Contributing Factor
-                                    <span className="ml-2 text-xs text-gray-500" title="Secondary factors that increase likelihood of the primary root cause">⚠️</span>
+                                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full" title="Secondary factors that increase likelihood of the primary root cause">⚠️ Important</span>
                                   </FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       {...field} 
                                       placeholder="Key contributing factors (e.g., 'High operating temperature, inadequate maintenance intervals')"
                                       rows={2}
+                                      className="border-2 border-orange-200 focus:border-orange-400"
                                     />
                                   </FormControl>
                                   <FormMessage />
-                                  <p className="text-xs text-orange-600 mt-1">
-                                    🔗 <strong>PURPOSE:</strong> Secondary factors that work together with the primary root cause to enable this failure mode.
-                                  </p>
+                                  <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded mt-1">
+                                    <strong>🔗 PURPOSE:</strong> Secondary factors that work together with the primary root cause to enable this failure mode.
+                                  </div>
                                 </FormItem>
                               )}
                             />
@@ -1315,15 +1364,22 @@ export default function EvidenceLibraryManagement() {
                               name="latentCause"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Latent Cause</FormLabel>
+                                  <FormLabel className="flex items-center gap-2">
+                                    Latent Cause
+                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full" title="Underlying system/design issues that enable failures">🔧 System</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       {...field} 
                                       placeholder="Underlying latent causes (e.g., 'Design limitations, inadequate material selection')"
                                       rows={2}
+                                      className="border-2 border-blue-200 focus:border-blue-400"
                                     />
                                   </FormControl>
                                   <FormMessage />
+                                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-1">
+                                    <strong>🏗️ PURPOSE:</strong> Underlying system, design, or organizational issues that create conditions for failure.
+                                  </div>
                                 </FormItem>
                               )}
                             />
@@ -1332,15 +1388,22 @@ export default function EvidenceLibraryManagement() {
                               name="detectionGap"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Detection Gap</FormLabel>
+                                  <FormLabel className="flex items-center gap-2">
+                                    Detection Gap
+                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full" title="Monitoring and detection limitations">🚨 Detection</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       {...field} 
                                       placeholder="Early detection opportunities missed (e.g., 'Vibration monitoring not implemented, temperature trend ignored')"
                                       rows={2}
+                                      className="border-2 border-yellow-200 focus:border-yellow-400"
                                     />
                                   </FormControl>
                                   <FormMessage />
+                                  <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded mt-1">
+                                    <strong>🔍 PURPOSE:</strong> Identifies monitoring and detection gaps that prevent early warning of this failure mode.
+                                  </div>
                                 </FormItem>
                               )}
                             />
