@@ -23,8 +23,14 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
   const [viewMode, setViewMode] = useState<'tree' | 'fishbone'>('tree');
   const [zoom, setZoom] = useState(1);
 
-  // Generate tree structure from analysis data
-  const generateTreeData = (): TreeNode => {
+  // Generate tree structure from analysis data with enhanced universal logic
+  const generateTreeData = (): TreeNode & { 
+    equipmentContext?: string; 
+    evidenceAdequacy?: number; 
+    eliminatedCauses?: TreeNode[];
+    originalSymptoms?: string[];
+    operatingContext?: string[];
+  } => {
     if (!analysis) {
       return {
         id: 'root',
@@ -35,10 +41,60 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       };
     }
 
+    // Universal equipment identification logic - works for ANY equipment combination
+    const equipmentContext = analysis.equipmentGroup && analysis.equipmentType 
+      ? `${analysis.equipmentGroup} → ${analysis.equipmentType}${analysis.equipmentSubtype ? ` → ${analysis.equipmentSubtype}` : ''}`
+      : 'Equipment Type Not Specified';
+      
     const rootCause = analysis.failureMode || analysis.rootCause || 'Equipment Failure';
+    
+    // Extract original symptoms from incident data (universal for all equipment)
+    const originalSymptoms: string[] = [];
+    if (analysis.symptoms) originalSymptoms.push(...analysis.symptoms);
+    if (analysis.description) originalSymptoms.push(`Reported: ${analysis.description}`);
+    
+    // Extract operating context (universal approach)
+    const operatingContext: string[] = [];
+    if (analysis.operatingParameters) {
+      const params = analysis.operatingParameters;
+      Object.keys(params).forEach(key => {
+        if (params[key] && typeof params[key] === 'object') {
+          Object.entries(params[key]).forEach(([subKey, value]) => {
+            operatingContext.push(`${key}.${subKey}: ${value}`);
+          });
+        } else if (params[key]) {
+          operatingContext.push(`${key}: ${params[key]}`);
+        }
+      });
+    }
+    
+    // Calculate evidence adequacy score (universal formula)
+    let evidenceAdequacy = 0;
+    const evidenceFactors = [
+      analysis.evidenceFiles?.length || 0, // Files uploaded
+      analysis.evidenceChecklist?.filter((item: any) => item.completed)?.length || 0, // Checklist completion
+      analysis.crossMatchResults?.libraryMatches?.length || 0, // Library matches
+      originalSymptoms.length, // Symptom detail
+      operatingContext.length // Operating context detail
+    ];
+    evidenceAdequacy = Math.min(100, Math.round((evidenceFactors.reduce((a, b) => a + b, 0) / 15) * 100));
     
     // Extract contributing factors from analysis results
     const contributingFactors: TreeNode[] = [];
+    
+    // Extract eliminated causes (universal logic for all equipment)
+    const eliminatedCauses: TreeNode[] = [];
+    if (analysis.eliminationResults) {
+      analysis.eliminationResults.forEach((elimination: any, index: number) => {
+        eliminatedCauses.push({
+          id: `eliminated-${index}`,
+          label: elimination.failureMode || `Eliminated Cause ${index + 1}`,
+          confidence: 0, // Eliminated = 0% confidence
+          evidence: [elimination.reason || 'Eliminated by analysis'],
+          type: 'evidence'
+        });
+      });
+    }
 
     // Extract root causes from analysis
     if (analysis.rootCauses && Array.isArray(analysis.rootCauses)) {
@@ -102,21 +158,42 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       });
     }
 
-    // Return the tree structure
+    // Return the enhanced tree structure with universal context
     return {
       id: 'root',
       label: rootCause,
       confidence: analysis.overallConfidence || 85,
       evidence: ['Analysis results'],
       type: 'root',
-      children: contributingFactors
+      children: contributingFactors,
+      equipmentContext,
+      evidenceAdequacy,
+      eliminatedCauses,
+      originalSymptoms,
+      operatingContext
     };
   };
 
   const treeData = generateTreeData();
 
-  // Render tree node recursively
-  const renderTreeNode = (node: TreeNode, depth: number = 0): JSX.Element => {
+  // Render causal arrow connector (universal for all failure types)
+  const renderCausalArrow = (fromType: string, toType: string) => {
+    const getArrowColor = () => {
+      if (fromType === 'root' && toType === 'primary') return 'text-red-500';
+      if (fromType === 'primary' && toType === 'secondary') return 'text-orange-500';
+      return 'text-blue-500';
+    };
+    
+    return (
+      <div className={`flex items-center justify-center my-2 ${getArrowColor()}`}>
+        <div className="text-lg">↓</div>
+        <span className="text-xs ml-1">leads to</span>
+      </div>
+    );
+  };
+
+  // Render tree node recursively with enhanced universal logic
+  const renderTreeNode = (node: TreeNode, depth: number = 0, parentType?: string): JSX.Element => {
     const getNodeColor = (type: string, confidence: number) => {
       if (type === 'root') return 'bg-red-100 border-red-300 text-red-800';
       if (type === 'primary') return confidence >= 80 ? 'bg-orange-100 border-orange-300 text-orange-800' : 'bg-yellow-100 border-yellow-300 text-yellow-800';
@@ -126,6 +203,9 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
 
     return (
       <div key={node.id} className={`ml-${depth * 8} mb-4`}>
+        {/* Causal arrow from parent (universal logic) */}
+        {parentType && depth > 0 && renderCausalArrow(parentType, node.type)}
+        
         <div className={`inline-block p-3 rounded-lg border-2 ${getNodeColor(node.type, node.confidence)} max-w-md`}>
           <div className="flex items-center justify-between mb-1">
             <h4 className="font-semibold text-sm">{node.label}</h4>
@@ -138,8 +218,16 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
               <strong>Evidence:</strong> {node.evidence[0]}
             </div>
           )}
+          
+          {/* Show failure logic connection for root nodes */}
+          {node.type === 'root' && node.children && node.children.length > 0 && (
+            <div className="text-xs mt-2 p-2 bg-white/50 rounded border">
+              <strong>Failure Logic:</strong> {node.children.length} contributing factor{node.children.length > 1 ? 's' : ''} identified
+            </div>
+          )}
         </div>
-        {node.children && node.children.map(child => renderTreeNode(child, depth + 1))}
+        
+        {node.children && node.children.map(child => renderTreeNode(child, depth + 1, node.type))}
       </div>
     );
   };
@@ -185,12 +273,72 @@ export default function RCATreeVisualization({ analysis, onEdit }: RCATreeProps)
       <div className="bg-white border rounded-lg p-6 min-h-[400px] overflow-auto" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
         {viewMode === 'tree' ? (
           <div className="space-y-4">
+            {/* Enhanced header with equipment context and evidence adequacy */}
             <div className="text-center mb-8">
               <h3 className="text-lg font-bold text-gray-900 mb-2">Root Cause Analysis Tree</h3>
-              <p className="text-sm text-gray-600">Equipment: {analysis?.equipmentType || 'Unknown'} | Confidence: {analysis?.overallConfidence || 0}%</p>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <strong>Equipment:</strong> {treeData.equipmentContext || 'Equipment type not specified'} | 
+                  <strong> Analysis Confidence:</strong> {analysis?.overallConfidence || 0}%
+                </p>
+                <div className="flex justify-center items-center gap-4">
+                  <Badge variant={treeData.evidenceAdequacy >= 80 ? 'default' : treeData.evidenceAdequacy >= 60 ? 'secondary' : 'destructive'}>
+                    Evidence Adequacy: {treeData.evidenceAdequacy}%
+                  </Badge>
+                  {treeData.eliminatedCauses && treeData.eliminatedCauses.length > 0 && (
+                    <Badge variant="outline">
+                      {treeData.eliminatedCauses.length} Causes Eliminated
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Original symptoms and operating context (universal) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {treeData.originalSymptoms && treeData.originalSymptoms.length > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-sm text-blue-800 mb-2">🔧 Original Symptoms</h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    {treeData.originalSymptoms.map((symptom, index) => (
+                      <li key={index}>• {symptom}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {treeData.operatingContext && treeData.operatingContext.length > 0 && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-sm text-green-800 mb-2">⚙️ Operating Context</h4>
+                  <ul className="text-xs text-green-700 space-y-1">
+                    {treeData.operatingContext.slice(0, 4).map((context, index) => (
+                      <li key={index}>• {context}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             
+            {/* Main RCA Tree */}
             {renderTreeNode(treeData)}
+            
+            {/* Eliminated causes section (universal logic) */}
+            {treeData.eliminatedCauses && treeData.eliminatedCauses.length > 0 && (
+              <div className="mt-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="font-semibold text-sm text-gray-800 mb-3">📉 Eliminated Causes</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {treeData.eliminatedCauses.map((cause, index) => (
+                    <div key={index} className="bg-white p-2 rounded border border-gray-300 opacity-60">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm line-through">{cause.label}</span>
+                        <Badge variant="outline" className="text-xs">Eliminated</Badge>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">{cause.evidence[0]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">

@@ -218,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate structured RCA analysis
       const structuredRCA = RCAAnalysisEngine.generateStructuredRCA(investigation);
       
-      // Convert to existing format for compatibility
+      // Convert to existing format for compatibility with enhanced equipment context
       const analysisResults = {
         causes: structuredRCA.causesConsidered.map(cause => ({
           description: cause.cause,
@@ -232,7 +232,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         topEvent: 'Equipment Failure',
         confidence: structuredRCA.confidence,
         analysisMethod: getAnalysisMethodForInvestigationType(investigation.investigationType),
-        structuredAnalysis: structuredRCA
+        structuredAnalysis: structuredRCA,
+        // Enhanced context for RCA Tree visualization
+        equipmentGroup: investigation.equipmentGroup,
+        equipmentType: investigation.equipmentType,
+        equipmentSubtype: investigation.equipmentSubtype,
+        symptoms: investigation.symptoms,
+        description: investigation.description,
+        evidenceFiles: investigation.evidenceFiles || [],
+        evidenceChecklist: investigation.evidenceChecklist || [],
+        operatingParameters: investigation.operatingParameters
       };
 
       const recommendations = structuredRCA.recommendations.map(rec => 
