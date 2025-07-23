@@ -29,7 +29,7 @@ export default function AnalysisDetail() {
   const actualId = isIncident ? analysisId.replace('INC-', '') : analysisId;
   const apiEndpoint = isIncident ? `/api/incidents/${actualId}` : `/api/investigations/${analysisId}`;
 
-  const { data: analysis, isLoading, error } = useQuery<Analysis>({
+  const { data: rawData, isLoading, error } = useQuery({
     queryKey: [apiEndpoint],
     enabled: !!analysisId,
     queryFn: async () => {
@@ -38,6 +38,28 @@ export default function AnalysisDetail() {
       return response.json();
     },
   });
+
+  // Transform incident data to analysis format if needed
+  const analysis = rawData ? (isIncident ? {
+    analysisId: `INC-${rawData.id}`,
+    equipmentId: rawData.equipmentId || 'Unknown',
+    location: rawData.location || 'Unknown',
+    priority: rawData.priority || 'medium',
+    confidence: rawData.aiAnalysis?.overallConfidence || 0,
+    analysisResults: rawData.aiAnalysis,
+    whatHappened: rawData.symptomDescription || rawData.title,
+    evidenceData: {
+      equipment_type: rawData.equipmentType,
+      equipment_tag: rawData.equipmentId,
+      operating_location: rawData.location
+    },
+    whereHappened: rawData.location,
+    rootCauses: rawData.aiAnalysis?.rootCauses?.map((rc: any) => rc.description) || [],
+    recommendations: rawData.aiAnalysis?.recommendations?.map((rec: any) => rec.description) || [],
+    status: rawData.workflowStatus,
+    investigationType: 'Equipment Failure',
+    updatedAt: rawData.updatedAt
+  } : rawData) : null;
 
   if (isLoading) {
     return (
@@ -187,7 +209,53 @@ export default function AnalysisDetail() {
                   
                   <div>
                     <h4 className="font-medium text-sm mb-2">Root Cause Analysis</h4>
-                    {analysis.analysisResults?.structuredAnalysis ? (
+                    {analysis.analysisResults ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                          <h5 className="font-medium text-sm mb-2">Failure Analysis</h5>
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Failure Mode:</strong> {analysis.analysisResults.failureMode || 'Not specified'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Severity:</strong> {analysis.analysisResults.severity || 'Not specified'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Confidence:</strong> {analysis.analysisResults.overallConfidence || 0}%
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <h5 className="font-medium text-sm mb-3">Root Causes</h5>
+                          <div className="space-y-3">
+                            {(analysis.analysisResults.rootCauses || []).map((cause: any, idx: number) => (
+                              <div key={idx} className="p-3 border-l-4 border-red-500 bg-red-50">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h6 className="font-medium text-sm">{cause.description}</h6>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800">
+                                      Root Cause
+                                    </span>
+                                    <span className="text-xs font-medium">
+                                      {cause.confidence}%
+                                    </span>
+                                  </div>
+                                </div>
+                                {cause.evidence && cause.evidence.length > 0 && (
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium text-green-700 mb-1">Evidence:</p>
+                                    <ul className="text-xs text-green-600 list-disc list-inside">
+                                      {cause.evidence.map((evidence: any, i: number) => (
+                                        <li key={i}>{typeof evidence === 'string' ? evidence : evidence.description || ''}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : analysis.analysisResults?.structuredAnalysis ? (
                       <div className="space-y-4">
                         <div className="p-4 bg-muted/50 rounded-lg">
                           <h5 className="font-medium text-sm mb-2">Symptom Statement</h5>
@@ -264,7 +332,29 @@ export default function AnalysisDetail() {
                   
                   <div>
                     <h4 className="font-medium text-sm mb-2">Recommendations</h4>
-                    {analysis.analysisResults?.structuredAnalysis?.recommendations ? (
+                    {analysis.analysisResults?.recommendations ? (
+                      <div className="space-y-3">
+                        {analysis.analysisResults.recommendations.map((rec: any, idx: number) => (
+                          <div key={idx} className="p-3 border-l-4 border-blue-500 bg-blue-50">
+                            <div className="flex items-start justify-between mb-1">
+                              <h6 className="font-medium text-sm">{rec.title}</h6>
+                              <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">
+                                {rec.priority} priority
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              <strong>Description:</strong> {rec.description}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Timeframe:</strong> {rec.timeframe || 'Not specified'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Cost:</strong> {rec.estimatedCost || 'Not specified'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : analysis.analysisResults?.structuredAnalysis?.recommendations ? (
                       <div className="space-y-3">
                         {analysis.analysisResults.structuredAnalysis.recommendations.map((rec, idx) => (
                           <div key={idx} className={`p-3 border-l-4 ${
@@ -303,9 +393,7 @@ export default function AnalysisDetail() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-foreground">
-                        {analysis.confidence || analysis.analysisResults?.confidence ? 
-                         `${Math.round((analysis.confidence || analysis.analysisResults?.confidence || 0) * 100)}` : 
-                         "80"}%
+                        {analysis.confidence || analysis.analysisResults?.overallConfidence || 0}%
                       </div>
                       <div className="text-xs text-muted-foreground">Confidence Score</div>
                     </div>
