@@ -45,6 +45,15 @@ const evidenceLibrarySchema = z.object({
   followupActions: z.string().optional(), // What to do after collecting
   industryBenchmark: z.string().optional(), // Industry standards/benchmarks
   
+  // Enriched Evidence Library Fields - from comprehensive CSV import
+  primaryRootCause: z.string().optional(), // Primary Root Cause analysis
+  contributingFactor: z.string().optional(), // Contributing factors
+  latentCause: z.string().optional(), // Latent/underlying causes
+  detectionGap: z.string().optional(), // Detection gaps analysis
+  faultSignaturePattern: z.string().optional(), // Fault signature patterns
+  applicableToOtherEquipment: z.string().optional(), // Cross-equipment applicability
+  evidenceGapFlag: z.string().optional(), // Evidence gap indicators
+  
   // Legacy fields
   blankColumn1: z.string().optional(),
   blankColumn2: z.string().optional(),
@@ -81,6 +90,15 @@ interface EvidenceLibrary {
   prerequisiteEvidence?: string;
   followupActions?: string;
   industryBenchmark?: string;
+  
+  // Enriched Evidence Library Fields - from comprehensive CSV import
+  primaryRootCause?: string;
+  contributingFactor?: string;
+  latentCause?: string;
+  detectionGap?: string;
+  faultSignaturePattern?: string;
+  applicableToOtherEquipment?: string;
+  evidenceGapFlag?: string;
   
   // Legacy fields
   blankColumn1?: string;
@@ -1183,6 +1201,151 @@ export default function EvidenceLibraryManagement() {
                                     <Textarea 
                                       {...field} 
                                       placeholder="Industry standards or benchmarks (e.g., 'ISO 10816 vibration limits, API 682 seal standards')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Enriched Evidence Library Fields Section */}
+                        <div className="border-t pt-6 mt-6">
+                          <h3 className="text-lg font-semibold mb-4 text-green-700 dark:text-green-400">
+                            🔬 Enriched Evidence Library Fields
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Advanced RCA analysis fields for comprehensive failure mode understanding and cross-equipment applicability.
+                          </p>
+
+                          {/* Enriched Fields Grid Row 1 */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="primaryRootCause"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Primary Root Cause</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Primary engineering root cause for this failure mode (e.g., 'Material degradation due to corrosive environment')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="contributingFactor"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Contributing Factor</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Key contributing factors (e.g., 'High operating temperature, inadequate maintenance intervals')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Enriched Fields Grid Row 2 */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="latentCause"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Latent Cause</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Underlying latent causes (e.g., 'Design limitations, inadequate material selection')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="detectionGap"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Detection Gap</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Early detection opportunities missed (e.g., 'Vibration monitoring not implemented, temperature trend ignored')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Enriched Fields Grid Row 3 */}
+                          <div className="grid grid-cols-1 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="faultSignaturePattern"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Fault Signature Pattern</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Characteristic patterns and symptoms (e.g., 'Gradual vibration increase over 6 months, sudden temperature spike at failure')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Enriched Fields Grid Row 4 */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name="applicableToOtherEquipment"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Applicable to Other Equipment</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Cross-equipment applicability (e.g., 'Similar failure modes in compressors, fans, agitators')"
+                                      rows={2}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="evidenceGapFlag"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Evidence Gap Flag</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Common evidence collection gaps (e.g., 'Historical maintenance records often incomplete')"
                                       rows={2}
                                     />
                                   </FormControl>

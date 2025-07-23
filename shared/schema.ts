@@ -68,6 +68,15 @@ export const evidenceLibrary = pgTable("evidence_library", {
   followupActions: text("followup_actions"), // What to do after collecting this evidence - Admin editable
   industryBenchmark: text("industry_benchmark"), // Industry standards/benchmarks - Admin editable
   
+  // Enriched Evidence Library Fields - from comprehensive CSV import
+  primaryRootCause: text("primary_root_cause"), // Primary Root Cause analysis
+  contributingFactor: text("contributing_factor"), // Contributing factors
+  latentCause: text("latent_cause"), // Latent/underlying causes
+  detectionGap: text("detection_gap"), // Detection gaps analysis
+  faultSignaturePattern: text("fault_signature_pattern"), // Fault signature patterns
+  applicableToOtherEquipment: text("applicable_to_other_equipment"), // Cross-equipment applicability
+  evidenceGapFlag: text("evidence_gap_flag"), // Evidence gap indicators
+  
   // Elimination logic fields - for intelligent failure mode elimination
   eliminatedIfTheseFailuresConfirmed: text("eliminated_if_these_failures_confirmed"), // Failure modes that eliminate this one
   whyItGetsEliminated: text("why_it_gets_eliminated"), // Engineering reason for elimination
