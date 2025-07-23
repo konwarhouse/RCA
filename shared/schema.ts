@@ -217,6 +217,9 @@ export const incidents = pgTable("incidents", {
   contextualFactors: text("contextual_factors"),
   equipmentLibraryId: integer("equipment_library_id"),
   
+  // Structured Timeline Data (NEW)
+  timelineData: jsonb("timeline_data"), // Universal + equipment-specific timeline questions
+  
   // Evidence checklist & collection (Steps 3-5)
   evidenceChecklist: jsonb("evidence_checklist"), // AI-generated questions
   evidenceResponses: jsonb("evidence_responses"), // User answers & uploads

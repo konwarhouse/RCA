@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, AlertTriangle, User, MapPin, Wrench, ArrowRight, Home } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Calendar, Clock, AlertTriangle, User, MapPin, Wrench, ArrowRight, Home, Clock4 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Form schema for incident reporting - THREE-LEVEL CASCADING DROPDOWN SYSTEM
+// Form schema for incident reporting - THREE-LEVEL CASCADING DROPDOWN SYSTEM + STRUCTURED TIMELINE
 const incidentSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -29,6 +30,8 @@ const incidentSchema = z.object({
   priority: z.enum(["Low", "Medium", "High", "Critical"]),
   immediateActions: z.string().optional(),
   safetyImplications: z.string().optional(),
+  // Structured Timeline Data (NEW)
+  timelineData: z.record(z.string()).optional(),
 });
 
 type IncidentForm = z.infer<typeof incidentSchema>;
@@ -36,6 +39,8 @@ type IncidentForm = z.infer<typeof incidentSchema>;
 export default function IncidentReporting() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [timelineQuestions, setTimelineQuestions] = useState<any[]>([]);
+  const [showTimeline, setShowTimeline] = useState(false);
   
   const form = useForm<IncidentForm>({
     resolver: zodResolver(incidentSchema),
@@ -52,12 +57,44 @@ export default function IncidentReporting() {
       priority: "Medium",
       immediateActions: "",
       safetyImplications: "",
+      timelineData: {},
     },
   });
 
   // THREE-LEVEL CASCADING DROPDOWN STATE
   const selectedEquipmentGroup = form.watch("equipmentGroup");
   const selectedEquipmentType = form.watch("equipmentType");
+  const selectedEquipmentSubtype = form.watch("equipmentSubtype");
+
+  // Generate timeline questions when equipment selection is complete
+  useEffect(() => {
+    if (selectedEquipmentGroup && selectedEquipmentType && selectedEquipmentSubtype) {
+      generateTimelineQuestions();
+    }
+  }, [selectedEquipmentGroup, selectedEquipmentType, selectedEquipmentSubtype]);
+
+  const generateTimelineQuestions = async () => {
+    try {
+      const response = await fetch('/api/incidents/0/generate-timeline-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          equipmentGroup: selectedEquipmentGroup,
+          equipmentType: selectedEquipmentType,
+          equipmentSubtype: selectedEquipmentSubtype
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTimelineQuestions(data.timelineQuestions?.questions || []);
+        setShowTimeline(true);
+        console.log(`Generated ${data.timelineQuestions?.totalQuestions || 0} timeline questions`);
+      }
+    } catch (error) {
+      console.error('Error generating timeline questions:', error);
+    }
+  };
 
   // LEVEL 1: Fetch Equipment Groups from Evidence Library
   const { data: equipmentGroups = [] } = useQuery({
@@ -540,6 +577,110 @@ export default function IncidentReporting() {
                     )}
                   />
                 </div>
+
+                {/* STRUCTURED TIMELINE SECTION (NEW) */}
+                {showTimeline && timelineQuestions.length > 0 && (
+                  <div className="mt-8 p-6 border rounded-lg bg-blue-50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Clock4 className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-semibold text-blue-900">Structured Timeline Questions</h3>
+                    </div>
+                    <p className="text-sm text-blue-700 mb-6">
+                      Answer these timeline questions to help AI understand the sequence of events. 
+                      Generated from Evidence Library for {selectedEquipmentGroup} → {selectedEquipmentType} → {selectedEquipmentSubtype}
+                    </p>
+
+                    {/* Universal Timeline Questions */}
+                    <div className="mb-6">
+                      <h4 className="font-medium text-slate-900 mb-3">Universal Timeline Anchors</h4>
+                      <div className="space-y-4">
+                        {timelineQuestions
+                          .filter(q => q.category === "Universal Timeline")
+                          .map((question) => (
+                            <div key={question.id} className="bg-white border rounded-lg p-4">
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                {question.label}
+                                {question.required && <span className="text-red-500 ml-1">*</span>}
+                              </label>
+                              <p className="text-xs text-slate-500 mb-2">{question.description}</p>
+                              {question.type === "datetime-local" ? (
+                                <Input
+                                  type="datetime-local"
+                                  className="w-full"
+                                  onChange={(e) => {
+                                    const currentData = form.getValues("timelineData") || {};
+                                    form.setValue("timelineData", {
+                                      ...currentData,
+                                      [question.id]: e.target.value
+                                    });
+                                  }}
+                                />
+                              ) : (
+                                <Textarea
+                                  placeholder="Describe what happened and when..."
+                                  className="w-full"
+                                  onChange={(e) => {
+                                    const currentData = form.getValues("timelineData") || {};
+                                    form.setValue("timelineData", {
+                                      ...currentData,
+                                      [question.id]: e.target.value
+                                    });
+                                  }}
+                                />
+                              )}
+                              <p className="text-xs text-slate-400 mt-1">Purpose: {question.purpose}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Equipment-Specific Timeline Questions */}
+                    {timelineQuestions.some(q => q.category === "Equipment-Specific Timeline") && (
+                      <div>
+                        <h4 className="font-medium text-slate-900 mb-3">Equipment-Specific Timeline</h4>
+                        <div className="space-y-4">
+                          {timelineQuestions
+                            .filter(q => q.category === "Equipment-Specific Timeline")
+                            .map((question) => (
+                              <div key={question.id} className="bg-white border rounded-lg p-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  {question.label}
+                                  {question.required && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                <p className="text-xs text-slate-500 mb-2">{question.description}</p>
+                                <Input
+                                  type="datetime-local"
+                                  className="w-full"
+                                  onChange={(e) => {
+                                    const currentData = form.getValues("timelineData") || {};
+                                    form.setValue("timelineData", {
+                                      ...currentData,
+                                      [question.id]: e.target.value
+                                    });
+                                  }}
+                                />
+                                <p className="text-xs text-blue-600 mt-1">
+                                  {question.equipmentContext} - {question.purpose}
+                                </p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-slate-100 rounded-lg p-4 mt-6">
+                      <p className="text-sm text-slate-600">
+                        <strong>Timeline Analysis:</strong> The AI will use this structured data to:
+                      </p>
+                      <ul className="text-xs text-slate-500 mt-2 space-y-1">
+                        <li>• Reconstruct the sequence of events</li>
+                        <li>• Detect lead-lag relationships between symptoms and failures</li>
+                        <li>• Disqualify failure modes that occurred after the primary event</li>
+                        <li>• Map evidence directly to the failure window</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <div className="flex justify-end pt-6">

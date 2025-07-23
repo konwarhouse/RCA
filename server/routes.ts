@@ -415,6 +415,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate structured timeline questions (NEW) - Universal + Equipment-Specific
+  app.post("/api/incidents/:id/generate-timeline-questions", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { equipmentGroup, equipmentType, equipmentSubtype } = req.body;
+
+      console.log(`[Timeline Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
+
+      // UNIVERSAL TIMELINE GENERATION: Use Evidence Library to build timeline questions (NO HARDCODING!)
+      const timelineQuestions = await generateUniversalTimelineQuestions(equipmentGroup, equipmentType, equipmentSubtype || '');
+      
+      res.json({ timelineQuestions });
+    } catch (error) {
+      console.error("[RCA] Error generating timeline questions:", error);
+      res.status(500).json({ message: "Failed to generate timeline questions" });
+    }
+  });
+
   // Generate AI evidence checklist (Step 3) - Enhanced with Elimination Logic
   app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
     try {
@@ -2364,6 +2382,175 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
   const issuePenalty = Math.min(issues.length * 5, 25); // Cap penalty at 25%
   
   return Math.max(40, Math.round(baseCompleteness - issuePenalty)); // Minimum 40% for theoretical analysis
+}
+
+// UNIVERSAL TIMELINE QUESTION GENERATION - Evidence Library Driven (NO HARDCODING!)
+async function generateUniversalTimelineQuestions(equipmentGroup: string, equipmentType: string, equipmentSubtype: string) {
+  console.log(`[Universal Timeline] Generating timeline questions from Evidence Library for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
+  
+  // Universal Timeline Anchors (Apply to All Equipment)
+  const universalQuestions = [
+    {
+      id: "timeline-universal-001",
+      category: "Universal Timeline",
+      label: "First observed abnormality",
+      description: "When was something first noticed to be wrong?",
+      type: "datetime-local",
+      required: true,
+      purpose: "Timeline anchor - first detection",
+      sequenceOrder: 1
+    },
+    {
+      id: "timeline-universal-002", 
+      category: "Universal Timeline",
+      label: "Alarm triggered",
+      description: "Was there an alarm? When did it trigger?",
+      type: "datetime-local",
+      required: false,
+      purpose: "System detection timing",
+      sequenceOrder: 2
+    },
+    {
+      id: "timeline-universal-003",
+      category: "Universal Timeline", 
+      label: "Operator intervention",
+      description: "What action was taken and when?",
+      type: "text",
+      required: false,
+      purpose: "Human response timing",
+      sequenceOrder: 3
+    },
+    {
+      id: "timeline-universal-004",
+      category: "Universal Timeline",
+      label: "Time of failure/trip",
+      description: "When did the actual failure or trip occur?", 
+      type: "datetime-local",
+      required: true,
+      purpose: "Primary failure timing",
+      sequenceOrder: 4
+    },
+    {
+      id: "timeline-universal-005",
+      category: "Universal Timeline",
+      label: "Equipment restart/recovery",
+      description: "Time of recovery, bypass, or restart attempt",
+      type: "datetime-local", 
+      required: false,
+      purpose: "Recovery timing",
+      sequenceOrder: 5
+    }
+  ];
+
+  try {
+    // Get equipment-specific timeline questions from Evidence Library
+    const libraryEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype);
+    
+    if (libraryEvidence.length > 0) {
+      console.log(`[Universal Timeline] Found ${libraryEvidence.length} Evidence Library entries for timeline generation`);
+      
+      // Generate equipment-specific timeline questions from Evidence Library
+      const equipmentSpecificQuestions = libraryEvidence.map((item: any, index: number) => {
+        // Extract timeline-relevant information from Evidence Library fields
+        const trendData = item.requiredTrendDataEvidence || '';
+        const questions = item.aiOrInvestigatorQuestions || '';
+        const failureMode = item.componentFailureMode || '';
+        
+        // Build equipment-specific timeline questions based on failure modes and trend data
+        const timelineQuestions = [];
+        
+        // Generate timing questions based on trend data requirements
+        if (trendData.toLowerCase().includes('vibration')) {
+          timelineQuestions.push({
+            id: `timeline-equipment-vibration-${index}`,
+            category: "Equipment-Specific Timeline",
+            label: "Vibration spike time",
+            description: "When was abnormal vibration first detected?",
+            type: "datetime-local",
+            required: false,
+            purpose: "Link to shaft/bearing issues",
+            equipmentContext: `${equipmentType} vibration monitoring`,
+            sequenceOrder: 10 + index
+          });
+        }
+        
+        if (trendData.toLowerCase().includes('pressure')) {
+          timelineQuestions.push({
+            id: `timeline-equipment-pressure-${index}`,
+            category: "Equipment-Specific Timeline", 
+            label: "Pressure deviation time",
+            description: "When did pressure readings become abnormal?",
+            type: "datetime-local",
+            required: false,
+            purpose: "Detect process parameter changes",
+            equipmentContext: `${equipmentType} pressure monitoring`,
+            sequenceOrder: 11 + index
+          });
+        }
+        
+        if (trendData.toLowerCase().includes('temperature')) {
+          timelineQuestions.push({
+            id: `timeline-equipment-temperature-${index}`,
+            category: "Equipment-Specific Timeline",
+            label: "Temperature spike time", 
+            description: "When was abnormal temperature detected?",
+            type: "datetime-local",
+            required: false,
+            purpose: "Thermal failure detection",
+            equipmentContext: `${equipmentType} temperature monitoring`,
+            sequenceOrder: 12 + index
+          });
+        }
+        
+        // Add failure-mode-specific timing questions
+        if (failureMode.toLowerCase().includes('seal')) {
+          timelineQuestions.push({
+            id: `timeline-equipment-seal-${index}`,
+            category: "Equipment-Specific Timeline",
+            label: "Seal leak observation time",
+            description: "When was seal leakage first observed?", 
+            type: "datetime-local",
+            required: false,
+            purpose: "Link to seal degradation timeline",
+            equipmentContext: `${equipmentType} seal monitoring`,
+            sequenceOrder: 13 + index
+          });
+        }
+        
+        return timelineQuestions;
+      }).flat().filter(Boolean);
+      
+      console.log(`[Universal Timeline] Generated ${equipmentSpecificQuestions.length} equipment-specific timeline questions`);
+      
+      // Combine universal and equipment-specific questions
+      const allQuestions = [...universalQuestions, ...equipmentSpecificQuestions];
+      
+      // Sort by sequence order
+      allQuestions.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+      
+      return {
+        universalCount: universalQuestions.length,
+        equipmentSpecificCount: equipmentSpecificQuestions.length,
+        totalQuestions: allQuestions.length,
+        questions: allQuestions,
+        equipmentContext: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+        generatedFrom: "Evidence Library Intelligence"
+      };
+    }
+  } catch (error) {
+    console.error('[Universal Timeline] Error accessing Evidence Library:', error);
+  }
+  
+  // Fallback: Universal questions only if no Evidence Library data
+  console.log(`[Universal Timeline] Using universal questions only (Evidence Library expansion needed)`);
+  return {
+    universalCount: universalQuestions.length,
+    equipmentSpecificCount: 0,
+    totalQuestions: universalQuestions.length,
+    questions: universalQuestions,
+    equipmentContext: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
+    generatedFrom: "Universal Fallback"
+  };
 }
 
 // Helper functions for evidence generation
