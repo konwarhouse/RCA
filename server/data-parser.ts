@@ -32,28 +32,8 @@ export const OperatingDataSchema = z.object({
 // come from admin-configurable Evidence Library entries
 
 // Common symptom patterns for NLP extraction
-export const SYMPTOM_PATTERNS = {
-  leak: {
-    patterns: ['leak', 'leaking', 'drip', 'dripping', 'seepage', 'wet', 'fluid loss'],
-    locations: ['seal', 'gasket', 'joint', 'stem', 'body', 'flange', 'connection']
-  },
-  noise: {
-    patterns: ['noise', 'noisy', 'sound', 'grinding', 'squealing', 'rattling', 'knocking'],
-    types: ['grinding', 'squealing', 'rattling', 'knocking', 'humming', 'whistling']
-  },
-  vibration: {
-    patterns: ['vibration', 'vibrating', 'shake', 'shaking', 'oscillation', 'unbalance'],
-    severity: ['slight', 'moderate', 'severe', 'excessive']
-  },
-  overheating: {
-    patterns: ['hot', 'overheat', 'overheating', 'temperature', 'thermal', 'burning'],
-    locations: ['bearing', 'motor', 'winding', 'housing', 'coupling']
-  },
-  performance: {
-    patterns: ['low flow', 'poor performance', 'efficiency', 'output', 'capacity', 'pressure drop'],
-    types: ['reduced_flow', 'low_pressure', 'high_pressure', 'efficiency_loss', 'capacity_reduction']
-  }
-};
+// REMOVED HARDCODED SYMPTOM_PATTERNS - NOW USING EVIDENCE LIBRARY EXCLUSIVELY!
+// All symptom detection now uses Evidence Library faultSignaturePattern field
 
 export class DataParser {
   
@@ -174,31 +154,65 @@ export class DataParser {
   }
 
   /**
-   * Extract equipment type and details from text
+   * Extract equipment type and details from text using Evidence Library - NO HARDCODING!
    */
-  private static extractEquipmentInfo(text: string): any {
+  private static async extractEquipmentInfo(text: string): Promise<any> {
     const lowerText = text.toLowerCase();
     const equipment: any = {};
     
-    // Find equipment type
-    for (const [type, config] of Object.entries(ASSET_TYPES)) {
-      if (lowerText.includes(type)) {
-        equipment.type = type;
+    try {
+      // Use Evidence Library to find equipment types - UNIVERSAL LOGIC!
+      const { investigationStorage } = await import("./storage");
+      const allEvidence = await investigationStorage.searchEvidenceLibrary('');
+      
+      // Build equipment patterns from Evidence Library
+      const equipmentPatterns: { [key: string]: { group: string, type: string, subtypes: string[] } } = {};
+      
+      allEvidence.forEach((entry: any) => {
+        const group = entry.equipmentGroup?.toLowerCase() || '';
+        const type = entry.equipmentType?.toLowerCase() || '';
+        const subtype = entry.equipmentSubtype?.toLowerCase() || '';
         
-        // Find subtype
-        for (const subtype of config.subtypes) {
-          if (lowerText.includes(subtype.replace('_', ' '))) {
-            equipment.subtype = subtype;
-            break;
+        if (group && type) {
+          const key = `${group}_${type}`;
+          if (!equipmentPatterns[key]) {
+            equipmentPatterns[key] = {
+              group: entry.equipmentGroup,
+              type: entry.equipmentType, 
+              subtypes: []
+            };
+          }
+          if (subtype && !equipmentPatterns[key].subtypes.includes(entry.equipmentSubtype)) {
+            equipmentPatterns[key].subtypes.push(entry.equipmentSubtype);
           }
         }
-        break;
+      });
+      
+      // Find equipment type from Evidence Library patterns
+      for (const [key, config] of Object.entries(equipmentPatterns)) {
+        const typeKeywords = config.type.toLowerCase().split(/[\s,.-]+/);
+        if (typeKeywords.some(keyword => lowerText.includes(keyword))) {
+          equipment.group = config.group;
+          equipment.type = config.type;
+          
+          // Find subtype from Evidence Library
+          for (const subtype of config.subtypes) {
+            const subtypeKeywords = subtype.toLowerCase().split(/[\s,.-]+/);
+            if (subtypeKeywords.some(keyword => lowerText.includes(keyword))) {
+              equipment.subtype = subtype;
+              break;
+            }
+          }
+          break;
+        }
       }
+    } catch (error) {
+      console.error('Error extracting equipment info from Evidence Library:', error);
     }
     
-    // Extract equipment ID patterns
+    // Extract equipment ID patterns - Universal logic
     const idPatterns = [
-      /(?:pump|motor|valve|equipment|asset)[\s\-#:]*([\w\-]+)/gi,
+      /(?:equipment|asset)[\s\-#:]*([\w\-]+)/gi,
       /(?:id|tag|number)[\s\-#:]*([\w\-]+)/gi,
       /([A-Z]{1,3}[-_]?\d{2,6})/g
     ];
@@ -225,29 +239,39 @@ export class DataParser {
       severity: null
     };
     
-    // Check for symptom patterns
-    for (const [symptomType, config] of Object.entries(SYMPTOM_PATTERNS)) {
-      for (const pattern of config.patterns) {
-        if (lowerText.includes(pattern)) {
-          symptoms.detected.push({
-            type: symptomType,
-            pattern: pattern,
-            confidence: this.calculateConfidence(text, pattern)
-          });
-          
-          // Extract location if available
-          if ('locations' in config) {
-            for (const location of (config as any).locations) {
-              if (lowerText.includes(location)) {
-                symptoms.location = location;
-                break;
-              }
-            }
+    // Use Evidence Library for symptom detection - NO HARDCODING!
+    try {
+      const { investigationStorage } = await import("./storage");
+      const allEvidence = await investigationStorage.searchEvidenceLibrary('');
+      
+      // Extract symptoms from Evidence Library fault signature patterns
+      for (const entry of allEvidence) {
+        const faultSignature = entry.faultSignaturePattern || '';
+        const componentFailure = entry.componentFailureMode || '';
+        
+        // Split fault signature into symptom keywords
+        const symptomKeywords = faultSignature.toLowerCase().split(/[\s,.-]+/);
+        const failureKeywords = componentFailure.toLowerCase().split(/[\s,.-]+/);
+        
+        // Check if any symptom keywords match
+        const allKeywords = [...symptomKeywords, ...failureKeywords].filter(k => k.length > 3);
+        for (const keyword of allKeywords) {
+          if (lowerText.includes(keyword)) {
+            symptoms.detected.push({
+              type: componentFailure,
+              pattern: keyword,
+              confidence: this.calculateConfidence(text, keyword),
+              evidenceId: entry.id
+            });
           }
-          break;
         }
       }
+    } catch (error) {
+      console.error('Error extracting symptoms from Evidence Library:', error);
     }
+    
+    return symptoms;
+  }
     
     return symptoms;
   }
@@ -413,28 +437,32 @@ export class DataParser {
   /**
    * Infer equipment type from ID or description
    */
-  private static inferEquipmentType(equipmentId: string, description: string): string | null {
+  private static async inferEquipmentType(equipmentId: string, description: string): Promise<string | null> {
     const combined = `${equipmentId} ${description}`.toLowerCase();
     
-    for (const [type] of Object.entries(ASSET_TYPES)) {
-      if (combined.includes(type)) {
-        return type;
+    try {
+      // Use Evidence Library to infer equipment types - NO HARDCODING!
+      const { investigationStorage } = await import("./storage");
+      const allEvidence = await investigationStorage.searchEvidenceLibrary('');
+      
+      // Build type patterns from Evidence Library
+      for (const entry of allEvidence) {
+        const typeKeywords = entry.equipmentType?.toLowerCase().split(/[\s,.-]+/) || [];
+        if (typeKeywords.some(keyword => combined.includes(keyword))) {
+          return entry.equipmentType;
+        }
       }
-    }
-    
-    // Check for common prefixes in equipment IDs
-    const prefixMap: Record<string, string> = {
-      'p': 'pump',
-      'm': 'motor',
-      'v': 'valve',
-      'c': 'conveyor',
-      'comp': 'compressor'
-    };
-    
-    for (const [prefix, type] of Object.entries(prefixMap)) {
-      if (equipmentId.toLowerCase().startsWith(prefix)) {
-        return type;
+      
+      // Check equipment codes from Evidence Library
+      for (const entry of allEvidence) {
+        const code = entry.equipmentCode?.toLowerCase() || '';
+        if (code && equipmentId.toLowerCase().includes(code)) {
+          return entry.equipmentType;
+        }
       }
+      
+    } catch (error) {
+      console.error('Error inferring equipment type from Evidence Library:', error);
     }
     
     return null;

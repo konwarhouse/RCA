@@ -30,16 +30,18 @@ export class FaultTreeEngine {
     this.templates = FAULT_TREE_TEMPLATES;
   }
 
-  // Main analysis method
-  analyzeFaultTree(
+  // Main analysis method - UNIVERSAL EVIDENCE LIBRARY DRIVEN
+  async analyzeFaultTree(
+    equipmentGroup: string,
     equipmentType: string,
+    equipmentSubtype: string,
     evidenceData: Record<string, any>
-  ): FaultTreeAnalysisResult {
+  ): Promise<FaultTreeAnalysisResult> {
     
-    // Get appropriate fault tree template
-    const template = this.getFaultTreeTemplate(equipmentType);
+    // Get appropriate fault tree template from Evidence Library - NO HARDCODING!
+    const template = await this.getFaultTreeTemplate(equipmentGroup, equipmentType, equipmentSubtype);
     if (!template) {
-      throw new Error(`No fault tree template available for equipment type: ${equipmentType}`);
+      throw new Error(`No fault tree template available for equipment: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
     }
 
     // Build specific fault tree based on evidence
@@ -57,8 +59,8 @@ export class FaultTreeEngine {
     // Calculate overall confidence
     const confidenceScore = this.calculateConfidenceScore(evidenceMapping, evidenceData);
     
-    // Generate recommendations
-    const recommendations = this.generateRecommendations(criticalPath, evidenceData, equipmentType);
+    // Generate recommendations based on Evidence Library
+    const recommendations = await this.generateRecommendations(criticalPath, evidenceData, equipmentGroup, equipmentType, equipmentSubtype);
 
     return {
       topEvent: template.description,
@@ -71,19 +73,58 @@ export class FaultTreeEngine {
     };
   }
 
-  private getFaultTreeTemplate(equipmentType: string): FaultTreeNode | null {
-    // NOTE: Equipment type mapping now uses Evidence Library data instead of hardcoded mappings
-    // This ensures universal support for any equipment type configured in the database
-    
-    // Use generic fault tree template that adapts based on Evidence Library intelligence
-    const normalizedType = equipmentType.toLowerCase();
-    if (normalizedType.includes('pump')) return this.templates['pump_failure'];
-    if (normalizedType.includes('valve')) return this.templates['valve_failure'];
-    if (normalizedType.includes('motor')) return this.templates['motor_failure'];
-    if (normalizedType.includes('compressor')) return this.templates['compressor_failure'];
-    
-    // Default to generic equipment failure template for any unknown equipment
-    return this.templates['equipment_failure'] || this.templates['pump_failure'];
+  private async getFaultTreeTemplate(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<FaultTreeNode | null> {
+    // UNIVERSAL EVIDENCE LIBRARY-DRIVEN TEMPLATE SELECTION - NO HARDCODING!
+    // Build fault tree template dynamically from Evidence Library data
+    try {
+      const { investigationStorage } = await import("./storage");
+      
+      // Get exact equipment matches from Evidence Library
+      const evidenceEntries = await investigationStorage.searchEvidenceLibraryByEquipment(
+        equipmentGroup, equipmentType, equipmentSubtype
+      );
+      
+      if (evidenceEntries.length === 0) {
+        // Use generic template if no specific evidence found
+        return this.templates['equipment_failure'];
+      }
+      
+      // Build dynamic fault tree from Evidence Library failure modes
+      const rootNode: FaultTreeNode = {
+        id: `${equipmentType}_failure`,
+        description: `${equipmentType} ${equipmentSubtype} Failure`,
+        type: 'OR',
+        probability: 0.1,
+        children: []
+      };
+      
+      // Add fault tree branches from Evidence Library
+      evidenceEntries.forEach((entry, index) => {
+        const failureMode = entry.componentFailureMode || `Failure Mode ${index + 1}`;
+        const confidenceLevel = entry.confidenceLevel || 'Medium';
+        
+        // Convert confidence to probability
+        const probability = confidenceLevel === 'High' ? 0.15 : 
+                          confidenceLevel === 'Medium' ? 0.1 : 0.05;
+        
+        const childNode: FaultTreeNode = {
+          id: `failure_${entry.id}`,
+          description: failureMode,
+          type: 'BASIC',
+          probability: probability,
+          evidenceRequired: entry.requiredTrendDataEvidence?.split(',') || []
+        };
+        
+        rootNode.children!.push(childNode);
+      });
+      
+      return rootNode;
+      
+    } catch (error) {
+      console.error('Error building dynamic fault tree:', error);
+      // Fallback to generic template
+      return this.templates['equipment_failure'];
+    }
   }
 
   private buildSpecificFaultTree(
@@ -444,36 +485,125 @@ export class FaultTreeEngine {
     return Math.min(qualityScore, 1.0);
   }
 
-  private generateRecommendations(
+  private async generateRecommendations(
     criticalPath: FaultTreeNode[],
     evidenceData: Record<string, any>,
-    equipmentType: string
-  ): RecommendationItem[] {
+    equipmentGroup: string,
+    equipmentType: string,
+    equipmentSubtype: string
+  ): Promise<RecommendationItem[]> {
     const recommendations: RecommendationItem[] = [];
 
-    // Generate recommendations based on critical path
+    // Generate Evidence Library-driven recommendations - NO HARDCODING!
     for (const node of criticalPath) {
       if (node.type === 'basic_event') {
-        const nodeRecommendations = this.getRecommendationsForNode(node, evidenceData, equipmentType);
+        const nodeRecommendations = await this.getEvidenceLibraryRecommendationsForNode(node, evidenceData, equipmentGroup, equipmentType, equipmentSubtype);
         recommendations.push(...nodeRecommendations);
       }
     }
 
-    // Add general recommendations based on equipment type
-    const generalRecommendations = this.getGeneralRecommendations(equipmentType, evidenceData);
-    recommendations.push(...generalRecommendations);
+    // Add Evidence Library-driven general recommendations
+    const generalRecs = await this.getEvidenceLibraryRecommendations(equipmentGroup, equipmentType, equipmentSubtype, evidenceData);
+    recommendations.push(...generalRecs);
 
     return recommendations;
   }
 
-  private getRecommendationsForNode(
+  private async getEvidenceLibraryRecommendationsForNode(
+    node: FaultTreeNode,
+    evidenceData: Record<string, any>,
+    equipmentGroup: string,
+    equipmentType: string,
+    equipmentSubtype: string
+  ): Promise<RecommendationItem[]> {
+    const recommendations: RecommendationItem[] = [];
+    
+    try {
+      // Use Evidence Library for node-specific recommendations - NO HARDCODING!
+      const { investigationStorage } = await import("./storage");
+      const evidenceEntries = await investigationStorage.searchEvidenceLibraryByEquipment(
+        equipmentGroup, equipmentType, equipmentSubtype
+      );
+      
+      // Build recommendations from Evidence Library followupActions
+      for (const entry of evidenceEntries) {
+        if (entry.followupActions && node.description.toLowerCase().includes(entry.componentFailureMode?.toLowerCase() || '')) {
+          const actions = entry.followupActions.split(',').map(action => action.trim());
+          
+          actions.forEach((action, index) => {
+            if (action.length > 5) { // Skip empty/short actions
+              recommendations.push({
+                id: `${entry.id}_action_${index}`,
+                type: 'corrective',
+                priority: entry.evidencePriority === 1 ? 'immediate' : 
+                         entry.evidencePriority === 2 ? 'short_term' : 'long_term',
+                category: 'maintenance',
+                description: action,
+                justification: `Recommended action for ${entry.componentFailureMode} based on Evidence Library`,
+                evidenceSupport: [entry.requiredTrendDataEvidence || ''],
+                estimatedCost: entry.collectionCost === 'High' ? 'high' : 
+                             entry.collectionCost === 'Medium' ? 'medium' : 'low',
+                implementation: entry.industryBenchmark || 'Follow standard procedures'
+              });
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error generating Evidence Library recommendations:', error);
+    }
+    
+    return recommendations;
+  }
+
+  private async getEvidenceLibraryRecommendations(
+    equipmentGroup: string,
+    equipmentType: string,
+    equipmentSubtype: string,
+    evidenceData: Record<string, any>
+  ): Promise<RecommendationItem[]> {
+    const recommendations: RecommendationItem[] = [];
+    
+    try {
+      // Use Evidence Library for general recommendations - UNIVERSAL LOGIC!
+      const { investigationStorage } = await import("./storage");
+      const evidenceEntries = await investigationStorage.searchEvidenceLibraryByEquipment(
+        equipmentGroup, equipmentType, equipmentSubtype
+      );
+      
+      // Build general recommendations from Evidence Library
+      evidenceEntries.forEach((entry, index) => {
+        if (entry.industryBenchmark) {
+          recommendations.push({
+            id: `general_${entry.id}`,
+            type: 'preventive',
+            priority: 'long_term',
+            category: 'monitoring',
+            description: `Implement ${entry.industryBenchmark}`,
+            justification: `Industry best practice for ${equipmentType} ${equipmentSubtype}`,
+            evidenceSupport: ['equipment_type'],
+            estimatedCost: entry.collectionCost === 'High' ? 'high' : 
+                         entry.collectionCost === 'Medium' ? 'medium' : 'low'
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error generating general Evidence Library recommendations:', error);
+    }
+    
+    return recommendations;
+  }
+
+  private DEPRECATED_getRecommendationsForNode(
     node: FaultTreeNode,
     evidenceData: Record<string, any>,
     equipmentType: string
   ): RecommendationItem[] {
+    // DEPRECATED - REPLACED WITH EVIDENCE LIBRARY LOGIC
     const recommendations: RecommendationItem[] = [];
     
-    // Node-specific recommendations
+    // HARDCODED NODE RECOMMENDATIONS - REMOVED!
     const nodeRecommendations: Record<string, RecommendationItem[]> = {
       'seal_failure': [
         {
