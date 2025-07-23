@@ -1267,22 +1267,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = [];
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
-        if (values.length >= 11) { // Minimum required fields
+        if (values.length >= 11 && values[4]) { // Minimum required fields + Equipment Code must exist
           items.push({
             equipmentGroup: values[0],
             equipmentType: values[1],
             subtype: values[2] || null,
             componentFailureMode: values[3],
-            equipmentCode: values[4],
+            equipmentCode: values[4], // UNIQUE KEY for upsert
             failureCode: values[5],
             riskRanking: values[6],
             requiredTrendDataEvidence: values[7],
             aiOrInvestigatorQuestions: values[8],
             attachmentsEvidenceRequired: values[9],
             rootCauseLogic: values[10],
-            blankColumn1: values[11] || null,
-            blankColumn2: values[12] || null,
-            blankColumn3: values[13] || null,
+            // Enriched Evidence Library Fields (indices 11-17)
+            primaryRootCause: values[11] || null,
+            contributingFactor: values[12] || null,
+            latentCause: values[13] || null,
+            detectionGap: values[14] || null,
+            faultSignaturePattern: values[15] || null,
+            applicableToOtherEquipment: values[16] || null,
+            evidenceGapFlag: values[17] || null,
+            // Configurable Intelligence Fields (indices 18-27)
+            confidenceLevel: values[18] || null,
+            diagnosticValue: values[19] || null,
+            industryRelevance: values[20] || null,
+            evidencePriority: values[21] ? parseInt(values[21]) : null,
+            timeToCollect: values[22] || null,
+            collectionCost: values[23] || null,
+            analysisComplexity: values[24] || null,
+            seasonalFactor: values[25] || null,
+            relatedFailureModes: values[26] || null,
+            prerequisiteEvidence: values[27] || null,
+            followupActions: values[28] || null,
+            industryBenchmark: values[29] || null,
+            // Legacy fields
+            blankColumn1: values[30] || null,
+            blankColumn2: values[31] || null,
+            blankColumn3: values[32] || null,
             updatedBy: "admin-import",
           });
         }
@@ -1292,9 +1314,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No valid data found in CSV" });
       }
 
-      const importedItems = await investigationStorage.bulkImportEvidenceLibrary(items);
+      const importedItems = await investigationStorage.bulkUpsertEvidenceLibrary(items);
       res.json({ 
-        message: "Import successful", 
+        message: "Import successful with upsert (Equipment Code-based updates)", 
         imported: importedItems.length,
         items: importedItems 
       });

@@ -44,6 +44,7 @@ export interface IInvestigationStorage {
   searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]>;
   searchEvidenceLibraryByEquipment(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<EvidenceLibrary[]>;
   bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
+  bulkUpsertEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   
   // AI Settings operations
   getAllAiSettings(): Promise<any[]>;
@@ -557,7 +558,61 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     }
   }
 
-
+  async bulkUpsertEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]> {
+    try {
+      console.log(`[Storage] Bulk upserting ${data.length} evidence library items based on Equipment Code`);
+      
+      const results: EvidenceLibrary[] = [];
+      
+      for (const item of data) {
+        if (!item.equipmentCode) {
+          console.warn(`[Storage] Skipping item without Equipment Code: ${item.componentFailureMode}`);
+          continue;
+        }
+        
+        // Check if record exists by Equipment Code (UNIQUE KEY)
+        const [existing] = await db
+          .select()
+          .from(evidenceLibrary)
+          .where(eq(evidenceLibrary.equipmentCode, item.equipmentCode))
+          .limit(1);
+        
+        if (existing) {
+          // UPDATE existing record
+          console.log(`[Storage] Updating existing record with Equipment Code: ${item.equipmentCode}`);
+          const [updated] = await db
+            .update(evidenceLibrary)
+            .set({
+              ...item,
+              updatedAt: new Date(),
+              lastUpdated: new Date(),
+              updatedBy: item.updatedBy || "admin-import"
+            })
+            .where(eq(evidenceLibrary.equipmentCode, item.equipmentCode))
+            .returning();
+          results.push(updated);
+        } else {
+          // INSERT new record
+          console.log(`[Storage] Inserting new record with Equipment Code: ${item.equipmentCode}`);
+          const [inserted] = await db
+            .insert(evidenceLibrary)
+            .values({
+              ...item,
+              lastUpdated: new Date(),
+              updatedAt: new Date()
+            })
+            .returning();
+          results.push(inserted);
+        }
+      }
+      
+      console.log(`[Storage] Successfully upserted ${results.length} evidence library items`);
+      return results;
+    } catch (error) {
+      console.error('[RCA] Error in bulkUpsertEvidenceLibrary:', error);
+      throw error;
+    }
+  }
 
   // Equipment Groups operations
   async getAllEquipmentGroups(): Promise<EquipmentGroup[]> {

@@ -461,7 +461,7 @@ export default function EvidenceLibraryManagement() {
 
   const handleExport = () => {
     const csv = [
-      "Equipment Group,Equipment Type,Subtype,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Blank Column 1,Blank Column 2,Blank Column 3",
+      "Equipment Group,Equipment Type,Subtype,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Primary Root Cause,Contributing Factor,Latent Cause,Detection Gap,Fault Signature Pattern,Applicable to Other Equipment,Evidence Gap Flag,Confidence Level,Diagnostic Value,Industry Relevance,Evidence Priority,Time to Collect,Collection Cost,Analysis Complexity,Seasonal Factor,Related Failure Modes,Prerequisite Evidence,Followup Actions,Industry Benchmark,Blank Column 1,Blank Column 2,Blank Column 3",
       ...evidenceItems.map(item => [
         item.equipmentGroup,
         item.equipmentType,
@@ -474,10 +474,29 @@ export default function EvidenceLibraryManagement() {
         item.aiOrInvestigatorQuestions,
         item.attachmentsEvidenceRequired,
         item.rootCauseLogic,
+        item.primaryRootCause || "",
+        item.contributingFactor || "",
+        item.latentCause || "",
+        item.detectionGap || "",
+        item.faultSignaturePattern || "",
+        item.applicableToOtherEquipment || "",
+        item.evidenceGapFlag || "",
+        item.confidenceLevel || "",
+        item.diagnosticValue || "",
+        item.industryRelevance || "",
+        item.evidencePriority || "",
+        item.timeToCollect || "",
+        item.collectionCost || "",
+        item.analysisComplexity || "",
+        item.seasonalFactor || "",
+        item.relatedFailureModes || "",
+        item.prerequisiteEvidence || "",
+        item.followupActions || "",
+        item.industryBenchmark || "",
         item.blankColumn1 || "",
         item.blankColumn2 || "",
         item.blankColumn3 || ""
-      ].map(field => `"${field.replace(/"/g, '""')}"`).join(","))
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
     const blob = new Blob([csv], { type: "text/csv" });
@@ -816,11 +835,18 @@ export default function EvidenceLibraryManagement() {
                             name="equipmentCode"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Equipment Code</FormLabel>
+                                <FormLabel className="flex items-center">
+                                  Equipment Code 
+                                  <span className="ml-1 text-red-500 font-bold">*UNIQUE*</span>
+                                  <span className="ml-2 text-xs text-gray-500" title="Unique identifier for equipment - used for updates and imports">🔑</span>
+                                </FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="e.g., PMP-CEN-001" />
+                                  <Input {...field} placeholder="e.g., PMP-CEN-001 (Must be unique - used for updates)" />
                                 </FormControl>
                                 <FormMessage />
+                                <p className="text-xs text-blue-600 mt-1">
+                                  📋 <strong>CRITICAL:</strong> Equipment Code is the ONLY unique field. CSV imports will UPDATE existing records with same Equipment Code.
+                                </p>
                               </FormItem>
                             )}
                           />
@@ -951,7 +977,10 @@ export default function EvidenceLibraryManagement() {
                               name="confidenceLevel"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Confidence Level</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Confidence Level
+                                    <span className="ml-2 text-xs text-gray-500" title="Expected analysis confidence when this evidence is collected">📊</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                       <SelectTrigger>
@@ -973,7 +1002,10 @@ export default function EvidenceLibraryManagement() {
                               name="diagnosticValue"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Diagnostic Value</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Diagnostic Value
+                                    <span className="ml-2 text-xs text-gray-500" title="How critical this evidence is for accurate diagnosis">🎯</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                       <SelectTrigger>
@@ -996,7 +1028,10 @@ export default function EvidenceLibraryManagement() {
                               name="industryRelevance"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Industry Relevance</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Industry Relevance
+                                    <span className="ml-2 text-xs text-gray-500" title="Which industries this failure mode applies to">🏭</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                       <SelectTrigger>
@@ -1025,7 +1060,10 @@ export default function EvidenceLibraryManagement() {
                               name="evidencePriority"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Evidence Priority</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Evidence Priority
+                                    <span className="ml-2 text-xs text-gray-500" title="Collection priority order (1=highest, 4=lowest)">📋</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                                       <SelectTrigger>
@@ -1048,7 +1086,10 @@ export default function EvidenceLibraryManagement() {
                               name="timeToCollect"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Time to Collect</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Time to Collect
+                                    <span className="ml-2 text-xs text-gray-500" title="Expected time required to collect this evidence">⏱️</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                       <SelectTrigger>
@@ -1071,7 +1112,10 @@ export default function EvidenceLibraryManagement() {
                               name="collectionCost"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Collection Cost</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Collection Cost
+                                    <span className="ml-2 text-xs text-gray-500" title="Expected cost to collect this evidence">💰</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                       <SelectTrigger>
@@ -1244,7 +1288,10 @@ export default function EvidenceLibraryManagement() {
                               name="contributingFactor"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Contributing Factor</FormLabel>
+                                  <FormLabel className="flex items-center">
+                                    Contributing Factor
+                                    <span className="ml-2 text-xs text-gray-500" title="Secondary factors that increase likelihood of the primary root cause">⚠️</span>
+                                  </FormLabel>
                                   <FormControl>
                                     <Textarea 
                                       {...field} 
@@ -1253,6 +1300,9 @@ export default function EvidenceLibraryManagement() {
                                     />
                                   </FormControl>
                                   <FormMessage />
+                                  <p className="text-xs text-orange-600 mt-1">
+                                    🔗 <strong>PURPOSE:</strong> Secondary factors that work together with the primary root cause to enable this failure mode.
+                                  </p>
                                 </FormItem>
                               )}
                             />
