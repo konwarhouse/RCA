@@ -2467,104 +2467,42 @@ async function generateUniversalTimelineQuestions(equipmentGroup: string, equipm
       let sequenceCounter = 10;
       
       libraryEvidence.forEach((item: any, index: number) => {
-        // Extract timeline-relevant information from Evidence Library fields
+        // UNIVERSAL APPROACH: Extract timeline questions directly from Evidence Library fields
         const trendData = item.requiredTrendDataEvidence || '';
         const questions = item.aiOrInvestigatorQuestions || '';
         const failureMode = item.componentFailureMode || '';
         
-        // Generate timing questions based on trend data requirements with DEDUPLICATION
-        if (trendData.toLowerCase().includes('vibration')) {
-          const key = `vibration-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
+        // ZERO HARDCODING: Generate timeline questions from Evidence Library data structure
+        // Each Evidence Library entry becomes a potential timeline question
+        if (failureMode && questions) {
+          const key = `${failureMode.toLowerCase().replace(/\s+/g, '-')}-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
           if (!equipmentSpecificQuestionsMap.has(key)) {
+            // Generate timeline question label from failure mode
+            const timelineLabel = `${failureMode} observation time`;
+            
+            // Generate description from AI questions or failure mode
+            const timelineDescription = questions.includes('When') ? 
+              questions.split('?')[0] + '?' : 
+              `When was ${failureMode.toLowerCase()} first detected?`;
+            
+            // Generate purpose from failure mode and trend data
+            const purpose = trendData ? 
+              `${failureMode} detection - requires ${trendData}` :
+              `${failureMode} timing analysis`;
+            
             equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-vibration`,
+              id: `timeline-equipment-${failureMode.toLowerCase().replace(/\s+/g, '-')}`,
               category: "Equipment-Specific Timeline",
-              label: "Vibration spike time",
-              description: "When was abnormal vibration first detected?",
+              label: timelineLabel,
+              description: timelineDescription,
               type: "datetime-local",
               required: false,
-              purpose: "Link to shaft/bearing issues",
-              equipmentContext: `${equipmentType} vibration monitoring`,
+              purpose: purpose,
+              equipmentContext: `${equipmentType} ${failureMode.toLowerCase()} monitoring`,
               sequenceOrder: sequenceCounter++,
               hasConfidenceField: true,
-              hasOptionalExplanation: true
-            });
-          }
-        }
-        
-        if (trendData.toLowerCase().includes('pressure')) {
-          const key = `pressure-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
-          if (!equipmentSpecificQuestionsMap.has(key)) {
-            equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-pressure`,
-              category: "Equipment-Specific Timeline", 
-              label: "Pressure deviation time",
-              description: "When did pressure readings become abnormal?",
-              type: "datetime-local",
-              required: false,
-              purpose: "Detect process parameter changes",
-              equipmentContext: `${equipmentType} pressure monitoring`,
-              sequenceOrder: sequenceCounter++,
-              hasConfidenceField: true,
-              hasOptionalExplanation: true
-            });
-          }
-        }
-        
-        if (trendData.toLowerCase().includes('temperature')) {
-          const key = `temperature-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
-          if (!equipmentSpecificQuestionsMap.has(key)) {
-            equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-temperature`,
-              category: "Equipment-Specific Timeline",
-              label: "Temperature deviation time", 
-              description: "When did temperature readings become abnormal?",
-              type: "datetime-local",
-              required: false,
-              purpose: "Thermal failure detection",
-              equipmentContext: `${equipmentType} temperature monitoring`,
-              sequenceOrder: sequenceCounter++,
-              hasConfidenceField: true,
-              hasOptionalExplanation: true
-            });
-          }
-        }
-        
-        // Add failure-mode-specific timing questions with DEDUPLICATION
-        if (failureMode.toLowerCase().includes('seal')) {
-          const key = `seal-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
-          if (!equipmentSpecificQuestionsMap.has(key)) {
-            equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-seal`,
-              category: "Equipment-Specific Timeline",
-              label: "Seal leak observation time",
-              description: "When was seal leakage first observed?", 
-              type: "datetime-local",
-              required: false,
-              purpose: "Seal integrity timeline",
-              equipmentContext: `${equipmentType} seal monitoring`,
-              sequenceOrder: sequenceCounter++,
-              hasConfidenceField: true,
-              hasOptionalExplanation: true
-            });
-          }
-        }
-        
-        if (failureMode.toLowerCase().includes('bearing')) {
-          const key = `bearing-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
-          if (!equipmentSpecificQuestionsMap.has(key)) {
-            equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-bearing`,
-              category: "Equipment-Specific Timeline",
-              label: "Bearing distress time",
-              description: "When were bearing issues first detected?",
-              type: "datetime-local",
-              required: false,
-              purpose: "Bearing failure progression",
-              equipmentContext: `${equipmentType} bearing monitoring`,
-              sequenceOrder: sequenceCounter++,
-              hasConfidenceField: true,
-              hasOptionalExplanation: true
+              hasOptionalExplanation: true,
+              evidenceLibraryBased: true // Flag to indicate this is Evidence Library driven
             });
           }
         }

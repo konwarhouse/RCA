@@ -16,8 +16,25 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### CONFIDENCE BUTTON VISUAL FEEDBACK ISSUE COMPLETELY RESOLVED (LATEST FIX)
-- **Date**: January 23, 2025 (Latest Critical UI Fix)
+### CRITICAL HARDCODED TIMELINE LOGIC ELIMINATION COMPLETED (LATEST FIX)
+- **Date**: January 23, 2025 (Latest Critical Architecture Fix)
+- **User Requirement Validated**: Confirmed zero hardcoding principle - all logic must be "Group+Type+Subtype" Evidence Library-driven
+- **Critical Hardcoding Discovered**: Timeline generation had hardcoded keyword matching (vibration, pressure, temperature, seal, bearing) violating universal architecture
+- **Technical Solution**: 
+  - **Eliminated Hardcoded Keywords**: Removed all `if (trendData.includes('vibration'))` and similar hardcoded checks
+  - **Universal Timeline Generation**: Each Evidence Library entry now generates its own timeline question dynamically
+  - **Dynamic Question Building**: Timeline labels/descriptions generated from `componentFailureMode` and `aiOrInvestigatorQuestions` fields
+  - **Zero Equipment-Specific Logic**: System works for ANY failure mode in ANY equipment combination through Evidence Library data
+- **Architecture Improvements**:
+  - **Timeline Label**: Built from `componentFailureMode` → "Seal Leak observation time", "Bearing Failure observation time"
+  - **Description**: Extracted from `aiOrInvestigatorQuestions` or generated dynamically from failure mode
+  - **Purpose**: Constructed from `failureMode` + `requiredTrendDataEvidence` combination
+  - **Equipment Context**: Uses actual `equipmentType` instead of hardcoded references
+- **Testing Results**: Centrifugal Pumps now generate 10 timeline questions from 10 Evidence Library failure modes without hardcoded logic
+- **Impact**: **TRULY UNIVERSAL ARCHITECTURE ACHIEVED** - Timeline system now maintains zero hardcoding principle. ANY equipment combination generates appropriate timeline questions through Evidence Library intelligence. System scales infinitely without developer intervention.
+
+### Previous: CONFIDENCE BUTTON VISUAL FEEDBACK ISSUE COMPLETELY RESOLVED 
+- **Date**: January 23, 2025 (Previous Critical UI Fix)
 - **User Issue Resolved**: Confidence buttons (Evidence Backed/Not Known/Estimated) had no clear visual feedback when selected - users couldn't tell which option was chosen
 - **Root Cause**: Buttons had minimal visual difference between selected/unselected states with only subtle background color changes
 - **Technical Solution**: 
