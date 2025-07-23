@@ -787,6 +787,48 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     }
   }
 
+  // Equipment-specific evidence library search - EXACT MATCH ONLY
+  async searchEvidenceLibraryByEquipment(
+    equipmentGroup: string, 
+    equipmentType: string, 
+    equipmentSubtype: string
+  ): Promise<EvidenceLibrary[]> {
+    try {
+      console.log(`[Storage] Searching for EXACT equipment match: ${equipmentGroup} -> ${equipmentType} -> ${equipmentSubtype}`);
+      
+      let query = db
+        .select()
+        .from(evidenceLibrary)
+        .where(
+          and(
+            eq(evidenceLibrary.isActive, true),
+            eq(evidenceLibrary.equipmentGroup, equipmentGroup),
+            eq(evidenceLibrary.equipmentType, equipmentType)
+          )
+        );
+
+      // Add subtype filter if provided
+      if (equipmentSubtype && equipmentSubtype.trim() !== '') {
+        query = query.where(
+          and(
+            eq(evidenceLibrary.isActive, true),
+            eq(evidenceLibrary.equipmentGroup, equipmentGroup),
+            eq(evidenceLibrary.equipmentType, equipmentType),
+            eq(evidenceLibrary.subtype, equipmentSubtype)
+          )
+        );
+      }
+
+      const results = await query.orderBy(evidenceLibrary.componentFailureMode);
+      
+      console.log(`[Storage] Found ${results.length} exact equipment matches for ${equipmentSubtype || equipmentType} ${equipmentType}`);
+      return results;
+    } catch (error) {
+      console.error("[DatabaseInvestigationStorage] Error searching evidence library by equipment:", error);
+      throw error;
+    }
+  }
+
   // AI Settings operations
   async getAiSettingsById(id: number): Promise<any> {
     try {

@@ -788,8 +788,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[Elimination Search] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
       console.log(`[Elimination Search] Symptoms: ${symptoms}`);
       
-      // Step 1: Get all failure modes for this equipment
-      const allFailureModes = await investigationStorage.searchEvidenceLibrary(
+      // Step 1: Get EXACT equipment matches only (not generic search)
+      const allFailureModes = await investigationStorage.searchEvidenceLibraryByEquipment(
         equipmentGroup as string, 
         equipmentType as string, 
         equipmentSubtype as string || ''
