@@ -68,6 +68,10 @@ export const evidenceLibrary = pgTable("evidence_library", {
   followupActions: text("followup_actions"), // What to do after collecting this evidence - Admin editable
   industryBenchmark: text("industry_benchmark"), // Industry standards/benchmarks - Admin editable
   
+  // Elimination logic fields - for intelligent failure mode elimination
+  eliminatedIfTheseFailuresConfirmed: text("eliminated_if_these_failures_confirmed"), // Failure modes that eliminate this one
+  whyItGetsEliminated: text("why_it_gets_eliminated"), // Engineering reason for elimination
+  
   // Legacy fields (keeping for compatibility)
   blankColumn1: varchar("blank_column_1"), // Blank Column 1
   blankColumn2: varchar("blank_column_2"), // Blank Column 2

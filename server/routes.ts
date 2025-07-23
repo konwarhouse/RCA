@@ -512,8 +512,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[AI Analysis] Processing ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype} - Incident #${id}`);
 
-      // Perform AI cross-matching and analysis
-      const analysis = await performAIAnalysis(equipmentGroup, equipmentType, equipmentSubtype, symptoms, evidenceChecklist, evidenceFiles);
+      // Step 1: Perform elimination logic analysis FIRST
+      const { EliminationEngine } = await import("./elimination-engine");
+      const eliminationResults = await EliminationEngine.performEliminationAnalysis(
+        equipmentGroup, 
+        equipmentType, 
+        equipmentSubtype || '', 
+        symptoms
+      );
+      
+      console.log(`[Elimination Engine] Eliminated ${eliminationResults.eliminatedFailureModes.length} failure modes`);
+      console.log(`[Elimination Engine] Confidence boost: +${eliminationResults.confidenceBoost}%`);
+
+      // Step 2: Generate targeted questions based on remaining failure modes
+      const targetedQuestions = EliminationEngine.generateTargetedQuestions(
+        eliminationResults.remainingFailureModes,
+        eliminationResults
+      );
+
+      // Step 3: Perform AI analysis with elimination-enhanced data
+      const analysis = await performAIAnalysis(
+        equipmentGroup, 
+        equipmentType, 
+        equipmentSubtype, 
+        symptoms, 
+        evidenceChecklist, 
+        evidenceFiles,
+        {
+          eliminationResults,
+          targetedQuestions,
+          remainingFailureModes: eliminationResults.remainingFailureModes
+        }
+      );
       
       // Update incident with analysis results
       await investigationStorage.updateIncident(id, {
@@ -2338,7 +2368,7 @@ async function generateEvidenceCategories(equipmentGroup: string, equipmentType:
   return categories;
 }
 
-async function performAIAnalysis(equipmentGroup: string, equipmentType: string, equipmentSubtype: string, symptoms: string, evidenceChecklist: any[], evidenceFiles: any[]) {
+async function performAIAnalysis(equipmentGroup: string, equipmentType: string, equipmentSubtype: string, symptoms: string, evidenceChecklist: any[], evidenceFiles: any[], eliminationContext?: any) {
   // Use configurable AI provider system for analysis
   const { AIService } = await import("./ai-service");
   
@@ -2346,8 +2376,30 @@ async function performAIAnalysis(equipmentGroup: string, equipmentType: string, 
     // Create failure-mode-aware AI prompt that focuses on PRIMARY causes
     const failureModeAnalysis = analyzeUniversalFailureMode(symptoms, equipmentType);
     
+    // Generate elimination-enhanced analysis prompt
+    let eliminationSection = '';
+    if (eliminationContext?.eliminationResults) {
+      const { eliminationResults, targetedQuestions } = eliminationContext;
+      
+      eliminationSection = `
+ELIMINATION LOGIC APPLIED:
+- ${eliminationResults.eliminatedFailureModes.length} failure modes eliminated based on observed symptoms
+- Eliminated: ${eliminationResults.eliminatedFailureModes.join(', ')}
+- ${eliminationResults.remainingFailureModes.length} failure modes remain for investigation
+- Confidence boost: +${eliminationResults.confidenceBoost}%
+
+${eliminationResults.eliminationReasons.length > 0 ? `
+ENGINEERING ELIMINATION REASONING:
+${eliminationResults.eliminationReasons.map(r => `- ${r.failureMode}: ${r.reason} (eliminated by ${r.eliminatedBy})`).join('\n')}
+` : ''}
+
+TARGETED INVESTIGATION QUESTIONS (based on remaining failure modes):
+${targetedQuestions.map(q => `- ${q}`).join('\n')}
+`;
+    }
+    
     const analysisPrompt = `
-You are a senior mechanical engineer conducting root cause analysis. The equipment has experienced a ${failureModeAnalysis.severity} failure.
+You are a senior mechanical engineer conducting root cause analysis with intelligent elimination logic. The equipment has experienced a ${failureModeAnalysis.severity} failure.
 
 CRITICAL ANALYSIS REQUIREMENTS:
 ${failureModeAnalysis.analysisInstructions}
@@ -2357,6 +2409,8 @@ Equipment Details:
 - Equipment Type: ${equipmentType}
 - Equipment Subtype: ${equipmentSubtype}
 - Failure Description: ${symptoms}
+
+${eliminationSection}
 
 ${failureModeAnalysis.keyQuestions.length > 0 ? `
 MANDATORY INVESTIGATION FOCUS:
