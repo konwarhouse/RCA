@@ -94,30 +94,35 @@ export default function EquipmentSelection() {
     retryDelay: 1000,
   });
 
-  // Fetch evidence library items based on the complete equipment specification (Group->Type->Subtype)
-  const { data: libraryItems = [] } = useQuery({
-    queryKey: [`/api/evidence-library/by-equipment`, incident?.equipmentGroup, incident?.equipmentType, incident?.equipmentSubtype],
+  // Fetch evidence library items with elimination logic applied - NEW INTELLIGENT SYSTEM
+  const { data: eliminationData, isLoading: isLoadingLibrary } = useQuery({
+    queryKey: [`/api/evidence-library/search-with-elimination`, incident?.equipmentGroup, incident?.equipmentType, incident?.equipmentSubtype, incident?.description],
     queryFn: async () => {
-      if (!incident?.equipmentGroup || !incident?.equipmentType || !incident?.equipmentSubtype) {
-        console.log('Missing equipment details - Group:', incident?.equipmentGroup, 'Type:', incident?.equipmentType, 'Subtype:', incident?.equipmentSubtype);
-        return [];
+      if (!incident?.equipmentGroup || !incident?.equipmentType || !incident?.equipmentSubtype || !incident?.description) {
+        console.log('Missing data for elimination analysis - Group:', incident?.equipmentGroup, 'Type:', incident?.equipmentType, 'Subtype:', incident?.equipmentSubtype, 'Description:', !!incident?.description);
+        return null;
       }
       
-      // Use specific equipment search for exact matches
-      const url = `/api/evidence-library/search?equipmentGroup=${encodeURIComponent(incident.equipmentGroup)}&equipmentType=${encodeURIComponent(incident.equipmentType)}&equipmentSubtype=${encodeURIComponent(incident.equipmentSubtype)}`;
-      console.log('Searching evidence library with specific equipment params:', url);
+      // Use elimination-aware search that filters out impossible failure modes
+      const url = `/api/evidence-library/search-with-elimination?equipmentGroup=${encodeURIComponent(incident.equipmentGroup)}&equipmentType=${encodeURIComponent(incident.equipmentType)}&equipmentSubtype=${encodeURIComponent(incident.equipmentSubtype)}&symptoms=${encodeURIComponent(incident.description)}`;
+      console.log('Searching evidence library with elimination logic:', url);
       
       const response = await fetch(url);
       if (!response.ok) {
-        console.error('Evidence library search failed:', response.status, response.statusText);
-        return [];
+        console.error('Elimination search failed:', response.status, response.statusText);
+        return null;
       }
       const results = await response.json();
-      console.log(`Evidence library results: ${results.length} items found for ${incident.equipmentSubtype} ${incident.equipmentType}`);
+      console.log(`Elimination results: ${results.remainingFailureModes?.length || 0} remaining, ${results.eliminatedFailureModes?.length || 0} eliminated`);
       return results;
     },
-    enabled: !!incident?.equipmentGroup && !!incident?.equipmentType && !!incident?.equipmentSubtype,
+    enabled: !!incident?.equipmentGroup && !!incident?.equipmentType && !!incident?.equipmentSubtype && !!incident?.description,
   });
+
+  // Extract remaining and eliminated failure modes
+  const libraryItems = eliminationData?.remainingFailureModes || [];
+  const eliminatedItems = eliminationData?.eliminatedFailureModes || [];
+  const eliminationSummary = eliminationData?.eliminationSummary;
 
   // Update equipment selection mutation
   const updateIncidentMutation = useMutation({
@@ -284,15 +289,47 @@ export default function EquipmentSelection() {
               </p>
             </CardHeader>
             <CardContent>
+              {/* Elimination Summary - NEW FEATURE */}
+              {eliminationSummary && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="font-semibold text-green-800">Intelligent Elimination Applied</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-bold text-slate-700">{eliminationSummary.totalAnalyzed}</div>
+                      <div className="text-slate-600">Total Analyzed</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-red-600">{eliminationSummary.eliminated}</div>
+                      <div className="text-red-600">Eliminated</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-green-600">{eliminationSummary.remaining}</div>
+                      <div className="text-green-600">Remaining</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      +{eliminationSummary.confidenceBoost}% Confidence Boost
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
               {libraryItems.length > 0 ? (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="mb-3">
+                    <h4 className="font-medium text-green-700 mb-2">🎯 Remaining Failure Modes (Focus Here)</h4>
+                  </div>
                   {libraryItems.map((item: any) => (
                     <div 
                       key={item.id}
                       className={`p-4 border rounded-lg cursor-pointer transition-all ${
                         selectedEquipmentFromLibrary?.id === item.id
                           ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          : 'border-green-200 hover:border-green-300 hover:bg-green-50'
                       }`}
                       onClick={() => setSelectedEquipmentFromLibrary(item)}
                     >
@@ -303,9 +340,35 @@ export default function EquipmentSelection() {
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-600 mb-2">{item.componentFailureMode}</p>
-                      <p className="text-xs text-slate-500">{item.subtypeExample}</p>
+                      <p className="text-xs text-green-600">✅ Active for investigation</p>
                     </div>
                   ))}
+                  
+                  {/* Show eliminated items for reference */}
+                  {eliminatedItems.length > 0 && (
+                    <div className="mt-6 pt-4 border-t border-slate-200">
+                      <details className="cursor-pointer">
+                        <summary className="font-medium text-red-700 mb-2">❌ Eliminated Failure Modes ({eliminatedItems.length}) - Click to view</summary>
+                        <div className="space-y-2 mt-3">
+                          {eliminatedItems.map((item: any) => (
+                            <div 
+                              key={item.id}
+                              className="p-3 border border-red-200 rounded-lg bg-red-50 opacity-75"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-medium text-red-800">{item.equipmentType}</h4>
+                                <Badge variant="destructive" className="opacity-75">
+                                  Eliminated
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-red-700 mb-1">{item.componentFailureMode}</p>
+                              <p className="text-xs text-red-600 italic">Reason: {item.eliminationReason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">

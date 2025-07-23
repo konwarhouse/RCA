@@ -1,5 +1,5 @@
 import { EvidenceLibrary } from "@shared/schema";
-import { storage } from "./storage";
+import { investigationStorage } from "./storage";
 
 export interface EliminationResult {
   eliminatedFailureModes: string[];
@@ -29,7 +29,7 @@ export class EliminationEngine {
     console.log(`[Elimination Engine] Symptoms: "${symptomDescription}"`);
 
     // Step 1: Get all possible failure modes for this equipment
-    const allFailureModes = await storage.searchEvidenceLibraryByEquipment(
+    const allFailureModes = await investigationStorage.searchEvidenceLibraryByEquipment(
       equipmentGroup, 
       equipmentType, 
       equipmentSubtype

@@ -776,6 +776,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Evidence Library with Elimination Logic - NEW ENDPOINT
+  app.get("/api/evidence-library/search-with-elimination", async (req, res) => {
+    try {
+      const { equipmentGroup, equipmentType, equipmentSubtype, symptoms } = req.query;
+      
+      if (!equipmentGroup || !equipmentType || !symptoms) {
+        return res.status(400).json({ message: "Equipment details and symptoms are required" });
+      }
+
+      console.log(`[Elimination Search] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
+      console.log(`[Elimination Search] Symptoms: ${symptoms}`);
+      
+      // Step 1: Get all failure modes for this equipment
+      const allFailureModes = await investigationStorage.searchEvidenceLibrary(
+        equipmentGroup as string, 
+        equipmentType as string, 
+        equipmentSubtype as string || ''
+      );
+      
+      // Step 2: Apply elimination logic
+      const { EliminationEngine } = await import("./elimination-engine");
+      const eliminationResults = await EliminationEngine.performEliminationAnalysis(
+        equipmentGroup as string, 
+        equipmentType as string, 
+        equipmentSubtype as string || '', 
+        symptoms as string
+      );
+      
+      // Step 3: Filter out eliminated failure modes
+      const remainingFailureModes = allFailureModes.filter(mode => {
+        const isEliminated = eliminationResults.eliminatedFailureModes.some(eliminated => 
+          eliminated.toLowerCase().includes(mode.componentFailureMode.toLowerCase()) ||
+          mode.componentFailureMode.toLowerCase().includes(eliminated.toLowerCase())
+        );
+        return !isEliminated;
+      });
+      
+      // Step 4: Add elimination metadata to each remaining mode
+      const enhancedFailureModes = remainingFailureModes.map(mode => ({
+        ...mode,
+        eliminationStatus: 'active',
+        remainingReason: 'Not eliminated by current symptoms'
+      }));
+      
+      // Step 5: Add eliminated modes for reference (marked as eliminated)
+      const eliminatedFailureModes = allFailureModes.filter(mode => {
+        const isEliminated = eliminationResults.eliminatedFailureModes.some(eliminated => 
+          eliminated.toLowerCase().includes(mode.componentFailureMode.toLowerCase()) ||
+          mode.componentFailureMode.toLowerCase().includes(eliminated.toLowerCase())
+        );
+        return isEliminated;
+      }).map(mode => {
+        const eliminationReason = eliminationResults.eliminationReasons.find(r => 
+          r.failureMode.toLowerCase().includes(mode.componentFailureMode.toLowerCase()) ||
+          mode.componentFailureMode.toLowerCase().includes(r.failureMode.toLowerCase())
+        );
+        
+        return {
+          ...mode,
+          eliminationStatus: 'eliminated',
+          eliminationReason: eliminationReason?.reason || 'Eliminated based on confirmed symptoms'
+        };
+      });
+      
+      console.log(`[Elimination Search] Total modes: ${allFailureModes.length}, Remaining: ${enhancedFailureModes.length}, Eliminated: ${eliminatedFailureModes.length}`);
+      
+      res.json({
+        remainingFailureModes: enhancedFailureModes,
+        eliminatedFailureModes: eliminatedFailureModes,
+        eliminationSummary: {
+          totalAnalyzed: allFailureModes.length,
+          remaining: enhancedFailureModes.length,
+          eliminated: eliminatedFailureModes.length,
+          confidenceBoost: eliminationResults.confidenceBoost,
+          targetedQuestions: EliminationEngine.generateTargetedQuestions(
+            eliminationResults.remainingFailureModes,
+            eliminationResults
+          )
+        }
+      });
+      
+    } catch (error) {
+      console.error("[Elimination Search] Error:", error);
+      res.status(500).json({ message: "Failed to search evidence library with elimination logic" });
+    }
+  });
+
   // Evidence Library Management Routes
   app.use("/api/evidence-library", evidenceLibraryRoutes);
 
