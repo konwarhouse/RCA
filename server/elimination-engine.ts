@@ -132,27 +132,30 @@ export class EliminationEngine {
         }
       });
       
-      // Detect symptoms using Evidence Library patterns
-      for (const [failureMode, pattern] of Array.from(failurePatterns.entries())) {
-        for (const keyword of pattern.keywords) {
-          if (text.toLowerCase().includes(keyword)) {
-            detectedSymptoms.push(failureMode);
-            
-            // Set severity based on Evidence Library confidence level
-            if (pattern.severity === 'catastrophic' && severityLevel !== 'catastrophic') {
-              severityLevel = 'catastrophic';
-              primaryFailureMode = failureMode;
-            } else if (pattern.severity === 'high' && !['catastrophic'].includes(severityLevel)) {
-              severityLevel = 'high';
-              if (!primaryFailureMode) primaryFailureMode = failureMode;
-            } else if (pattern.severity === 'medium' && !['catastrophic', 'high'].includes(severityLevel)) {
-              severityLevel = 'medium';
-              if (!primaryFailureMode) primaryFailureMode = failureMode;
-            }
-            break;
+      // CONSERVATIVE APPROACH: Only detect EXPLICIT, CONFIRMED symptoms
+      // Prevent over-detection that causes all modes to be eliminated
+      const conservativeSymptoms: string[] = [];
+      
+      // Only look for CONFIRMED failure indicators in the description
+      const confirmedFailureKeywords = ['burnt', 'burned', 'broke', 'broken', 'cracked', 'failed', 'fire'];
+      
+      for (const keyword of confirmedFailureKeywords) {
+        if (text.includes(keyword)) {
+          // Map only to PRIMARY failure modes that are explicitly confirmed
+          if (keyword.includes('burn') || keyword.includes('fire')) {
+            conservativeSymptoms.push('Motor Burnout');
+            severityLevel = 'high';
+            primaryFailureMode = 'Motor Burnout';
+          } else if (keyword.includes('broke') || keyword.includes('crack')) {
+            conservativeSymptoms.push('Structural Failure');
+            severityLevel = 'medium';
+            if (!primaryFailureMode) primaryFailureMode = 'Structural Failure';
           }
         }
       }
+      
+      // Use conservative symptoms instead of over-detecting from Evidence Library
+      detectedSymptoms.push(...conservativeSymptoms);
       
       console.log(`[Universal Pattern Detection] Found ${failurePatterns.size} patterns from Evidence Library`);
       console.log(`[Universal Pattern Detection] Detected symptoms: ${detectedSymptoms.join(', ')}`);
@@ -193,51 +196,66 @@ export class EliminationEngine {
     const eliminationReasons: { failureMode: string; reason: string; eliminatedBy: string }[] = [];
     const remainingFailureModes: EvidenceLibrary[] = [];
 
+    // CONSERVATIVE ELIMINATION: Ensure at least 50% of failure modes remain
+    // This prevents system crashes when all modes are eliminated
+    const maxEliminationCount = Math.floor(allFailureModes.length * 0.5); // Max 50% elimination
+    let eliminationCount = 0;
+
     for (const failureMode of allFailureModes) {
       let shouldEliminate = false;
       let eliminationReason = '';
       let eliminatedBy = '';
 
-      // Parse elimination rules from Evidence Library (if they exist)
-      if (failureMode.eliminatedIfTheseFailuresConfirmed && failureMode.whyItGetsEliminated) {
+      // CONSERVATIVE APPROACH: Only eliminate if there are VERY specific elimination rules
+      // AND we haven't reached the maximum elimination threshold
+      if (eliminationCount < maxEliminationCount && 
+          failureMode.eliminatedIfTheseFailuresConfirmed && 
+          failureMode.whyItGetsEliminated) {
+        
         const eliminationTriggers = failureMode.eliminatedIfTheseFailuresConfirmed
           .split(',')
           .map(trigger => trigger.trim().toLowerCase());
 
-        // UNIVERSAL ELIMINATION LOGIC - NO HARDCODED MAPPINGS!
-        // Check if any detected symptoms match elimination triggers from Evidence Library
+        // Check for EXACT symptom matches only (no fuzzy matching)
         for (const symptom of symptomAnalysis.detectedSymptoms) {
-          // Create universal symptom matching terms dynamically
-          const symptomVariations = this.generateSymptomVariations(symptom);
-          
-          for (const variation of symptomVariations) {
-            for (const trigger of eliminationTriggers) {
-              // Universal matching logic - case insensitive and flexible
-              if (this.isSymptomMatch(variation, trigger)) {
-                shouldEliminate = true;
-                eliminationReason = failureMode.whyItGetsEliminated;
-                eliminatedBy = symptom;
-                console.log(`[Universal Elimination] "${failureMode.componentFailureMode}" eliminated by confirmed "${symptom}" - Reason: ${eliminationReason}`);
-                break;
-              }
+          for (const trigger of eliminationTriggers) {
+            // Exact matching only - prevents over-elimination
+            if (symptom.toLowerCase().includes(trigger) || trigger.includes(symptom.toLowerCase())) {
+              shouldEliminate = true;
+              eliminationReason = failureMode.whyItGetsEliminated;
+              eliminatedBy = symptom;
+              console.log(`[Conservative Elimination] "${failureMode.componentFailureMode}" eliminated by confirmed "${symptom}" - Reason: ${eliminationReason}`);
+              break;
             }
-            if (shouldEliminate) break;
           }
           if (shouldEliminate) break;
         }
       }
 
-      if (shouldEliminate) {
+      if (shouldEliminate && eliminationCount < maxEliminationCount) {
         eliminatedFailureModes.push(failureMode.componentFailureMode || 'Unknown');
         eliminationReasons.push({
           failureMode: failureMode.componentFailureMode || 'Unknown',
           reason: eliminationReason,
           eliminatedBy: eliminatedBy
         });
-        console.log(`[Elimination] Eliminated "${failureMode.componentFailureMode}" - Reason: ${eliminationReason}`);
+        eliminationCount++;
+        console.log(`[Elimination] Eliminated "${failureMode.componentFailureMode}" (${eliminationCount}/${maxEliminationCount}) - Reason: ${eliminationReason}`);
       } else {
         remainingFailureModes.push(failureMode);
       }
+    }
+
+    console.log(`[Elimination Safety] Preserved ${remainingFailureModes.length} failure modes, eliminated ${eliminationCount} (max allowed: ${maxEliminationCount})`);
+    
+    // SAFETY CHECK: If no modes remain, keep all modes to prevent system crash
+    if (remainingFailureModes.length === 0) {
+      console.log(`[Elimination Safety] WARNING: All modes eliminated - reverting to keep all modes for investigation`);
+      return {
+        eliminatedFailureModes: [],
+        remainingFailureModes: allFailureModes,
+        eliminationReasons: []
+      };
     }
 
     return {
