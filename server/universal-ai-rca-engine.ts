@@ -231,7 +231,6 @@ Generate 2-4 most important evidence requests for this cause.
               });
             });
           }
-        }
       } catch (error) {
         console.error(`Evidence request generation failed for ${cause.causeName}:`, error);
         
