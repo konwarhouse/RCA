@@ -87,7 +87,18 @@ export default function EvidenceChecklist() {
       console.log(`[INCIDENT-ONLY EVIDENCE] Requesting incident-only analysis for: "${incidentData.symptomDescription || ''}"`);
       console.log(`[INCIDENT-ONLY EVIDENCE] NO equipment-type logic - pure incident symptom analysis`);
       
-      const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-checklist`, {
+      // BACKWARD COMPATIBILITY: Check if this is a legacy incident
+      const isLegacyIncident = !incidentData.symptomDescription || 
+                              incidentData.symptomDescription.trim().length < 20 ||
+                              incidentData.workflowStatus === 'equipment_selected';
+      
+      const endpoint = isLegacyIncident 
+        ? `/api/incidents/${incidentData.id}/generate-evidence-checklist-legacy`
+        : `/api/incidents/${incidentData.id}/generate-evidence-checklist`;
+      
+      console.log(`[BACKWARD COMPATIBILITY] Using ${isLegacyIncident ? 'LEGACY' : 'UNIVERSAL RCA'} endpoint for incident ${incidentData.id}`);
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -126,6 +137,15 @@ export default function EvidenceChecklist() {
             generationMethod: data.generationMethod
           });
           setShowHumanVerification(true);
+        } else if (data.backwardCompatible || data.generationMethod === 'legacy-compatibility') {
+          console.log("[BACKWARD COMPATIBILITY] Legacy evidence generation completed");
+          setEvidenceItems(data.evidenceItems);
+          setShowHumanVerification(false);
+          setShowUniversalRCAReview(false);
+        } else if (data.universalRCAFlow && data.aiAnalysis?.aiHypotheses) {
+          console.log("[Universal RCA] Showing hypothesis review interface");
+          setAIAnalysis(data.aiAnalysis);
+          setShowUniversalRCAReview(true);
         } else if (data.aiAnalysis) {
           // Ensure all hypotheses have proper IDs for button functionality  
           let hypothesesWithIds = [];
@@ -144,6 +164,8 @@ export default function EvidenceChecklist() {
           console.log('[INCIDENT-ONLY EVIDENCE] AI analysis ready for human verification');
           console.log('Hypotheses with IDs:', hypothesesWithIds);
           console.log('Full AI analysis:', data.aiAnalysis);
+        } else {
+          setEvidenceItems(data.evidenceItems);
         }
       } else {
         console.error('Invalid incident-only evidence format:', data);

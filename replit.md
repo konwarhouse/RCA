@@ -16,7 +16,25 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### RUNTIME ERROR FIX: NULL SAFETY FOR EVIDENCE ITEMS IMPLEMENTED (LATEST)
+### BACKWARD COMPATIBILITY SYSTEM IMPLEMENTED FOR UNIVERSAL RCA (LATEST)
+- **Date**: January 24, 2025 (Critical Backward Compatibility Solution)
+- **User Issue Resolved**: Concern that new Universal RCA logic wouldn't work with existing incidents like incident #75 created with old system
+- **Root Cause**: New Universal RCA Engine requires rich symptom descriptions, but legacy incidents have minimal equipment-only data
+- **Complete Backward Compatibility Solution**:
+  - **AUTOMATIC DETECTION**: Frontend automatically detects legacy incidents based on symptom description length and workflow status
+  - **DUAL ENDPOINT SYSTEM**: Created separate legacy endpoint `/generate-evidence-checklist-legacy` for old incidents
+  - **LEGACY EVIDENCE GENERATION**: Uses Evidence Library with equipment-based filtering for legacy incidents without AI hypothesis workflow
+  - **SEAMLESS TRANSITION**: Users experience no difference - system automatically routes to appropriate endpoint
+  - **ZERO DATA LOSS**: All existing incidents continue working with appropriate evidence generation method
+- **Technical Implementation**:
+  - **Detection Logic**: `!incidentData.symptomDescription || incidentData.symptomDescription.trim().length < 20 || incidentData.workflowStatus === 'equipment_selected'`
+  - **Legacy Endpoint**: `/api/incidents/:id/generate-evidence-checklist-legacy` uses `EvidenceLibraryOperations.searchEvidenceLibraryByEquipment()`
+  - **Response Handling**: Frontend detects `backwardCompatible: true` flag and bypasses AI hypothesis workflow
+  - **Evidence Format**: Legacy incidents get equipment-based evidence items with proper priority and completion tracking
+- **User Experience**: Legacy incidents like #75 continue working immediately without requiring symptom updates or data migration
+- **Impact**: **COMPLETE BACKWARD COMPATIBILITY ACHIEVED** - All existing incidents continue working seamlessly. New Universal RCA flow for rich incident descriptions, legacy Evidence Library flow for equipment-only incidents. Zero disruption to existing investigations.
+
+### Previous: RUNTIME ERROR FIX: NULL SAFETY FOR EVIDENCE ITEMS IMPLEMENTED
 - **Date**: January 24, 2025 (Critical Runtime Error Resolution)
 - **User Issue Resolved**: JavaScript runtime error "undefined is not an object (evaluating 'item.examples.length')" in evidence checklist
 - **Root Cause**: Evidence items generated without proper structure - missing `id`, `examples`, and other required fields causing frontend crashes

@@ -523,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: incidentText,
           equipmentGroup: incident.equipmentGroup,
           equipmentType: incident.equipmentType,
-          equipmentSubtype: incident.equipmentSubtype
+          equipmentSubtype: incident.equipmentSubtype || ''
         };
         
         const step1Result = await rcaEngine.ingestIncident(incidentData);
@@ -673,8 +673,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[UNIVERSAL RCA] ${confirmedHypotheses.length} hypotheses confirmed by investigator`);
       
+      // Convert feedback to proper hypothesis format
+      const properHypotheses = confirmedHypotheses.map(h => ({
+        id: h.id,
+        rootCauseTitle: h.rootCauseTitle || 'Custom Failure Mode',
+        confidence: 70,
+        reasoningTrace: h.userReasoning || 'User-confirmed hypothesis',
+        suggestedEvidence: []
+      }));
+      
       // STEP 4: Generate evidence prompts for confirmed hypotheses
-      const step4Result = await rcaEngine.generateEvidencePrompts(confirmedHypotheses);
+      const step4Result = await rcaEngine.generateEvidencePrompts(properHypotheses);
       
       res.json({
         success: true,
@@ -690,10 +699,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Continue with other routes
+  // BACKWARD COMPATIBILITY: Legacy evidence generation for old incidents 
+  app.post("/api/incidents/:id/generate-evidence-checklist-legacy", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(id);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      console.log(`[BACKWARD COMPATIBILITY] Generating evidence for legacy incident ${id}`);
+      
+      // Use Evidence Library for consistent results
+      const equipmentGroup = incident.equipmentGroup || 'Rotating';
+      const equipmentType = incident.equipmentType || 'Pumps';
+      const equipmentSubtype = incident.equipmentSubtype || 'Centrifugal';
+      
+      const evidenceResults = await EvidenceLibraryOperations.searchEvidenceLibraryByEquipment(
+        equipmentGroup,
+        equipmentType, 
+        equipmentSubtype
+      );
+      
+      // Convert to evidence checklist format
+      const evidenceItems = evidenceResults.map((item, index) => ({
+        id: `legacy-${id}-${Date.now()}-${index}`,
+        category: item.category || 'Equipment Analysis',
+        title: item.componentFailureMode,
+        description: `${item.faultSignaturePattern || item.componentFailureMode}`,
+        priority: item.criticality === 'Critical' ? 'Critical' as const : 
+                 item.criticality === 'High' ? 'High' as const :
+                 item.criticality === 'Medium' ? 'Medium' as const : 'Low' as const,
+        required: item.criticality === 'Critical',
+        aiGenerated: false,
+        specificToEquipment: true,
+        examples: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()) : [],
+        completed: false,
+        isUnavailable: false,
+        unavailableReason: '',
+        files: []
+      }));
+      
+      res.json({
+        evidenceItems,
+        generationMethod: 'legacy-compatibility',
+        backwardCompatible: true,
+        message: `Generated ${evidenceItems.length} evidence requirements for legacy incident`
+      });
+      
+    } catch (error) {
+      console.error('[BACKWARD COMPATIBILITY] Error:', error);
+      res.status(500).json({ message: "Failed to generate legacy evidence checklist" });
+    }
+  });
+
   app.get('/api/hello', (req, res) => {
     res.json({ message: 'Universal RCA API Ready' });
   });
 
-  return app;
+  return app as any;
 }
