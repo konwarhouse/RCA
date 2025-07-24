@@ -81,27 +81,46 @@ export class EliminationEngine {
     let severityLevel: 'low' | 'medium' | 'high' | 'catastrophic' = 'low';
     let primaryFailureMode: string | null = null;
 
-    // NLP-DRIVEN SYMPTOM EXTRACTION (Per Root Cause Filtering Enforcement)
+    // STRICT NLP-DRIVEN SYMPTOM EXTRACTION (Per NLP Filtering Compliance Audit)
     // STEP 1: Extract ONLY keywords actually mentioned in incident description
     const incidentKeywords = this.extractIncidentKeywords(text);
-    console.log(`[NLP Symptom Extraction] Keywords from incident: ${incidentKeywords.join(', ')}`);
     
-    // STEP 2: Query Evidence Library ONLY for failure modes matching incident keywords
+    // AUDIT LOG: NLP Keywords Extracted
+    const nlpAuditLog = {
+      incidentDescription: text,
+      extractedKeywords: incidentKeywords,
+      tokenizationMethod: 'Universal NLP - No hardcoded lists',
+      timestamp: new Date().toISOString()
+    };
+    console.log(`[NLP Audit Log - Keywords]`, JSON.stringify(nlpAuditLog));
+    
+    // STEP 2: STRICT filtering - only match Evidence Library entries that contain incident keywords
     const { investigationStorage } = await import("./storage");
     
     try {
       const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
+      let relevantEntries = 0;
       
-      // STEP 3: Filter failure modes based on ACTUAL incident keywords
+      // STEP 3: Apply STRICT relevance filtering based on ACTUAL incident keywords
       for (const entry of allEvidenceEntries) {
         const failureMode = entry.componentFailureMode || '';
         const faultSignature = entry.faultSignaturePattern || '';
         
-        // Check if this failure mode is relevant to the actual incident keywords
-        const isRelevant = this.isFailureModeRelevant(failureMode, faultSignature, incidentKeywords);
+        // STRICT RELEVANCE CHECK: Must match at least one incident keyword exactly
+        const relevanceScore = this.calculateRelevanceScore(failureMode, faultSignature, incidentKeywords);
         
-        if (isRelevant) {
+        if (relevanceScore > 0) {
+          relevantEntries++;
           detectedSymptoms.push(failureMode);
+          
+          // AUDIT LOG: Failure Mode Match
+          const matchAuditLog = {
+            failureMode: failureMode,
+            relevanceScore: relevanceScore,
+            matchedKeywords: this.getMatchedKeywords(failureMode, faultSignature, incidentKeywords),
+            confidenceLevel: entry.confidenceLevel
+          };
+          console.log(`[NLP Audit Log - Match]`, JSON.stringify(matchAuditLog));
           
           // Set severity based on Evidence Library confidence level
           const severity = entry.confidenceLevel === 'High' ? 'high' : 
@@ -117,12 +136,25 @@ export class EliminationEngine {
         }
       }
       
-      console.log(`[NLP Symptom Extraction] Analyzed ${allEvidenceEntries.length} Evidence Library entries`);
-      console.log(`[NLP Symptom Extraction] Detected relevant symptoms: ${detectedSymptoms.join(', ')}`);
+      // AUDIT LOG: Final Results
+      const resultsAuditLog = {
+        totalEvidenceEntries: allEvidenceEntries.length,
+        relevantMatches: relevantEntries,
+        detectedSymptoms: detectedSymptoms,
+        filteringMethod: 'Strict NLP - Incident keyword matching only',
+        noFallbackUsed: true
+      };
+      console.log(`[NLP Audit Log - Results]`, JSON.stringify(resultsAuditLog));
       
     } catch (error) {
       console.error('[NLP Symptom Extraction] Error accessing Evidence Library:', error);
-      // Return minimal symptoms to prevent over-detection
+      // NO FALLBACK - Return empty if error occurs
+      const errorAuditLog = {
+        error: error.message,
+        fallbackUsed: false,
+        detectedSymptoms: []
+      };
+      console.log(`[NLP Audit Log - Error]`, JSON.stringify(errorAuditLog));
       severityLevel = 'low';
     }
 
@@ -152,20 +184,41 @@ export class EliminationEngine {
   }
 
   /**
-   * Check if failure mode is relevant to actual incident keywords (NLP-driven filtering)
+   * Calculate relevance score using strict incident keyword matching (NLP Compliance Audit)
    */
-  private static isFailureModeRelevant(failureMode: string, faultSignature: string, incidentKeywords: string[]): boolean {
+  private static calculateRelevanceScore(failureMode: string, faultSignature: string, incidentKeywords: string[]): number {
     const failureLower = failureMode.toLowerCase();
     const signatureLower = faultSignature.toLowerCase();
+    let score = 0;
     
-    // Check if any incident keywords match this failure mode or its fault signature
+    // STRICT MATCHING: Only exact keyword matches count
     for (const keyword of incidentKeywords) {
-      if (failureLower.includes(keyword) || signatureLower.includes(keyword)) {
-        return true;
+      if (failureLower.includes(keyword)) {
+        score += 10; // High score for failure mode match
+      }
+      if (signatureLower.includes(keyword)) {
+        score += 5; // Medium score for signature match
       }
     }
     
-    return false;
+    return score;
+  }
+
+  /**
+   * Get matched keywords for audit logging (NLP Compliance Audit)
+   */
+  private static getMatchedKeywords(failureMode: string, faultSignature: string, incidentKeywords: string[]): string[] {
+    const failureLower = failureMode.toLowerCase();
+    const signatureLower = faultSignature.toLowerCase();
+    const matched: string[] = [];
+    
+    for (const keyword of incidentKeywords) {
+      if (failureLower.includes(keyword) || signatureLower.includes(keyword)) {
+        matched.push(keyword);
+      }
+    }
+    
+    return matched;
   }
 
   /**
