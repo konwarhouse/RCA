@@ -253,7 +253,14 @@ Focus on engineering logic. Be suggestive, not prescriptive.`;
       });
 
       const content = response.choices[0]?.message?.content || '[]';
-      const hypotheses = JSON.parse(content);
+      
+      // Clean JSON content - remove markdown code blocks if present
+      const cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      
+      console.log(`[UNIVERSAL RCA] Raw AI response: ${content.substring(0, 200)}...`);
+      console.log(`[UNIVERSAL RCA] Cleaned JSON: ${cleanContent.substring(0, 200)}...`);
+      
+      const hypotheses = JSON.parse(cleanContent);
 
       jsonLog.output = {
         hypothesesCount: hypotheses.length,
