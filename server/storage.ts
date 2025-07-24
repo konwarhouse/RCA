@@ -212,16 +212,46 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   async getAllAiSettings(): Promise<any[]> {
     try {
       const settings = await db.select().from(aiSettings).orderBy(aiSettings.createdAt);
-      return settings.map(setting => ({
-        id: setting.id,
-        provider: setting.provider,
-        isActive: setting.isActive,
-        createdBy: setting.createdBy,
-        createdAt: setting.createdAt,
-        hasApiKey: true,
-        testStatus: setting.testStatus || 'not_tested',
-        lastTestedAt: setting.lastTestedAt
-      }));
+      
+      // Import AIService for decryption
+      let AIService: any = null;
+      try {
+        const aiServiceModule = await import('./ai-service');
+        AIService = aiServiceModule.AIService;
+      } catch (error) {
+        console.warn("[DatabaseInvestigationStorage] Could not load AIService for decryption");
+      }
+      
+      return settings.map(setting => {
+        let decryptedApiKey = null;
+        
+        // Decrypt API key if AIService available
+        if (AIService && setting.encryptedApiKey) {
+          try {
+            console.log(`[DatabaseInvestigationStorage] Attempting to decrypt API key for setting ${setting.id}`);
+            decryptedApiKey = AIService.decryptApiKey(setting.encryptedApiKey);
+            console.log(`[DatabaseInvestigationStorage] Successfully decrypted API key for setting ${setting.id}: ${decryptedApiKey ? 'YES' : 'NO'} (last 4 chars: ${decryptedApiKey ? decryptedApiKey.slice(-4) : 'N/A'})`);
+          } catch (error) {
+            console.error(`[DatabaseInvestigationStorage] Failed to decrypt API key for setting ${setting.id}:`, error);
+          }
+        } else {
+          console.log(`[DatabaseInvestigationStorage] Cannot decrypt - AIService: ${!!AIService}, encryptedApiKey: ${!!setting.encryptedApiKey}`);
+        }
+        
+        return {
+          id: setting.id,
+          provider: setting.provider,
+          model: 'gpt-4o', // Default model
+          apiKey: decryptedApiKey, // CRITICAL: Decrypted API key for Universal RCA Engine
+          isActive: setting.isActive,
+          createdBy: setting.createdBy,
+          createdAt: setting.createdAt,
+          hasApiKey: !!setting.encryptedApiKey,
+          testStatus: setting.testStatus || 'not_tested',
+          lastTestedAt: setting.lastTestedAt,
+          isTestSuccessful: setting.testStatus === 'success'
+        };
+      });
     } catch (error) {
       console.error("[DatabaseInvestigationStorage] Error getting AI settings:", error);
       return [];

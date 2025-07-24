@@ -62,13 +62,49 @@ export class UniversalRCAEngine {
 
   constructor() {
     this.storage = new DatabaseInvestigationStorage();
-    
-    // Initialize AI if available (not hardcoded)
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey && apiKey.trim().length > 0) {
-      this.openai = new OpenAI({
-        apiKey: apiKey.trim()
+    // OpenAI client will be initialized dynamically from database settings
+    this.openai = null;
+  }
+
+  /**
+   * DYNAMIC AI CONFIGURATION LOADING
+   * Loads AI configuration from database settings (NO HARDCODING)
+   */
+  private async loadAIConfiguration(): Promise<OpenAI | null> {
+    try {
+      console.log('[UNIVERSAL RCA] Loading AI configuration from database');
+      
+      // Get AI settings from database
+      const aiSettings = await this.storage.getAllAiSettings();
+      console.log(`[UNIVERSAL RCA] Found ${aiSettings.length} AI settings in database`);
+      console.log(`[UNIVERSAL RCA] AI settings details:`, aiSettings.map(s => ({ id: s.id, provider: s.provider, isActive: s.isActive, hasApiKey: !!s.apiKey })));
+      
+      const activeProvider = aiSettings.find((setting: any) => setting.isActive);
+      console.log(`[UNIVERSAL RCA] Active provider found:`, activeProvider ? 'YES' : 'NO');
+      if (activeProvider) {
+        console.log(`[UNIVERSAL RCA] Active provider details:`, { id: activeProvider.id, provider: activeProvider.provider, hasApiKey: !!activeProvider.apiKey, apiKeyLength: activeProvider.apiKey ? activeProvider.apiKey.length : 0 });
+      }
+      
+      if (!activeProvider) {
+        console.warn('[UNIVERSAL RCA] No active AI provider configured in database');
+        return null;
+      }
+      
+      if (!activeProvider.apiKey) {
+        console.warn('[UNIVERSAL RCA] Active AI provider has no API key configured');
+        return null;
+      }
+      
+      console.log(`[UNIVERSAL RCA] Using AI provider: ${activeProvider.provider} (configured in database)`);
+      
+      // Create OpenAI client with database-stored API key
+      return new OpenAI({
+        apiKey: activeProvider.apiKey
       });
+      
+    } catch (error) {
+      console.error('[UNIVERSAL RCA] Failed to load AI configuration:', error);
+      return null;
     }
   }
 
@@ -139,8 +175,11 @@ export class UniversalRCAEngine {
       method: 'ai_inference'
     };
 
-    if (!this.openai) {
-      console.log('[UNIVERSAL RCA] AI unavailable - using manual fallback');
+    // DYNAMIC AI LOADING: Get AI configuration from database (NOT hardcoded)
+    const openaiClient = await this.loadAIConfiguration();
+    
+    if (!openaiClient) {
+      console.log('[UNIVERSAL RCA] AI not configured - using manual fallback');
       
       const fallbackHypotheses: AIHypothesis[] = [
         {
@@ -197,7 +236,7 @@ Respond with JSON array:
 Focus on engineering logic. Be suggestive, not prescriptive.`;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response = await openaiClient.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           {

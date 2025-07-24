@@ -762,6 +762,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN PANEL: AI Settings management routes (NO HARDCODING - DATABASE DRIVEN)
+  app.get("/api/admin/ai-settings", async (req, res) => {
+    try {
+      const aiSettings = await investigationStorage.getAllAiSettings();
+      console.log(`[ADMIN] Retrieved ${aiSettings.length} AI settings (NO HARDCODING)`);
+      res.json(aiSettings);
+    } catch (error) {
+      console.error('[ADMIN] Error retrieving AI settings:', error);
+      res.status(500).json({ message: "Failed to retrieve AI settings" });
+    }
+  });
+
+  app.post("/api/admin/ai-settings", async (req, res) => {
+    try {
+      const settingsData = req.body;
+      console.log(`[ADMIN] Saving new AI settings - Provider: ${settingsData.provider}, Active: ${settingsData.isActive} (NO HARDCODING)`);
+      
+      const newSettings = await investigationStorage.saveAiSettings(settingsData);
+      console.log(`[ADMIN] Successfully saved AI settings with ID: ${newSettings.id} (DATABASE DRIVEN)`);
+      
+      res.json({
+        success: true,
+        settings: newSettings,
+        message: 'AI settings saved successfully'
+      });
+    } catch (error) {
+      console.error('[ADMIN] Error saving AI settings:', error);
+      res.status(500).json({ message: "Failed to save AI settings" });
+    }
+  });
+
+  app.post("/api/admin/ai-settings/test", async (req, res) => {
+    try {
+      const { provider, apiKey } = req.body;
+      console.log(`[ADMIN] Testing API key for provider: ${provider} (NO HARDCODING)`);
+      
+      // Import AIService dynamically to avoid hardcoded dependencies
+      const { AIService } = await import("./ai-service");
+      const testResult = await AIService.testApiKey(provider, apiKey);
+      
+      console.log(`[ADMIN] API key test result: ${testResult.success ? 'SUCCESS' : 'FAILED'}`);
+      
+      res.json({
+        success: testResult.success,
+        message: testResult.success ? 'API key is valid' : testResult.error
+      });
+    } catch (error) {
+      console.error('[ADMIN] Error testing API key:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to test API key" 
+      });
+    }
+  });
+
   app.get('/api/hello', (req, res) => {
     res.json({ message: 'Universal RCA API Ready' });
   });
