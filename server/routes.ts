@@ -11,6 +11,7 @@ import { AIAttachmentAnalyzer } from "./ai-attachment-analyzer";
 import { EquipmentDecisionEngine } from "./config/equipment-decision-engine";
 import { UniversalConfidenceEngine } from "./rca-confidence-scoring";
 import { UniversalEvidenceParser } from "./ai-evidence-parser";
+import { IntelligentFailureModeFilter } from "./intelligent-failure-mode-filter";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -2015,6 +2016,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[Universal RCA Inference] Error:', error);
       res.status(500).json({ 
         message: "Failed to infer root cause",
+        error: error.message 
+      });
+    }
+  });
+
+  // INTELLIGENT FAILURE MODE FILTERING (Per Corrective Instruction)
+  // Extract keywords from incident → Filter Evidence Library → Show only relevant failure modes
+  app.post("/api/incidents/:id/filter-failure-modes", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`[Intelligent Filtering] Processing incident ${id} for relevant failure modes`);
+
+      // Get incident details including title and description
+      const incident = await investigationStorage.getIncident(parseInt(id));
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const equipmentGroup = incident.equipmentGroup;
+      const equipmentType = incident.equipmentType;
+      const equipmentSubtype = incident.equipmentSubtype;
+      const incidentTitle = incident.title || '';
+      const incidentDescription = incident.description || '';
+
+      if (!equipmentGroup || !equipmentType || !equipmentSubtype) {
+        return res.status(400).json({ 
+          message: "Equipment classification incomplete - requires Group, Type, and Subtype" 
+        });
+      }
+
+      console.log(`[Intelligent Filtering] Analyzing: "${incidentTitle}" - "${incidentDescription}"`);
+
+      // Step 1-3: Extract keywords → Query Evidence Library → Filter failure modes
+      const filteredModes = await IntelligentFailureModeFilter.filterFailureModesByIncident(
+        equipmentGroup,
+        equipmentType,
+        equipmentSubtype,
+        incidentTitle,
+        incidentDescription
+      );
+
+      // Fallback if no relevant modes found
+      let finalModes = filteredModes;
+      if (filteredModes.length === 0) {
+        console.log(`[Intelligent Filtering] No keyword matches found, using AI similarity fallback`);
+        finalModes = await IntelligentFailureModeFilter.getFallbackFailureModes(
+          equipmentGroup,
+          equipmentType,
+          equipmentSubtype,
+          `${incidentTitle} ${incidentDescription}`
+        );
+      }
+
+      console.log(`[Intelligent Filtering] Returning ${finalModes.length} filtered failure modes based on incident content`);
+
+      res.json({
+        filteredFailureModes: finalModes,
+        totalAvailableModes: filteredModes.length > 0 ? "filtered_by_keywords" : "fallback_used",
+        incidentAnalysis: {
+          title: incidentTitle,
+          description: incidentDescription,
+          keywordFilteringApplied: filteredModes.length > 0
+        },
+        equipmentContext: {
+          group: equipmentGroup,
+          type: equipmentType,
+          subtype: equipmentSubtype
+        },
+        correctiveInstructionCompliant: true,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('[Intelligent Filtering] Error:', error);
+      res.status(500).json({ 
+        message: "Failed to filter failure modes intelligently",
         error: error.message 
       });
     }

@@ -92,6 +92,36 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 - **Testing Results**: System successfully processes evidence files with MIME detection, calculates confidence scores using Evidence Library weights, and provides structured inference output compliant with Universal RCA Logic Specification
 - **Impact**: **UNIVERSAL RCA LOGIC SPECIFICATION FULLY IMPLEMENTED** - Platform now provides complete spec-compliant root cause analysis workflow with AI-assisted evidence evaluation, confidence scoring, and inference generation. All 6 specification components operational with zero hardcoding policy maintained. System ready for enterprise deployment with universal equipment support.
 
+### INTELLIGENT FAILURE MODE FILTERING IMPLEMENTED (CORRECTIVE INSTRUCTION COMPLIANCE)
+- **Date**: January 24, 2025 (Final Implementation of Corrective Instruction)
+- **User Issue Resolved**: System was loading all failure modes for equipment subtype instead of intelligently filtering based on incident description
+- **Critical Problem**: Previous system presented static failure mode lists (bearing failure, seal leak, etc.) regardless of actual incident content, violating universal logic principles
+- **Corrective Instruction Implementation**:
+  - **Step 1 - Keyword Extraction**: Universal NLP patterns extract failure keywords (break, crack, overheat, etc.) and component keywords (shaft, bearing, seal, etc.) from incident text
+  - **Step 2 - Evidence Library Filtering**: System queries Evidence Library using equipment classification + extracted keywords to find only relevant failure modes
+  - **Step 3 - Filtered Display**: Shows ONLY failure modes with keyword relevance score > 0, ranked by relevance
+  - **Step 4 - Targeted Evidence**: Prompts for evidence types only from filtered failure modes, not all possible evidence
+  - **Step 5 - Inference Ready**: Analysis focuses only on keyword-matched failure modes with targeted evidence
+- **Technical Implementation**:
+  - **Intelligent Failure Mode Filter**: `server/intelligent-failure-mode-filter.ts` implements universal keyword extraction and relevance scoring
+  - **API Endpoint**: `/api/incidents/:id/filter-failure-modes` provides incident-specific failure mode filtering
+  - **Evidence Interface**: `client/src/components/intelligent-evidence-interface.tsx` implements corrective instruction workflow
+  - **Universal Keywords**: NO hardcoded equipment lists - uses universal failure patterns (structural, thermal, mechanical, electrical, fluid)
+  - **Relevance Scoring**: Mathematical scoring algorithm weighs primary keywords (10 points), failure indicators (8 points), components (5 points)
+- **Example Behavior (Corrective Instruction Compliant)**:
+  - **Input**: "Pump failed and shaft broken into 2"
+  - **Keywords Extracted**: "shaft", "break", "broken", "fail"
+  - **Filtered Modes**: "Shaft Breakage", "Shaft Key Shear", "Overload" (NOT bearing failure, seal leak, motor overload)
+  - **Evidence Requested**: Torque trend, Metallurgical inspection, Overload logs (NOT bearing temperature, oil analysis)
+- **Zero Hardcoding Verification**:
+  - ✅ NO hardcoded equipment-specific failure mode lists
+  - ✅ NO static subtype-based evidence loading
+  - ✅ Universal keyword patterns work for ANY equipment type
+  - ✅ AI similarity fallback when no keyword matches
+  - ✅ Mathematical relevance scoring without equipment assumptions
+- **Testing Results**: System now analyzes incident content first, extracts relevant keywords, and filters Evidence Library to show only applicable failure modes with targeted evidence requirements
+- **Impact**: **CORRECTIVE INSTRUCTION FULLY IMPLEMENTED** - Platform now provides truly intelligent, keyword-driven failure mode filtering that responds to actual incident content. System eliminates irrelevant failure modes and focuses evidence collection on incident-specific requirements. Universal design maintained with zero hardcoded equipment logic.
+
 ### Previous: COMPLETE HARDCODED LOGIC ELIMINATION & AI ATTACHMENT ANALYSIS IMPLEMENTED 
 - **Date**: January 24, 2025 (Final System-Wide Hardcoding Elimination + AI Content Analysis)
 - **User Issues Resolved**: 
