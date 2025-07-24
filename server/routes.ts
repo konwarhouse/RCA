@@ -14,6 +14,7 @@ import { UniversalEvidenceParser } from "./ai-evidence-parser";
 import { IntelligentFailureModeFilter } from "./intelligent-failure-mode-filter";
 import { UniversalQuestionnaireEngine } from "./universal-questionnaire-engine";
 import { EvidenceValidationEngine } from "./evidence-validation-engine";
+import { UniversalTimelineEngine } from "./universal-timeline-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -458,21 +459,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate structured timeline questions (NEW) - Universal + Equipment-Specific
+  // Generate contextual timeline questions - TIMELINE LOGIC ENFORCEMENT
   app.post("/api/incidents/:id/generate-timeline-questions", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { equipmentGroup, equipmentType, equipmentSubtype } = req.body;
 
-      console.log(`[Timeline Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
+      console.log(`[TIMELINE ENFORCEMENT] Generating contextual timeline questions for incident ${id}`);
+      console.log(`[TIMELINE ENFORCEMENT] Equipment: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
 
-      // UNIVERSAL TIMELINE GENERATION: Use Evidence Library to build timeline questions (NO HARDCODING!)
-      const timelineQuestions = await generateUniversalTimelineQuestions(equipmentGroup, equipmentType, equipmentSubtype || '');
+      // TIMELINE LOGIC ENFORCEMENT: Context-driven questions based on incident keywords
+      const timelineQuestions = await UniversalTimelineEngine.generateUniversalTimelineQuestions(
+        id,
+        equipmentGroup, 
+        equipmentType, 
+        equipmentSubtype || ''
+      );
       
       res.json({ timelineQuestions });
     } catch (error) {
-      console.error("[RCA] Error generating timeline questions:", error);
-      res.status(500).json({ message: "Failed to generate timeline questions" });
+      console.error("[TIMELINE ENFORCEMENT] Error generating contextual timeline questions:", error);
+      res.status(500).json({ message: "Failed to generate contextual timeline questions" });
     }
   });
 
@@ -3067,161 +3074,10 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
   return Math.max(40, Math.round(baseCompleteness - issuePenalty)); // Minimum 40% for theoretical analysis
 }
 
-// UNIVERSAL TIMELINE QUESTION GENERATION - Evidence Library Driven (NO HARDCODING!)
-async function generateUniversalTimelineQuestions(equipmentGroup: string, equipmentType: string, equipmentSubtype: string) {
-  console.log(`[Universal Timeline] Generating timeline questions from Evidence Library for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
-  
-  // Universal Timeline Anchors (Apply to All Equipment) - Enhanced with Confidence Tracking
-  const universalQuestions = [
-    {
-      id: "timeline-universal-001",
-      category: "Universal Timeline",
-      label: "First observed abnormality",
-      description: "When was something first noticed to be wrong?",
-      type: "datetime-local",
-      required: true,
-      purpose: "Timeline anchor - first detection",
-      sequenceOrder: 1,
-      hasConfidenceField: true,
-      hasOptionalExplanation: true
-    },
-    {
-      id: "timeline-universal-002", 
-      category: "Universal Timeline",
-      label: "Alarm triggered",
-      description: "Was there an alarm? When did it trigger?",
-      type: "datetime-local",
-      required: false,
-      purpose: "System detection timing",
-      sequenceOrder: 2,
-      hasConfidenceField: true,
-      hasOptionalExplanation: true
-    },
-    {
-      id: "timeline-universal-003",
-      category: "Universal Timeline", 
-      label: "Operator intervention",
-      description: "What action was taken and when?",
-      type: "text",
-      required: false,
-      purpose: "Human response timing",
-      sequenceOrder: 3,
-      hasConfidenceField: true,
-      hasOptionalExplanation: false // Already text field
-    },
-    {
-      id: "timeline-universal-004",
-      category: "Universal Timeline",
-      label: "Time of failure/trip",
-      description: "When did the actual failure or trip occur?", 
-      type: "datetime-local",
-      required: true,
-      purpose: "Primary failure timing",
-      sequenceOrder: 4,
-      hasConfidenceField: true,
-      hasOptionalExplanation: true
-    },
-    {
-      id: "timeline-universal-005",
-      category: "Universal Timeline",
-      label: "Equipment restart/recovery",
-      description: "Time of recovery, bypass, or restart attempt",
-      type: "datetime-local", 
-      required: false,
-      purpose: "Recovery timing",
-      sequenceOrder: 5,
-      hasConfidenceField: true,
-      hasOptionalExplanation: true
-    }
-  ];
-
-  try {
-    // Get equipment-specific timeline questions from Evidence Library
-    const libraryEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype);
-    
-    if (libraryEvidence.length > 0) {
-      console.log(`[Universal Timeline] Found ${libraryEvidence.length} Evidence Library entries for timeline generation`);
-      
-      // Generate equipment-specific timeline questions from Evidence Library with DEDUPLICATION
-      const equipmentSpecificQuestionsMap = new Map();
-      let sequenceCounter = 10;
-      
-      libraryEvidence.forEach((item: any, index: number) => {
-        // UNIVERSAL APPROACH: Extract timeline questions directly from Evidence Library fields
-        const trendData = item.requiredTrendDataEvidence || '';
-        const questions = item.aiOrInvestigatorQuestions || '';
-        const failureMode = item.componentFailureMode || '';
-        
-        // ZERO HARDCODING: Generate timeline questions from Evidence Library data structure
-        // Each Evidence Library entry becomes a potential timeline question
-        if (failureMode && questions) {
-          const key = `${failureMode.toLowerCase().replace(/\s+/g, '-')}-${equipmentGroup}-${equipmentType}-${equipmentSubtype}`;
-          if (!equipmentSpecificQuestionsMap.has(key)) {
-            // Generate timeline question label from failure mode
-            const timelineLabel = `${failureMode} observation time`;
-            
-            // Generate description from AI questions or failure mode
-            const timelineDescription = questions.includes('When') ? 
-              questions.split('?')[0] + '?' : 
-              `When was ${failureMode.toLowerCase()} first detected?`;
-            
-            // Generate purpose from failure mode and trend data
-            const purpose = trendData ? 
-              `${failureMode} detection - requires ${trendData}` :
-              `${failureMode} timing analysis`;
-            
-            equipmentSpecificQuestionsMap.set(key, {
-              id: `timeline-equipment-${failureMode.toLowerCase().replace(/\s+/g, '-')}`,
-              category: "Equipment-Specific Timeline",
-              label: timelineLabel,
-              description: timelineDescription,
-              type: "datetime-local",
-              required: false,
-              purpose: purpose,
-              equipmentContext: `${equipmentType} ${failureMode.toLowerCase()} monitoring`,
-              sequenceOrder: sequenceCounter++,
-              hasConfidenceField: true,
-              hasOptionalExplanation: true,
-              evidenceLibraryBased: true // Flag to indicate this is Evidence Library driven
-            });
-          }
-        }
-      });
-      
-      const equipmentSpecificQuestions = Array.from(equipmentSpecificQuestionsMap.values());
-      
-      console.log(`[Universal Timeline] Generated ${equipmentSpecificQuestions.length} equipment-specific timeline questions`);
-      
-      // Combine universal and equipment-specific questions
-      const allQuestions = [...universalQuestions, ...equipmentSpecificQuestions];
-      
-      // Sort by sequence order
-      allQuestions.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-      
-      return {
-        universalCount: universalQuestions.length,
-        equipmentSpecificCount: equipmentSpecificQuestions.length,
-        totalQuestions: allQuestions.length,
-        questions: allQuestions,
-        equipmentContext: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
-        generatedFrom: "Evidence Library Intelligence"
-      };
-    }
-  } catch (error) {
-    console.error('[Universal Timeline] Error accessing Evidence Library:', error);
-  }
-  
-  // Fallback: Universal questions only if no Evidence Library data
-  console.log(`[Universal Timeline] Using universal questions only (Evidence Library expansion needed)`);
-  return {
-    universalCount: universalQuestions.length,
-    equipmentSpecificCount: 0,
-    totalQuestions: universalQuestions.length,
-    questions: universalQuestions,
-    equipmentContext: `${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`,
-    generatedFrom: "Universal Fallback"
-  };
-}
+// OLD HARDCODED TIMELINE FUNCTION REMOVED - REPLACED BY UNIVERSAL TIMELINE ENGINE
+// This function violated Timeline Logic Enforcement by showing ALL failure modes
+// regardless of incident context. New Universal Timeline Engine uses NLP keyword
+// extraction and contextual filtering per enforcement requirements.
 
 // Helper functions for evidence generation
 async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string, equipmentSubtype?: string) {
