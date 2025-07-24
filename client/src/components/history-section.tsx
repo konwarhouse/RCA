@@ -37,7 +37,8 @@ export default function HistorySection() {
   if (searchQuery) queryParams.set("search", searchQuery);
   if (priorityFilter && priorityFilter !== "all") queryParams.set("priority", priorityFilter);
   if (dateFilter && dateFilter !== "all") queryParams.set("dateRange", dateFilter);
-  if (statusFilter && statusFilter !== "all") queryParams.set("status", statusFilter);
+  // Always include status parameter since backend needs it to determine filtering
+  queryParams.set("status", statusFilter);
 
   const { data: analyses = [], isLoading, refetch } = useQuery<Analysis[]>({
     queryKey: ["/api/analyses", queryParams.toString()],
