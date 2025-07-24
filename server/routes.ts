@@ -327,6 +327,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const investigations = await investigationStorage.getAllInvestigations();
       const incidents = await investigationStorage.getAllIncidents();
       
+      console.log(`[DEBUG] Found ${incidents.length} incidents, looking for INC-68:`);
+      const inc68 = incidents.find(inc => inc.id === 68);
+      if (inc68) {
+        console.log(`[DEBUG] INC-68 found: currentStep=${inc68.currentStep}, status=${inc68.workflowStatus}`);
+      } else {
+        console.log(`[DEBUG] INC-68 NOT found in incidents array`);
+      }
+      
       // Filter investigations based on status parameter
       const filteredInvestigations = status === 'all' ? investigations : 
         investigations.filter(inv => inv.status === 'completed' || inv.currentStep === 'completed');
@@ -358,10 +366,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add incidents based on status filter - all incidents if status='all', only completed if status='completed' 
       const filteredIncidents = status === 'all' ? incidents : 
-        incidents.filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created');
+        incidents.filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created' && inc.aiAnalysis);
+      
+      console.log(`[DEBUG] After filtering, ${filteredIncidents.length} incidents remain`);
+      console.log(`[DEBUG] INC-68 in filtered results:`, filteredIncidents.some(inc => inc.id === 68));
       
       const analysesFromIncidents = filteredIncidents.map(inc => {
         const isDraft = !inc.aiAnalysis || inc.currentStep < 6;
+        if (inc.id === 68) {
+          console.log(`[DEBUG] Mapping INC-68: isDraft=${isDraft}, currentStep=${inc.currentStep}, aiAnalysis=${!!inc.aiAnalysis}`);
+        }
         return {
           id: inc.id,
           investigationId: `INC-${inc.id}`,
@@ -397,6 +411,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allAnalyses = [...analysesFromInvestigations, ...analysesFromIncidents]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+      console.log(`[DEBUG] Final response contains ${allAnalyses.length} analyses`);
+      const inc68InResponse = allAnalyses.find(analysis => analysis.investigationId === 'INC-68');
+      console.log(`[DEBUG] INC-68 in final response:`, !!inc68InResponse);
+      if (inc68InResponse) {
+        console.log(`[DEBUG] INC-68 details:`, {
+          id: inc68InResponse.id,
+          title: inc68InResponse.title,
+          status: inc68InResponse.status,
+          isDraft: inc68InResponse.isDraft
+        });
+      }
+      
       res.json(allAnalyses);
     } catch (error) {
       console.error("[RCA] Error fetching analyses:", error);
