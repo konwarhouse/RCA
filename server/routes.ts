@@ -546,6 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Generate evidence items from AI-inferred failure modes
           for (const inferredMode of fallbackAnalysis.inferredFailureModes) {
             evidenceItems.push({
+              id: inferredMode.id || `ai-inferred-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
               category: `AI-Inferred Analysis`,
               title: inferredMode.failureMode,
               description: `${inferredMode.reasoning} (Confidence: ${inferredMode.confidence}%)`,
@@ -554,15 +555,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               specificToEquipment: false,
               source: 'AI-Inferred (No Evidence Library match)',
               confidenceSource: 'AI-Inferred',
+              examples: inferredMode.suggestedEvidence || [],
               questions: inferredMode.suggestedEvidence.map(evidence => 
                 `Provide data or documentation for: ${evidence}`
-              )
+              ),
+              completed: false,
+              isUnavailable: false,
+              unavailableReason: '',
+              files: []
             });
           }
         } else {
           // Generate evidence requests based ONLY on AI-extracted symptoms  
           for (const symptom of analysis.extractedSymptoms || []) {
             evidenceItems.push({
+              id: `symptom-${symptom.keyword}-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
               category: `Symptom Analysis`,
               title: `${symptom.keyword} Investigation`,
               description: `Evidence required for: ${symptom.context}`,
@@ -570,11 +577,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               confidence: symptom.confidence,
               specificToEquipment: false,
               source: 'AI-extracted symptom',
+              examples: [],
               questions: [
                 `Provide detailed measurements or observations of ${symptom.keyword}`,
                 `When was ${symptom.keyword} first observed?`,
                 `What data exists to quantify ${symptom.keyword}?`
-              ]
+              ],
+              completed: false,
+              isUnavailable: false,
+              unavailableReason: '',
+              files: []
             });
           }
         }
@@ -594,6 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         evidenceItems = [{
+          id: `manual-fallback-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
           category: 'Manual Analysis Required',
           title: 'Expert Engineering Assessment',
           description: 'AI services unavailable - manual root cause analysis required',
@@ -602,11 +615,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           specificToEquipment: false,
           source: 'Manual fallback',
           confidenceSource: 'AI-Inferred',
+          examples: [],
           questions: [
             'Conduct manual symptom analysis based on incident description',
             'Apply engineering judgment to identify potential failure modes',
             'Gather supporting evidence based on expert assessment'
-          ]
+          ],
+          completed: false,
+          isUnavailable: false,
+          unavailableReason: '',
+          files: []
         }];
       }
 

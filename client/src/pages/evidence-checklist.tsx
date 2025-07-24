@@ -792,7 +792,7 @@ function EvidenceItemCard({
           </div>
           <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
           
-          {item.examples.length > 0 && (
+          {item.examples && item.examples.length > 0 && (
             <div className="mb-3">
               <Label className="text-xs font-medium text-muted-foreground">Examples:</Label>
               <ul className="text-xs text-muted-foreground mt-1 ml-4">
