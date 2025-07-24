@@ -8,6 +8,7 @@ import { nlpAnalyzer } from "./nlp-analyzer";
 import multer from "multer";
 import Papa from "papaparse";
 import { AIAttachmentAnalyzer } from "./ai-attachment-analyzer";
+import { EquipmentDecisionEngine } from "./config/equipment-decision-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 

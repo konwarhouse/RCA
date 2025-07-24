@@ -3,16 +3,13 @@ import { readFileSync } from "fs";
 import path from "path";
 import { EquipmentDecisionEngine } from "./config/equipment-decision-engine";
 
-/**
- * AI-Powered Attachment Content Analyzer
- * Uses dynamic MIME type detection and JSON schema inference
- * NO HARDCODED FILE TYPE OR EQUIPMENT ASSUMPTIONS
- */
+// AI-Powered Attachment Content Analysis System
+// Analyzes uploaded files for evidence adequacy and provides specific feedback
 export class AIAttachmentAnalyzer {
   private openai: OpenAI;
-  
+
   constructor() {
-    this.openai = new OpenAI({
+    this.openai = new OpenAI({ 
       apiKey: process.env.OPENAI_API_KEY 
     });
   }
@@ -226,7 +223,177 @@ Focus on technical accuracy and evidence completeness for engineering analysis.
 `;
   }
 
+  // Legacy methods maintained for compatibility
+  private async analyzeImageContent(base64Image: string, analysisPrompt: string): Promise<any> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: analysisPrompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${base64Image}` }
+              }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      
+      return {
+        isAdequate: result.adequacyScore >= 70,
+        adequacyScore: result.adequacyScore || 0,
+        specificFindings: result.technicalFindings || [],
+        missingInformation: result.missingElements || [],
+        qualityAssessment: result.schemaCompliance?.dataQuality || 'Analysis completed',
+        recommendations: [`Image analysis: ${result.adequacyScore}% adequacy`],
+        followUpQuestions: ['Can you provide additional views or closeup images?']
+      };
+    } catch (error) {
+      return this.generateErrorAnalysis('image_analysis');
+    }
+  }
+
+  private async analyzeDocumentStructure(analysisPrompt: string): Promise<any> {
+    return {
+      isAdequate: false,
+      adequacyScore: 50,
+      specificFindings: ['PDF document detected'],
+      missingInformation: ['PDF content requires OCR processing'],
+      qualityAssessment: 'PDF analysis requires specialized processing',
+      recommendations: ['Convert PDF to text format or provide content summary'],
+      followUpQuestions: ['Can you provide key sections of the PDF as text?']
+    };
+  }
+
+  private generateGenericAnalysis(evidenceCategory: string, equipmentContext: any, requiredEvidence: string[]): any {
+    return {
+      isAdequate: false,
+      adequacyScore: 30,
+      specificFindings: ['Unknown file format detected'],
+      missingInformation: ['File content could not be analyzed'],
+      qualityAssessment: 'File format not supported for automatic analysis',
+      recommendations: ['Please provide file in supported format (CSV, TXT, JPG, PNG)'],
+      followUpQuestions: ['Can you convert this file to a supported format?']
+    };
+  }
+
+  /**
+   * Infer content schema from parsed content
+   */
+  private async inferContentSchema(contentAnalysis: any, expectedSchema: any): Promise<any> {
+    const schemaValidation = {
+      structureMatch: false,
+      fieldCoverage: 0,
+      dataQuality: 0,
+      missingFields: [],
+      extraFields: [],
+      typeCompliance: {}
+    };
+
+    if (!contentAnalysis.parsedContent || contentAnalysis.parsedContent.error) {
+      return schemaValidation;
+    }
+
+    const content = contentAnalysis.parsedContent;
+    
+    // Check required fields coverage
+    if (content.headers && expectedSchema.requiredFields) {
+      const presentFields = content.headers.filter((header: string) => 
+        expectedSchema.requiredFields.some((required: string) => 
+          header.toLowerCase().includes(required.toLowerCase())
+        )
+      );
+      
+      schemaValidation.fieldCoverage = presentFields.length / expectedSchema.requiredFields.length;
+      schemaValidation.missingFields = expectedSchema.requiredFields.filter((required: string) =>
+        !content.headers.some((header: string) => 
+          header.toLowerCase().includes(required.toLowerCase())
+        )
+      );
+    }
+
+    // Validate data types
+    if (content.dataTypes && expectedSchema.dataTypes) {
+      Object.keys(expectedSchema.dataTypes).forEach(field => {
+        const expectedType = expectedSchema.dataTypes[field];
+        const actualType = content.dataTypes[field];
+        schemaValidation.typeCompliance[field] = actualType === expectedType;
+      });
+    }
+
+    // Calculate overall data quality
+    schemaValidation.dataQuality = content.completeness || 0;
+    schemaValidation.structureMatch = schemaValidation.fieldCoverage > 0.7;
+
+    return schemaValidation;
+  }
+
+  /**
+   * Generate metadata-driven analysis using equipment configuration
+   */
+  private async generateMetadataDrivenAnalysis(
+    contentAnalysis: any,
+    schemaValidation: any,
+    evidenceCategory: string,
+    equipmentConfig: any,
+    requiredEvidence: string[]
+  ): Promise<any> {
+    // Route analysis decision based on tags and metadata
+    const analysisRoute = await EquipmentDecisionEngine.routeDecision(
+      equipmentConfig.investigationTags,
+      contentAnalysis.metadata,
+      'analysisRoute'
+    );
+
+    console.log(`[Metadata Analysis] Using route: ${analysisRoute}`);
+
+    const adequacyScore = this.calculateAdequacyScore(contentAnalysis, schemaValidation, equipmentConfig);
+    
+    return {
+      isAdequate: adequacyScore >= 70,
+      adequacyScore,
+      specificFindings: this.extractSpecificFindings(contentAnalysis, equipmentConfig),
+      missingInformation: this.identifyMissingInformation(schemaValidation, equipmentConfig),
+      qualityAssessment: this.generateQualityAssessment(contentAnalysis, schemaValidation),
+      recommendations: this.generateDynamicRecommendations(schemaValidation, equipmentConfig),
+      followUpQuestions: this.generateContextualQuestions(contentAnalysis, equipmentConfig)
+    };
+  }
+
+  /**
+   * Calculate adequacy score using JSON schema validation
+   */
+  private calculateAdequacyScore(contentAnalysis: any, schemaValidation: any, equipmentConfig: any): number {
+    let score = 0;
+    
+    // Base score from content existence
+    if (contentAnalysis.parsedContent && !contentAnalysis.parsedContent.error) {
+      score += 30;
+    }
+    
+    // Schema compliance score
+    score += schemaValidation.fieldCoverage * 40;
+    
+    // Data quality score
+    score += schemaValidation.dataQuality * 20;
+    
+    // Structure match bonus
+    if (schemaValidation.structureMatch) {
+      score += 10;
+    }
+    
+    return Math.min(100, Math.round(score));
+  }
+
   // Helper methods for content parsing and analysis
+
   private parseTSVStructure(content: string, equipmentConfig: any): any {
     const lines = content.split('\n').filter(line => line.trim());
     if (lines.length === 0) return { error: 'Empty TSV file' };
@@ -257,7 +424,7 @@ Focus on technical accuracy and evidence completeness for engineering analysis.
       type: 'text',
       length: content.length,
       lineCount: content.split('\n').length,
-      keywords: this.extractKeywords(content, equipmentConfig.contentAnalysisSchema.contentPatterns || []),
+      keywords: this.extractKeywords(content, equipmentConfig.contentAnalysisSchema.contentPatterns),
       completeness: this.calculateTextCompleteness(content, equipmentConfig.contentAnalysisSchema)
     };
   }
@@ -380,114 +547,6 @@ Focus on technical accuracy and evidence completeness for engineering analysis.
     return foundPatterns.length / schema.contentPatterns.length;
   }
 
-  /**
-   * Infer content schema from parsed content
-   */
-  private async inferContentSchema(contentAnalysis: any, expectedSchema: any): Promise<any> {
-    const schemaValidation = {
-      structureMatch: false,
-      fieldCoverage: 0,
-      dataQuality: 0,
-      missingFields: [],
-      extraFields: [],
-      typeCompliance: {}
-    };
-
-    if (!contentAnalysis.parsedContent || contentAnalysis.parsedContent.error) {
-      return schemaValidation;
-    }
-
-    const content = contentAnalysis.parsedContent;
-    
-    // Check required fields coverage
-    if (content.headers && expectedSchema.requiredFields) {
-      const presentFields = content.headers.filter((header: string) => 
-        expectedSchema.requiredFields.some((required: string) => 
-          header.toLowerCase().includes(required.toLowerCase())
-        )
-      );
-      
-      schemaValidation.fieldCoverage = presentFields.length / expectedSchema.requiredFields.length;
-      schemaValidation.missingFields = expectedSchema.requiredFields.filter((required: string) =>
-        !content.headers.some((header: string) => 
-          header.toLowerCase().includes(required.toLowerCase())
-        )
-      );
-    }
-
-    // Validate data types
-    if (content.dataTypes && expectedSchema.dataTypes) {
-      Object.keys(expectedSchema.dataTypes).forEach(field => {
-        const expectedType = expectedSchema.dataTypes[field];
-        const actualType = content.dataTypes[field];
-        schemaValidation.typeCompliance[field] = actualType === expectedType;
-      });
-    }
-
-    // Calculate overall data quality
-    schemaValidation.dataQuality = content.completeness || 0;
-    schemaValidation.structureMatch = schemaValidation.fieldCoverage > 0.7;
-
-    return schemaValidation;
-  }
-
-  /**
-   * Generate metadata-driven analysis using equipment configuration
-   */
-  private async generateMetadataDrivenAnalysis(
-    contentAnalysis: any,
-    schemaValidation: any,
-    evidenceCategory: string,
-    equipmentConfig: any,
-    requiredEvidence: string[]
-  ): Promise<any> {
-    // Route analysis decision based on tags and metadata
-    const analysisRoute = await EquipmentDecisionEngine.routeDecision(
-      equipmentConfig.investigationTags,
-      contentAnalysis.metadata,
-      'analysisRoute'
-    );
-
-    console.log(`[Metadata Analysis] Using route: ${analysisRoute}`);
-
-    const adequacyScore = this.calculateAdequacyScore(contentAnalysis, schemaValidation, equipmentConfig);
-    
-    return {
-      isAdequate: adequacyScore >= 70,
-      adequacyScore,
-      specificFindings: this.extractSpecificFindings(contentAnalysis, equipmentConfig),
-      missingInformation: this.identifyMissingInformation(schemaValidation, equipmentConfig),
-      qualityAssessment: this.generateQualityAssessment(contentAnalysis, schemaValidation),
-      recommendations: this.generateDynamicRecommendations(schemaValidation, equipmentConfig),
-      followUpQuestions: this.generateContextualQuestions(contentAnalysis, equipmentConfig)
-    };
-  }
-
-  /**
-   * Calculate adequacy score using JSON schema validation
-   */
-  private calculateAdequacyScore(contentAnalysis: any, schemaValidation: any, equipmentConfig: any): number {
-    let score = 0;
-    
-    // Base score from content existence
-    if (contentAnalysis.parsedContent && !contentAnalysis.parsedContent.error) {
-      score += 30;
-    }
-    
-    // Schema compliance score
-    score += schemaValidation.fieldCoverage * 40;
-    
-    // Data quality score
-    score += schemaValidation.dataQuality * 20;
-    
-    // Structure match bonus
-    if (schemaValidation.structureMatch) {
-      score += 10;
-    }
-    
-    return Math.min(100, Math.round(score));
-  }
-
   private extractSpecificFindings(contentAnalysis: any, equipmentConfig: any): string[] {
     const findings: string[] = [];
     const content = contentAnalysis.parsedContent;
@@ -566,6 +625,43 @@ Focus on technical accuracy and evidence completeness for engineering analysis.
     return questions;
   }
 
+  /**
+   * Dynamic text analysis prompt generation using equipment metadata
+   */
+  private generateDynamicTextAnalysisPrompt(
+    content: string, 
+    evidenceCategory: string, 
+    equipmentConfig: any, 
+    requiredEvidence: string[]
+  ): string {
+    const tags = equipmentConfig.investigationTags.join(', ');
+    const requiredFields = equipmentConfig.contentAnalysisSchema.requiredFields.join(', ');
+    
+    return `
+ANALYZE THIS TEXT CONTENT FOR TECHNICAL EVIDENCE:
+
+EQUIPMENT CONTEXT TAGS: ${tags}
+EVIDENCE CATEGORY: ${evidenceCategory}
+REQUIRED CONTENT FIELDS: ${requiredFields}
+ANALYSIS COMPLEXITY: ${equipmentConfig.analysisComplexity}
+
+CONTENT TO ANALYZE:
+${content.substring(0, 2000)}${content.length > 2000 ? '...[truncated]' : ''}
+
+PROVIDE JSON RESPONSE:
+{
+  "specificFindings": ["list specific technical observations from the content"],
+  "dataStructure": "describe the data format and organization",
+  "requiredFieldsFound": ["list which required fields are present"],
+  "missingFields": ["list which required fields are missing"],
+  "dataQuality": "assessment of completeness and accuracy",
+  "adequacyScore": [0-100],
+  "recommendations": ["specific improvements needed"],
+  "followUpQuestions": ["questions about missing technical details"]
+}
+`;
+  }
+
   private generateErrorAnalysis(evidenceCategory: string): any {
     return {
       isAdequate: false,
@@ -575,6 +671,146 @@ Focus on technical accuracy and evidence completeness for engineering analysis.
       qualityAssessment: 'Analysis could not be completed due to technical error',
       recommendations: ['Please verify file format and try uploading again'],
       followUpQuestions: ['Can you provide the file in a different format?']
+    };
+  }
+}
+  private generateImageAnalysisPrompt(
+    evidenceCategory: string, 
+    equipmentContext: any, 
+    requiredEvidence: string[]
+  ): string {
+    return `
+ANALYZE THIS IMAGE FOR RCA EVIDENCE ADEQUACY:
+
+EQUIPMENT CONTEXT:
+- Equipment: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
+- Evidence Category: ${evidenceCategory}
+- Required Evidence: ${requiredEvidence.join(', ')}
+
+PROVIDE DETAILED VISUAL ANALYSIS IN JSON FORMAT:
+{
+  "adequacyScore": <number 0-100>,
+  "specificFindings": [
+    "describe what is visible in the image",
+    "identify equipment components shown",
+    "note any damage, wear, or abnormalities"
+  ],
+  "missingInformation": [
+    "list what should be visible but isn't shown",
+    "identify missing visual documentation"
+  ],
+  "qualityAssessment": "assessment of image quality, clarity, and documentation value",
+  "recommendations": [
+    "suggest additional photos needed",
+    "recommend better angles or documentation"
+  ],
+  "followUpQuestions": [
+    "ask for specific visual details not shown",
+    "request measurements or additional context"
+  ]
+}
+
+Focus on visual evidence quality and completeness for engineering analysis.
+`;
+  }
+
+  /**
+   * Analyze image content using OpenAI Vision
+   */
+  private async analyzeImageContent(base64Image: string, prompt: string): Promise<any> {
+    const response = await this.openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` }
+            }
+          ]
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3
+    });
+
+    const analysis = JSON.parse(response.choices[0].message.content || '{}');
+    return {
+      isAdequate: analysis.adequacyScore >= 70,
+      adequacyScore: analysis.adequacyScore || 0,
+      specificFindings: analysis.specificFindings || [],
+      missingInformation: analysis.missingInformation || [],
+      qualityAssessment: analysis.qualityAssessment || 'Image analysis completed',
+      recommendations: analysis.recommendations || [],
+      followUpQuestions: analysis.followUpQuestions || []
+    };
+  }
+
+  /**
+   * Generate analysis for PDF documents
+   */
+  private generatePDFAnalysisPrompt(
+    evidenceCategory: string, 
+    equipmentContext: any, 
+    requiredEvidence: string[]
+  ): string {
+    return `PDF document analysis for ${evidenceCategory} evidence in ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype} investigation.`;
+  }
+
+  /**
+   * Analyze document structure for PDFs
+   */
+  private async analyzeDocumentStructure(prompt: string): Promise<any> {
+    return {
+      isAdequate: false,
+      adequacyScore: 50,
+      specificFindings: ['PDF document uploaded'],
+      missingInformation: ['PDF content analysis requires OCR processing'],
+      qualityAssessment: 'PDF format detected - manual review recommended',
+      recommendations: ['Convert to text format if possible', 'Provide key excerpts as text'],
+      followUpQuestions: ['What are the key findings in this document?', 'Can you provide specific data points from the PDF?']
+    };
+  }
+
+  /**
+   * Generate generic analysis for unknown file types
+   */
+  private generateGenericAnalysis(
+    evidenceCategory: string, 
+    equipmentContext: any, 
+    requiredEvidence: string[]
+  ): any {
+    return {
+      isAdequate: false,
+      adequacyScore: 30,
+      specificFindings: ['File uploaded successfully'],
+      missingInformation: ['File content analysis not available for this format'],
+      qualityAssessment: 'Unable to analyze file content automatically',
+      recommendations: [
+        'Consider converting to supported format (TXT, CSV, JPG, PNG)',
+        'Provide key information as text summary'
+      ],
+      followUpQuestions: [
+        'What are the main findings in this file?',
+        'Can you provide a summary of the key data points?'
+      ]
+    };
+  }
+
+  /**
+   * Generate error analysis when AI analysis fails
+   */
+  private generateErrorAnalysis(evidenceCategory: string): any {
+    return {
+      isAdequate: false,
+      adequacyScore: 0,
+      specificFindings: ['File uploaded but analysis failed'],
+      missingInformation: ['Automatic content analysis unavailable'],
+      qualityAssessment: 'Manual review required due to system error',
+      recommendations: ['Review file manually', 'Provide text summary of key points'],
+      followUpQuestions: ['What are the main findings in this evidence?']
     };
   }
 }
