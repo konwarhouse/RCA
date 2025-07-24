@@ -949,28 +949,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isCorrectEquipment) continue;
         
-        // Check for symptom matches in Evidence Library patterns
+        // FILTERING THRESHOLD ENFORCEMENT: Calculate confidence score for symptom matches
         const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
         const failureMode = (entry.componentFailureMode || '').toLowerCase();
         const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
         
-        let hasSymptomMatch = false;
+        let relevanceScore = 0;
         let matchedKeyword = '';
         
+        // Calculate confidence score based on where keyword matches
         for (const keyword of symptomKeywords) {
-          if (faultSignature.includes(keyword) || failureMode.includes(keyword) || questions.includes(keyword)) {
-            hasSymptomMatch = true;
+          if (failureMode.includes(keyword)) {
+            relevanceScore += 10; // High score for failure mode name match (e.g., "seal" in "Seal Leak")
             matchedKeyword = keyword;
-            break;
+          } else if (faultSignature.includes(keyword)) {
+            relevanceScore += 8; // Medium score for fault signature match
+            matchedKeyword = keyword;
+          } else if (questions.includes(keyword)) {
+            relevanceScore += 3; // Low score for question match
+            matchedKeyword = keyword;
           }
         }
         
-        // ONLY include if it has symptom relevance
-        if (hasSymptomMatch) {
+        // FILTERING THRESHOLD ENFORCEMENT: Only include if confidence >= 60% (score >= 6)
+        const confidenceThreshold = 6; // 60% confidence minimum per escalation document
+        const hasHighConfidenceMatch = relevanceScore >= confidenceThreshold;
+        
+        if (hasHighConfidenceMatch) {
           symptomMatchedModes.push(entry);
-          console.log(`[Evidence Library Filtering] Matched: ${entry.componentFailureMode} (keyword: ${matchedKeyword})`);
+          console.log(`[Evidence Library Filtering] HIGH CONFIDENCE MATCH: ${entry.componentFailureMode} (keyword: ${matchedKeyword}, score: ${relevanceScore})`);
         } else {
-          console.log(`[Evidence Library Filtering] Excluded: ${entry.componentFailureMode} (no symptom match)`);
+          console.log(`[Evidence Library Filtering] EXCLUDED: ${entry.componentFailureMode} (confidence: ${relevanceScore}/${confidenceThreshold}, keyword: ${matchedKeyword || 'none'})`);
         }
       }
       

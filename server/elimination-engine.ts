@@ -138,7 +138,8 @@ export class EliminationEngine {
         // ONLY include failure modes with actual symptom matches
         if (matched) {
           relevantFailureModes++;
-          detectedSymptoms.push(entry.componentFailureMode || '');
+          // EVIDENCE LIBRARY FILTERING ENFORCEMENT: DO NOT add Evidence Library symptoms to detectedSymptoms
+          // detectedSymptoms should ONLY contain incident keywords, not library failure modes
           
           // AUDIT LOG: Required by Evidence Library Filtering Enforcement
           const matchAuditLog = {
@@ -193,7 +194,7 @@ export class EliminationEngine {
     }
 
     return {
-      detectedSymptoms: Array.from(new Set(detectedSymptoms)), // Remove duplicates
+      detectedSymptoms: incidentKeywords, // EVIDENCE LIBRARY FILTERING ENFORCEMENT: ONLY incident keywords, NOT Evidence Library symptoms
       severityLevel,
       primaryFailureMode
     };
@@ -287,7 +288,7 @@ export class EliminationEngine {
         decision: 'EVALUATING',
         reason: '',
         confidenceScore: 0.5,
-        evidenceUsed: symptomAnalysis.detectedSymptoms,
+        evidenceUsed: symptomAnalysis.detectedSymptoms, // Now contains ONLY incident keywords: ['pump', 'seal', 'leaking', 'dripping']
         eliminationRule: 'SchemaPattern-v1'
       };
 
