@@ -13,6 +13,7 @@ import { UniversalConfidenceEngine } from "./rca-confidence-scoring";
 import { UniversalEvidenceParser } from "./ai-evidence-parser";
 import { IntelligentFailureModeFilter } from "./intelligent-failure-mode-filter";
 import { UniversalQuestionnaireEngine } from "./universal-questionnaire-engine";
+import { EvidenceValidationEngine } from "./evidence-validation-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -604,6 +605,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!incident) {
         return res.status(404).json({ message: "Incident not found" });
       }
+
+      console.log(`[EVIDENCE VALIDATION ENFORCEMENT] Starting mandatory evidence validation for incident ${id}`);
+
+      // MANDATORY EVIDENCE VALIDATION GATE (Per Evidence Validation Enforcement)
+      const evidenceValidation = await EvidenceValidationEngine.validateMinimumEvidenceForRCA(id);
+      
+      if (!evidenceValidation.canProceed) {
+        console.log(`[EVIDENCE VALIDATION ENFORCEMENT] RCA analysis BLOCKED - insufficient validated evidence`);
+        console.log(`[EVIDENCE VALIDATION ENFORCEMENT] Validation summary: ${evidenceValidation.validationSummary}`);
+        
+        return res.status(400).json({
+          message: "Cannot proceed with RCA analysis - evidence validation failed",
+          validationResult: evidenceValidation,
+          enforcementCompliant: true,
+          blockedReason: "Evidence files must be validated and parsed before RCA analysis",
+          requiredActions: evidenceValidation.requiredActions
+        });
+      }
+
+      console.log(`[EVIDENCE VALIDATION ENFORCEMENT] Evidence validation passed - proceeding with RCA analysis`);
+      console.log(`[EVIDENCE VALIDATION ENFORCEMENT] ${evidenceValidation.validationSummary}`);
 
       // Use incident data for equipment info, fallback to request body
       const equipmentGroup = incident.equipmentGroup || req.body.equipmentGroup;

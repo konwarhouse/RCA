@@ -76,6 +76,17 @@ export interface IInvestigationStorage {
   updateIncident(id: number, data: Partial<Incident>): Promise<Incident>;
   getAllIncidents(): Promise<Incident[]>;
   
+  // Evidence file operations - MANDATORY VALIDATION ENFORCEMENT
+  getEvidenceFiles(incidentId: number): Promise<Array<{
+    id: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: Date;
+    category?: string;
+    description?: string;
+  }>>;
+  
   // Cascading dropdown operations
   getCascadingEquipmentGroups(): Promise<string[]>;
   getCascadingEquipmentTypes(groupName: string): Promise<string[]>;
@@ -907,6 +918,77 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     } catch (error) {
       console.error("[DatabaseInvestigationStorage] Error updating AI settings test status:", error);
       throw error;
+    }
+  }
+
+  // MANDATORY EVIDENCE VALIDATION ENFORCEMENT - Evidence file operations
+  async getEvidenceFiles(incidentId: number): Promise<Array<{
+    id: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: Date;
+    category?: string;
+    description?: string;
+  }>> {
+    try {
+      console.log(`[Evidence Files] Retrieving evidence files for incident ${incidentId}`);
+      
+      // Get incident to check if it has evidence files stored
+      const incident = await this.getIncident(incidentId);
+      
+      if (!incident) {
+        console.log(`[Evidence Files] Incident ${incidentId} not found`);
+        return [];
+      }
+      
+      // Check if incident has evidence data stored
+      const evidenceFiles = incident.evidenceFiles || [];
+      const evidenceCategories = incident.evidenceCategories || {};
+      
+      console.log(`[Evidence Files] Found ${evidenceFiles.length} evidence files in incident data`);
+      console.log(`[Evidence Files] Evidence categories available: ${Object.keys(evidenceCategories).length}`);
+      
+      // Convert stored evidence files to expected format
+      const formattedFiles = evidenceFiles.map((file: any) => ({
+        id: file.id || Date.now().toString(),
+        fileName: file.name || file.fileName || 'Unknown File',
+        fileSize: file.size || file.fileSize || 0,
+        mimeType: file.type || file.mimeType || 'application/octet-stream',
+        uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+        category: file.category,
+        description: file.description
+      }));
+      
+      // Also check evidence categories for file references
+      const categoryFiles: any[] = [];
+      for (const [categoryId, categoryData] of Object.entries(evidenceCategories)) {
+        if (typeof categoryData === 'object' && categoryData !== null) {
+          const category = categoryData as any;
+          if (category.files && Array.isArray(category.files)) {
+            category.files.forEach((file: any) => {
+              categoryFiles.push({
+                id: file.id || Date.now().toString(),
+                fileName: file.fileName || file.name || 'Category File',
+                fileSize: file.fileSize || file.size || 0,
+                mimeType: file.mimeType || file.type || 'application/octet-stream',
+                uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+                category: categoryId,
+                description: file.description
+              });
+            });
+          }
+        }
+      }
+      
+      const allFiles = [...formattedFiles, ...categoryFiles];
+      
+      console.log(`[Evidence Files] Total evidence files found: ${allFiles.length}`);
+      return allFiles;
+      
+    } catch (error) {
+      console.error('[Evidence Files] Error retrieving evidence files:', error);
+      return [];
     }
   }
 }
