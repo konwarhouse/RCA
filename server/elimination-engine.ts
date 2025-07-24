@@ -81,97 +81,49 @@ export class EliminationEngine {
     let severityLevel: 'low' | 'medium' | 'high' | 'catastrophic' = 'low';
     let primaryFailureMode: string | null = null;
 
-    // UNIVERSAL EVIDENCE LIBRARY-DRIVEN PATTERN DETECTION - NO HARDCODING!
+    // NLP-DRIVEN SYMPTOM EXTRACTION (Per Root Cause Filtering Enforcement)
+    // STEP 1: Extract ONLY keywords actually mentioned in incident description
+    const incidentKeywords = this.extractIncidentKeywords(text);
+    console.log(`[NLP Symptom Extraction] Keywords from incident: ${incidentKeywords.join(', ')}`);
+    
+    // STEP 2: Query Evidence Library ONLY for failure modes matching incident keywords
     const { investigationStorage } = await import("./storage");
     
-    // Get ALL failure patterns from Evidence Library dynamically
     try {
       const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
-      const failurePatterns = new Map();
       
-      // Build universal patterns from Evidence Library data
-      allEvidenceEntries.forEach((entry: any) => {
-        const mode = entry.componentFailureMode || '';
-        const questions = entry.aiOrInvestigatorQuestions || '';
-        const symptoms = entry.faultSignaturePattern || '';
+      // STEP 3: Filter failure modes based on ACTUAL incident keywords
+      for (const entry of allEvidenceEntries) {
+        const failureMode = entry.componentFailureMode || '';
+        const faultSignature = entry.faultSignaturePattern || '';
         
-        // Extract keywords from Evidence Library fields
-        const keywords = [];
+        // Check if this failure mode is relevant to the actual incident keywords
+        const isRelevant = this.isFailureModeRelevant(failureMode, faultSignature, incidentKeywords);
         
-        // Parse failure mode for keywords
-        if (mode) {
-          keywords.push(mode.toLowerCase());
-          keywords.push(...mode.toLowerCase().split(/[\s,.-]+/));
-        }
-        
-        // Parse fault signature patterns for symptoms
-        if (symptoms) {
-          keywords.push(...symptoms.toLowerCase().split(/[\s,.-]+/));
-        }
-        
-        // Parse AI questions for symptom keywords
-        if (questions) {
-          const questionWords = questions.toLowerCase().match(/\b\w+(?:ing|ed|s)?\b/g) || [];
-          keywords.push(...questionWords);
-        }
-        
-        // Clean keywords and add to patterns
-        const cleanKeywords = keywords
-          .filter(k => k && k.length > 3)
-          .filter(k => !['what', 'when', 'where', 'how', 'why', 'the', 'and', 'for', 'with'].includes(k));
-        
-        if (cleanKeywords.length > 0) {
-          const severity = entry.confidenceLevel === 'High' ? 'catastrophic' : 
-                          entry.confidenceLevel === 'Medium' ? 'high' : 'medium';
-          
-          failurePatterns.set(mode || `failure_${entry.id}`, {
-            keywords: cleanKeywords,
-            severity: severity,
-            confidenceLevel: entry.confidenceLevel || 'Medium'
-          });
-        }
-      });
-      
-      // UNIVERSAL SCHEMA-DRIVEN SYMPTOM DETECTION
-      // Extract symptoms ONLY from Evidence Library failure mode patterns - NO HARDCODING
-      for (const [failureMode, pattern] of Array.from(failurePatterns.entries())) {
-        const keywordMatches = pattern.keywords.filter(keyword => 
-          text.toLowerCase().includes(keyword.toLowerCase())
-        );
-        
-        // Only add symptom if there are Evidence Library keyword matches
-        if (keywordMatches.length > 0) {
+        if (isRelevant) {
           detectedSymptoms.push(failureMode);
           
-          // Set severity based on Evidence Library confidence level (schema-driven)
-          if (pattern.severity === 'catastrophic' && severityLevel !== 'catastrophic') {
-            severityLevel = 'catastrophic';
-            primaryFailureMode = failureMode;
-          } else if (pattern.severity === 'high' && !['catastrophic'].includes(severityLevel)) {
+          // Set severity based on Evidence Library confidence level
+          const severity = entry.confidenceLevel === 'High' ? 'high' : 
+                         entry.confidenceLevel === 'Medium' ? 'medium' : 'low';
+          
+          if (severity === 'high' && severityLevel !== 'high') {
             severityLevel = 'high';
-            if (!primaryFailureMode) primaryFailureMode = failureMode;
-          } else if (pattern.severity === 'medium' && !['catastrophic', 'high'].includes(severityLevel)) {
+            primaryFailureMode = failureMode;
+          } else if (severity === 'medium' && severityLevel === 'low') {
             severityLevel = 'medium';
             if (!primaryFailureMode) primaryFailureMode = failureMode;
           }
         }
       }
       
-      console.log(`[Universal Pattern Detection] Found ${failurePatterns.size} patterns from Evidence Library`);
-      console.log(`[Universal Pattern Detection] Detected symptoms: ${detectedSymptoms.join(', ')}`);
+      console.log(`[NLP Symptom Extraction] Analyzed ${allEvidenceEntries.length} Evidence Library entries`);
+      console.log(`[NLP Symptom Extraction] Detected relevant symptoms: ${detectedSymptoms.join(', ')}`);
       
     } catch (error) {
-      console.error('[Universal Pattern Detection] Error accessing Evidence Library:', error);
-      
-      // Emergency fallback - basic pattern detection
-      const basicPatterns = ['failed', 'broke', 'damaged', 'leak', 'overheat', 'vibrat'];
-      for (const pattern of basicPatterns) {
-        if (text.toLowerCase().includes(pattern)) {
-          detectedSymptoms.push(`basic_${pattern}`);
-          if (!severityLevel) severityLevel = 'medium';
-          if (!primaryFailureMode) primaryFailureMode = `basic_${pattern}`;
-        }
-      }
+      console.error('[NLP Symptom Extraction] Error accessing Evidence Library:', error);
+      // Return minimal symptoms to prevent over-detection
+      severityLevel = 'low';
     }
 
     return {
@@ -179,6 +131,41 @@ export class EliminationEngine {
       severityLevel,
       primaryFailureMode
     };
+  }
+
+  /**
+   * Extract keywords using NLP word tokenization (NO HARDCODED KEYWORDS)
+   */
+  private static extractIncidentKeywords(description: string): string[] {
+    const text = description.toLowerCase();
+    
+    // Universal NLP tokenization - extract meaningful technical words
+    const words = text.match(/\b[a-z]{3,}\b/g) || [];
+    
+    // Filter to technical keywords (length > 3, exclude common words)
+    const stopWords = ['the', 'and', 'but', 'for', 'was', 'are', 'been', 'have', 'this', 'that', 'with', 'from'];
+    const technicalKeywords = words.filter(word => 
+      word.length > 3 && !stopWords.includes(word)
+    );
+    
+    return Array.from(new Set(technicalKeywords)); // Remove duplicates
+  }
+
+  /**
+   * Check if failure mode is relevant to actual incident keywords (NLP-driven filtering)
+   */
+  private static isFailureModeRelevant(failureMode: string, faultSignature: string, incidentKeywords: string[]): boolean {
+    const failureLower = failureMode.toLowerCase();
+    const signatureLower = faultSignature.toLowerCase();
+    
+    // Check if any incident keywords match this failure mode or its fault signature
+    for (const keyword of incidentKeywords) {
+      if (failureLower.includes(keyword) || signatureLower.includes(keyword)) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**

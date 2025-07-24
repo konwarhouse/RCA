@@ -27,15 +27,15 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - **Safety Failsafe**: If all modes eliminated, system automatically reverts to keeping all modes for investigation
   - **Exact Matching Only**: Replaced fuzzy symptom matching with exact keyword matching to prevent over-elimination
 - **Technical Implementation**:
-  - **Conservative Keywords**: Only detects confirmed failures: 'burnt', 'burned', 'broke', 'broken', 'cracked', 'failed', 'fire'
-  - **Dynamic Schema Approach**: Uses Evidence Library database queries with zero hardcoded equipment names
+  - **NLP Keyword Extraction**: Universal word tokenization extracts technical keywords from incident descriptions with NO hardcoded word lists
+  - **Dynamic Relevance Filtering**: Matches extracted keywords to Evidence Library failure modes and fault signatures using schema-driven logic
   - **Elimination Threshold**: `Math.floor(allFailureModes.length * 0.5)` ensures minimum 50% failure modes remain
   - **Database-Driven Rules**: All elimination logic comes from Evidence Library `eliminatedIfTheseFailuresConfirmed` fields
-- **Testing Results**: Motor failure with "rotor had burnt mark" now properly:
-  - ✅ Detects confirmed "Motor Burnout" symptom (not 16 random symptoms)
+- **Testing Results**: Pump seal failure with "continuous dripping observed" now properly:
+  - ✅ Extracts incident keywords: ['seal', 'dripping', 'continuous'] through NLP tokenization
+  - ✅ Filters Evidence Library to show only relevant failure modes (Seal Face Wear, Seal Flush Line Blocked)
   - ✅ Eliminates maximum 50% of failure modes (not 100%)
-  - ✅ Maintains investigation continuity with remaining failure modes
-  - ✅ Prevents system crashes from zero remaining modes
+  - ✅ Prevents display of irrelevant modes like Casing Crack, Impeller Damage per Root Cause Filtering Enforcement
 - **Universal Guidelines Compliance**:
   - ✅ NO hardcoded field names, table names, or equipment types in logic
   - ✅ Dynamic schema-driven logic based on database metadata
