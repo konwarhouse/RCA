@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+// EvidenceItemCard is defined locally in this file
+import { UniversalRCAHypothesisReview } from '@/components/universal-rca-hypothesis-review';
+import { useToast } from '@/hooks/use-toast';
 
 interface EvidenceItem {
   id: string;
@@ -60,6 +63,8 @@ export default function EvidenceChecklist() {
   const [hypothesesFeedback, setHypothesesFeedback] = useState<{[key: string]: 'accept' | 'reject' | 'modify'}>({});
   const [customFailureModes, setCustomFailureModes] = useState<string[]>([]);
   const [newCustomMode, setNewCustomMode] = useState('');
+  const [showUniversalRCAReview, setShowUniversalRCAReview] = useState(false);
+  const { toast } = useToast();
 
   // Extract incident ID from URL parameters
   useEffect(() => {
@@ -327,8 +332,26 @@ export default function EvidenceChecklist() {
           </CardHeader>
         </Card>
 
+        {/* Universal RCA Hypothesis Review Interface */}
+        {showUniversalRCAReview && aiAnalysis?.aiHypotheses && (
+          <UniversalRCAHypothesisReview
+            incidentId={incidentId!}
+            aiHypotheses={aiAnalysis.aiHypotheses}
+            instructions={aiAnalysis.instructions || "Review AI-generated failure hypotheses and select which ones to investigate further"}
+            onHypothesesConfirmed={(confirmedEvidence) => {
+              console.log('[Universal RCA] Hypotheses confirmed, received evidence:', confirmedEvidence);
+              setEvidenceItems(confirmedEvidence);
+              setShowUniversalRCAReview(false);
+              toast({
+                title: "Hypotheses Confirmed",
+                description: `Evidence collection requirements generated for confirmed failure modes`
+              });
+            }}
+          />
+        )}
+
         {/* ENHANCED_RCA_AI_HUMAN_VERIFICATION: Human Verification Interface */}
-        {showHumanVerification && aiAnalysis && (
+        {showHumanVerification && aiAnalysis && !showUniversalRCAReview && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
