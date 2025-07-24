@@ -17,6 +17,7 @@ import { IntelligentFailureModeFilter } from "./intelligent-failure-mode-filter"
 import { UniversalQuestionnaireEngine } from "./universal-questionnaire-engine";
 import { EvidenceValidationEngine } from "./evidence-validation-engine";
 import { UniversalTimelineEngine } from "./universal-timeline-engine";
+import { IncidentOnlyRCAEngine } from "./incident-only-rca-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -2407,6 +2408,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to check evidence adequacy",
         error: error.message 
+      });
+    }
+  });
+
+  // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Incident-Only RCA with Human Verification
+  app.post("/api/incidents/:id/incident-only-rca", async (req, res) => {
+    try {
+      console.log(`[INCIDENT-ONLY RCA] Starting human-verified analysis for incident ${req.params.id}`);
+      console.log('[INCIDENT-ONLY RCA] NO EQUIPMENT-TYPE LOGIC - Pure incident analysis with human verification');
+
+      const incident = await investigationStorage.getIncident(parseInt(req.params.id));
+      if (!incident) {
+        return res.status(404).json({ error: "Incident not found" });
+      }
+
+      const incidentOnlyEngine = new IncidentOnlyRCAEngine();
+      
+      const analysis = await incidentOnlyEngine.performIncidentOnlyRCA(
+        req.params.id,
+        incident.description || incident.symptomDescription || ''
+      );
+
+      // Store the analysis results with human verification flag
+      await investigationStorage.updateIncident(parseInt(req.params.id), {
+        aiAnalysis: {
+          ...analysis,
+          analysisType: 'Incident-Only RCA with Human Verification',
+          requiresHumanVerification: true,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      res.json({
+        success: true,
+        ...analysis
+      });
+
+    } catch (error) {
+      console.error('Incident-only RCA analysis failed:', error);
+      res.status(500).json({ 
+        error: "Incident-only RCA analysis failed",
+        details: (error as Error).message
+      });
+    }
+  });
+
+  // FALLBACK LOGIC FOR LOW CONFIDENCE RCA (AI-ONLY INFERENCE)
+  app.post("/api/incidents/:id/ai-fallback-analysis", async (req, res) => {
+    try {
+      console.log(`[AI FALLBACK] Starting AI-only inference for incident ${req.params.id}`);
+      console.log('[AI FALLBACK] NO HARDCODING - Pure AI inference when Evidence Library confidence is low');
+
+      const incident = await investigationStorage.getIncident(parseInt(req.params.id));
+      if (!incident) {
+        return res.status(404).json({ error: "Incident not found" });
+      }
+
+      const incidentDescription = incident.description || incident.symptomDescription || '';
+      const equipmentContext = {
+        group: incident.equipmentGroup,
+        type: incident.equipmentType,
+        subtype: incident.equipmentSubtype
+      };
+
+      // STEP 1: AI-ONLY INFERENCE using Dynamic AI Configuration
+      const { DynamicAIConfig } = await import('./dynamic-ai-config');
+      
+      const aiPrompt = `Based on the following incident description and equipment context, what are the most likely root causes?
+
+Incident Description: "${incidentDescription}"
+Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
+
+Provide 3-5 most probable failure modes with engineering reasoning. Focus on:
+1. Technical failure mechanisms
+2. Engineering evidence requirements  
+3. Confidence assessment
+
+Respond with JSON:
+{
+  "inferredFailureModes": [
+    {
+      "failureMode": "specific failure description",
+      "reasoning": "engineering basis for this inference",
+      "confidence": number (0-100),
+      "evidenceRequests": ["specific evidence needed"],
+      "confidenceSource": "AI-Inferred"
+    }
+  ]
+}`;
+
+      const aiResponse = await DynamicAIConfig.performAIAnalysis(
+        'fallback-inference',
+        aiPrompt,
+        'AI Fallback Root Cause Inference',
+        'system'
+      );
+
+      const inference = JSON.parse(aiResponse);
+      
+      // STEP 2: Log for review queue (no hardcoding)
+      const reviewQueueEntry = {
+        incidentID: req.params.id,
+        equipmentGroup: equipmentContext.group,
+        equipmentType: equipmentContext.type,
+        subtype: equipmentContext.subtype,
+        inferredCauses: inference.inferredFailureModes || [],
+        confidenceSource: "AI-Inferred",
+        timestamp: new Date().toISOString(),
+        reviewStatus: "pending_investigator_confirmation"
+      };
+
+      console.log('[AI FALLBACK] Inference logged for review:', JSON.stringify(reviewQueueEntry, null, 2));
+
+      // STEP 3: Return for investigator confirmation
+      res.json({
+        success: true,
+        analysisType: 'AI Fallback Inference',
+        requiresInvestigatorConfirmation: true,
+        inferredFailureModes: inference.inferredFailureModes || [],
+        instructions: "Please review and confirm the AI-inferred causes. Select which ones you agree with for evidence collection.",
+        reviewQueueEntry
+      });
+
+    } catch (error) {
+      console.error('AI fallback analysis failed:', error);
+      res.status(500).json({ 
+        error: "AI fallback analysis failed",
+        details: (error as Error).message
       });
     }
   });
