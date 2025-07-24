@@ -2034,6 +2034,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // UNIVERSAL AI-DRIVEN RCA ANALYSIS ENGINE (ABSOLUTE NO HARDCODING)
+  app.post('/api/incidents/:id/ai-rca-analysis', async (req, res) => {
+    try {
+      const incidentId = req.params.id;
+      const incident = await investigationStorage.getIncident(incidentId);
+      
+      if (!incident) {
+        return res.status(404).json({ error: 'Incident not found' });
+      }
+
+      console.log(`[UNIVERSAL AI RCA] Starting AI-driven analysis for incident ${incidentId}`);
+      console.log(`[UNIVERSAL AI RCA] NO HARDCODED LOGIC - Pure AI inference`);
+
+      // Import the Universal AI RCA Engine
+      const { UniversalAIRCAEngine } = await import('./universal-ai-rca-engine');
+      const aiEngine = new UniversalAIRCAEngine();
+
+      // Get Evidence Library for optional validation (not dictation)
+      const evidenceLibrary = await investigationStorage.searchEvidenceLibrary('');
+      
+      // Get uploaded evidence if available
+      const uploadedEvidence = incident.evidenceFiles || [];
+
+      // Perform complete AI-driven RCA analysis
+      const aiRCAResult = await aiEngine.performCompleteRCA(
+        incidentId,
+        `${incident.title} - ${incident.description}`,
+        incident.equipmentGroup,
+        incident.equipmentType, 
+        incident.equipmentSubtype,
+        evidenceLibrary,
+        uploadedEvidence
+      );
+
+      console.log(`[UNIVERSAL AI RCA] Analysis complete - ${aiRCAResult.inferredCauses.length} causes inferred`);
+      console.log(`[UNIVERSAL AI RCA] Overall confidence: ${aiRCAResult.confidence}%`);
+
+      // Store analysis results in database
+      await investigationStorage.updateIncident(incidentId, {
+        aiAnalysis: JSON.stringify({
+          inferredCauses: aiRCAResult.inferredCauses,
+          evidenceRequests: aiRCAResult.evidenceRequests,
+          confidence: aiRCAResult.confidence,
+          aiReasoningChain: aiRCAResult.aiReasoningChain,
+          auditLog: aiRCAResult.auditLog,
+          analysisType: 'Universal AI-Driven RCA',
+          timestamp: new Date().toISOString()
+        }),
+        workflowStatus: 'analysis_complete',
+        analyzedAt: new Date().toISOString(),
+        hasAnalysis: true
+      });
+
+      res.json({
+        success: true,
+        analysis: aiRCAResult,
+        message: 'AI-driven RCA analysis completed successfully'
+      });
+
+    } catch (error) {
+      console.error('Universal AI RCA analysis failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ 
+        error: 'AI RCA analysis failed', 
+        details: errorMessage 
+      });
+    }
+  });
+
   // Universal RCA Inference Engine (Per Spec Goal)
   // AI infers most probable root cause and provides actionable recommendations
   app.post("/api/incidents/:id/infer-root-cause", async (req, res) => {
