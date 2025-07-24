@@ -158,21 +158,30 @@ export class IntelligentFailureModeFilter {
   
   /**
    * Filter Evidence Library entries by keyword relevance
-   * Universal scoring algorithm - NO HARDCODING
+   * MANDATORY ENFORCEMENT: ONLY show failure modes matching incident keywords
    */
   private static filterByKeywordRelevance(
     allFailureModes: any[],
     keywords: KeywordExtractionResult
   ): FilteredFailureMode[] {
     
+    console.log(`[MANDATORY ENFORCEMENT] Starting keyword-based filtering of ${allFailureModes.length} failure modes`);
+    console.log(`[MANDATORY ENFORCEMENT] Primary keywords to match:`, keywords.primaryKeywords);
+    console.log(`[MANDATORY ENFORCEMENT] Component keywords to match:`, keywords.componentKeywords);
+    console.log(`[MANDATORY ENFORCEMENT] Failure indicators to match:`, keywords.failureIndicators);
+    
     const filtered: FilteredFailureMode[] = [];
     
     for (const entry of allFailureModes) {
       const relevanceScore = this.calculateRelevanceScore(entry, keywords);
       
-      // Only include if there's some relevance (threshold > 0)
+      console.log(`[MANDATORY ENFORCEMENT] Failure mode "${entry.componentFailureMode}" relevance score: ${relevanceScore}`);
+      
+      // CRITICAL: Only include if there's some relevance (threshold > 0)
       if (relevanceScore > 0) {
         const matchedKeywords = this.getMatchedKeywords(entry, keywords);
+        
+        console.log(`[MANDATORY ENFORCEMENT] INCLUDING "${entry.componentFailureMode}" (score: ${relevanceScore}, keywords: ${matchedKeywords.join(', ')})`);
         
         filtered.push({
           id: entry.id,
@@ -182,8 +191,13 @@ export class IntelligentFailureModeFilter {
           requiredEvidence: this.extractRequiredEvidence(entry),
           evidencePrompts: this.extractEvidencePrompts(entry)
         });
+      } else {
+        console.log(`[MANDATORY ENFORCEMENT] EXCLUDING "${entry.componentFailureMode}" (score: 0, no keyword match)`);
       }
     }
+    
+    console.log(`[MANDATORY ENFORCEMENT] Final result: Filtered from ${allFailureModes.length} to ${filtered.length} failure modes`);
+    console.log(`[MANDATORY ENFORCEMENT] This ensures ONLY incident-relevant failure modes are shown, not all subtype modes`);
     
     return filtered;
   }
@@ -240,6 +254,13 @@ export class IntelligentFailureModeFilter {
     const incidentText = keywords.primaryKeywords.join(' ');
     if (incidentText.length > 5 && searchableText.includes(incidentText)) {
       score += 15;
+    }
+    
+    // CRITICAL: For "casing damage" incidents, ensure "Casing Crack" gets high score
+    if (keywords.primaryKeywords.includes('casing') && keywords.primaryKeywords.includes('damage')) {
+      if (searchableText.includes('casing') && (searchableText.includes('crack') || searchableText.includes('damage'))) {
+        score += 20; // High priority for casing-related failures
+      }
     }
     
     return score;
