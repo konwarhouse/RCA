@@ -57,6 +57,9 @@ export default function EvidenceChecklist() {
   const [aiAnalysis, setAIAnalysis] = useState<any>(null);
   const [showHumanVerification, setShowHumanVerification] = useState(false);
   const [verifiedHypotheses, setVerifiedHypotheses] = useState<any[]>([]);
+  const [hypothesesFeedback, setHypothesesFeedback] = useState<{[key: string]: 'accept' | 'reject' | 'modify'}>({});
+  const [customFailureModes, setCustomFailureModes] = useState<string[]>([]);
+  const [newCustomMode, setNewCustomMode] = useState('');
 
   // Extract incident ID from URL parameters
   useEffect(() => {
@@ -93,13 +96,32 @@ export default function EvidenceChecklist() {
     onSuccess: (data) => {
       console.log('Incident-only evidence checklist generated:', data);
       
-      // Handle incident-only response structure
+      // Handle incident-only response structure with fallback logic
       if (data && data.evidenceItems) {
         setEvidenceItems(data.evidenceItems);
         console.log(`[INCIDENT-ONLY EVIDENCE] Generated ${data.evidenceItems.length} symptom-based evidence items`);
         
-        // Store AI analysis for human verification
-        if (data.aiAnalysis) {
+        // Handle fallback analysis or regular AI analysis
+        if (data.fallbackAnalysis) {
+          console.log('[FALLBACK LOGIC] Evidence Library confidence LOW - showing AI-inferred failure modes');
+          setAIAnalysis({
+            extractedSymptoms: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
+              keyword: mode.failureMode,
+              confidence: mode.confidence,
+              context: mode.reasoning
+            })),
+            aiHypotheses: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
+              id: mode.id,
+              hypothesis: mode.failureMode,
+              reasoning: mode.reasoning,
+              aiConfidence: mode.confidence,
+              confidenceSource: mode.confidenceSource
+            })),
+            fallbackMode: true,
+            generationMethod: data.generationMethod
+          });
+          setShowHumanVerification(true);
+        } else if (data.aiAnalysis) {
           setAIAnalysis(data.aiAnalysis);
           setShowHumanVerification(data.requiresHumanVerification || false);
           console.log('[INCIDENT-ONLY EVIDENCE] AI analysis ready for human verification');
@@ -297,11 +319,20 @@ export default function EvidenceChecklist() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Brain className="h-5 w-5 text-orange-600" />
-                Human Verification Required
+                {aiAnalysis?.fallbackMode ? 'AI-Inferred Analysis (Low Confidence)' : 'Human Verification Required'}
               </CardTitle>
               <CardDescription>
-                AI has analyzed the incident description and generated hypotheses. Please review and approve before proceeding.
+                {aiAnalysis?.fallbackMode 
+                  ? 'Evidence Library confidence LOW. AI has inferred potential failure modes using engineering knowledge. INVESTIGATOR VERIFICATION REQUIRED.'
+                  : 'AI has analyzed the incident description and generated hypotheses. Please review and approve before proceeding.'
+                }
               </CardDescription>
+              {aiAnalysis?.fallbackMode && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm">
+                  <strong>FALLBACK LOGIC ACTIVE:</strong> No high-confidence Evidence Library matches found. 
+                  Analysis based on AI engineering inference only.
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -309,8 +340,8 @@ export default function EvidenceChecklist() {
                   <h4 className="font-medium mb-2">Extracted Symptoms:</h4>
                   <div className="flex flex-wrap gap-2">
                     {aiAnalysis.extractedSymptoms?.map((symptom: any, index: number) => (
-                      <Badge key={index} variant="outline" className="bg-blue-50">
-                        {symptom.keyword} ({symptom.confidence}% confidence)
+                      <Badge key={index} variant="outline" className={aiAnalysis.fallbackMode ? "bg-yellow-50" : "bg-blue-50"}>
+                        {symptom.keyword} ({symptom.confidence}% {aiAnalysis.fallbackMode ? 'AI-inferred' : 'confidence'})
                       </Badge>
                     ))}
                   </div>
@@ -318,25 +349,42 @@ export default function EvidenceChecklist() {
                 
                 {aiAnalysis.aiHypotheses && aiAnalysis.aiHypotheses.length > 0 && (
                   <div>
-                    <h4 className="font-medium mb-2">AI Failure Hypotheses (Review Required):</h4>
+                    <h4 className="font-medium mb-2">
+                      {aiAnalysis?.fallbackMode ? 'AI-Inferred Failure Modes (Review Required):' : 'AI Failure Hypotheses (Review Required):'}
+                    </h4>
                     <div className="space-y-3">
                       {aiAnalysis.aiHypotheses.map((hypothesis: any, index: number) => (
                         <div key={index} className="p-3 border rounded-lg bg-white">
                           <div className="flex justify-between items-start mb-2">
                             <h5 className="font-medium">{hypothesis.hypothesis}</h5>
                             <Badge variant={hypothesis.aiConfidence > 80 ? "default" : "secondary"}>
-                              {hypothesis.aiConfidence}% AI Confidence
+                              {hypothesis.aiConfidence}% {hypothesis.confidenceSource || 'AI Confidence'}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{hypothesis.reasoning}</p>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50">
+                            <Button 
+                              size="sm" 
+                              variant={hypothesesFeedback[hypothesis.id] === 'accept' ? "default" : "outline"}
+                              className="text-green-600 hover:bg-green-50"
+                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'accept'}))}
+                            >
                               ✅ Accept
                             </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
+                            <Button 
+                              size="sm" 
+                              variant={hypothesesFeedback[hypothesis.id] === 'reject' ? "default" : "outline"}
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'reject'}))}
+                            >
                               ❌ Reject
                             </Button>
-                            <Button size="sm" variant="outline" className="text-blue-600 hover:bg-blue-50">
+                            <Button 
+                              size="sm" 
+                              variant={hypothesesFeedback[hypothesis.id] === 'modify' ? "default" : "outline"}
+                              className="text-blue-600 hover:bg-blue-50"
+                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'modify'}))}
+                            >
                               ✏️ Modify
                             </Button>
                           </div>
@@ -346,16 +394,100 @@ export default function EvidenceChecklist() {
                   </div>
                 )}
                 
+                {/* Custom Failure Modes Section */}
+                <div>
+                  <h4 className="font-medium mb-2">Add Custom Failure Modes (Optional):</h4>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCustomMode}
+                        onChange={(e) => setNewCustomMode(e.target.value)}
+                        placeholder="Enter custom failure mode based on your experience"
+                        className="flex-1 px-3 py-2 border rounded-md text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (newCustomMode.trim()) {
+                            setCustomFailureModes(prev => [...prev, newCustomMode.trim()]);
+                            setNewCustomMode('');
+                          }
+                        }}
+                        disabled={!newCustomMode.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    {customFailureModes.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {customFailureModes.map((mode, index) => (
+                          <Badge key={index} variant="secondary" className="bg-green-50">
+                            {mode}
+                            <button
+                              className="ml-1 text-red-500 hover:text-red-700"
+                              onClick={() => setCustomFailureModes(prev => prev.filter((_, i) => i !== index))}
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="pt-4 border-t">
                   <Button 
-                    onClick={() => {
-                      setShowHumanVerification(false);
-                      console.log('[HUMAN VERIFICATION] User proceeding with incident-only analysis');
+                    onClick={async () => {
+                      const confirmedCauses = aiAnalysis?.aiHypotheses
+                        ?.filter((h: any) => hypothesesFeedback[h.id] === 'accept')
+                        .map((h: any) => h.hypothesis) || [];
+                      
+                      const disagreedCauses = aiAnalysis?.aiHypotheses
+                        ?.filter((h: any) => hypothesesFeedback[h.id] === 'reject')
+                        .map((h: any) => h.hypothesis) || [];
+                      
+                      if (aiAnalysis?.fallbackMode) {
+                        // Submit fallback feedback
+                        try {
+                          const response = await fetch(`/api/incidents/${incidentId}/fallback-feedback`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              confirmedCauses,
+                              disagreedCauses,
+                              alternativeCauses: [],
+                              customFailureModes,
+                              userReasoning: 'User feedback on AI-inferred failure modes'
+                            })
+                          });
+                          
+                          if (response.ok) {
+                            const result = await response.json();
+                            console.log('[FALLBACK LOGIC] Feedback submitted successfully:', result);
+                            setShowHumanVerification(false);
+                          }
+                        } catch (error) {
+                          console.error('[FALLBACK LOGIC] Failed to submit feedback:', error);
+                        }
+                      } else {
+                        setShowHumanVerification(false);
+                        console.log('[HUMAN VERIFICATION] User proceeding with incident-only analysis');
+                      }
                     }}
                     className="w-full"
+                    disabled={Object.keys(hypothesesFeedback).length === 0 && customFailureModes.length === 0}
                   >
-                    Proceed with Verified Hypotheses
+                    {aiAnalysis?.fallbackMode ? 'Submit Investigator Feedback' : 'Proceed with Verified Hypotheses'}
                   </Button>
+                  
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {aiAnalysis?.fallbackMode 
+                      ? 'Your feedback helps improve future analysis and may be reviewed for Evidence Library enhancement'
+                      : 'Please provide feedback on at least one hypothesis to continue'
+                    }
+                  </p>
                 </div>
               </div>
             </CardContent>
