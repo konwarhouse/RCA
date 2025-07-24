@@ -54,6 +54,9 @@ export default function EvidenceChecklist() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [showEliminatedEvidence, setShowEliminatedEvidence] = useState(false);
+  const [aiAnalysis, setAIAnalysis] = useState<any>(null);
+  const [showHumanVerification, setShowHumanVerification] = useState(false);
+  const [verifiedHypotheses, setVerifiedHypotheses] = useState<any[]>([]);
 
   // Extract incident ID from URL parameters
   useEffect(() => {
@@ -70,50 +73,39 @@ export default function EvidenceChecklist() {
     enabled: !!incidentId,
   });
 
-  // Generate AI evidence checklist - Enhanced with Elimination Logic
+  // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Incident-Only Evidence Generation
   const generateChecklistMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
-      console.log(`[Frontend Evidence] Requesting elimination-aware checklist for ${incidentData.equipmentGroup}→${incidentData.equipmentType}→${incidentData.equipmentSubtype || ''}`);
+      console.log(`[INCIDENT-ONLY EVIDENCE] Requesting incident-only analysis for: "${incidentData.symptomDescription || ''}"`);
+      console.log(`[INCIDENT-ONLY EVIDENCE] NO equipment-type logic - pure incident symptom analysis`);
       
       const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-checklist`, {
         method: 'POST',
-        body: JSON.stringify({
-          equipmentGroup: incidentData.equipmentGroup,
-          equipmentType: incidentData.equipmentType,
-          equipmentSubtype: incidentData.equipmentSubtype, // FIXED: Added missing equipmentSubtype
-          symptoms: incidentData.symptomDescription || '', // FIXED: Use correct database field name
-        }),
         headers: { 'Content-Type': 'application/json' },
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to generate checklist: ${response.status}`);
+        throw new Error(`Failed to generate incident-only checklist: ${response.status}`);
       }
       
       return await response.json();
     },
     onSuccess: (data) => {
-      console.log('Evidence checklist generated:', data);
+      console.log('Incident-only evidence checklist generated:', data);
       
-      // Handle new response structure with elimination data
+      // Handle incident-only response structure
       if (data && data.evidenceItems) {
-        if (Array.isArray(data.evidenceItems)) {
-          setEvidenceItems(data.evidenceItems);
-        } else if (data.evidenceItems.activeEvidence) {
-          // New structured response
-          setEvidenceItems(data.evidenceItems.activeEvidence || []);
-          setEliminatedEvidence(data.evidenceItems.eliminatedEvidence || []);
-          setEliminationSummary(data.evidenceItems.eliminationSummary || null);
-        } else {
-          setEvidenceItems([]);
+        setEvidenceItems(data.evidenceItems);
+        console.log(`[INCIDENT-ONLY EVIDENCE] Generated ${data.evidenceItems.length} symptom-based evidence items`);
+        
+        // Store AI analysis for human verification
+        if (data.aiAnalysis) {
+          setAIAnalysis(data.aiAnalysis);
+          setShowHumanVerification(data.requiresHumanVerification || false);
+          console.log('[INCIDENT-ONLY EVIDENCE] AI analysis ready for human verification');
         }
-      } else if (data.eliminatedEvidence) {
-        // Direct response structure
-        setEvidenceItems(data.evidenceItems || []);
-        setEliminatedEvidence(data.eliminatedEvidence || []);
-        setEliminationSummary(data.eliminationSummary || null);
       } else {
-        console.error('Invalid evidence items format:', data);
+        console.error('Invalid incident-only evidence format:', data);
         setEvidenceItems([]);
       }
       setIsGenerating(false);
@@ -299,11 +291,82 @@ export default function EvidenceChecklist() {
           </CardHeader>
         </Card>
 
+        {/* ENHANCED_RCA_AI_HUMAN_VERIFICATION: Human Verification Interface */}
+        {showHumanVerification && aiAnalysis && (
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-orange-600" />
+                Human Verification Required
+              </CardTitle>
+              <CardDescription>
+                AI has analyzed the incident description and generated hypotheses. Please review and approve before proceeding.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Extracted Symptoms:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {aiAnalysis.extractedSymptoms?.map((symptom: any, index: number) => (
+                      <Badge key={index} variant="outline" className="bg-blue-50">
+                        {symptom.keyword} ({symptom.confidence}% confidence)
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                
+                {aiAnalysis.aiHypotheses && aiAnalysis.aiHypotheses.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">AI Failure Hypotheses (Review Required):</h4>
+                    <div className="space-y-3">
+                      {aiAnalysis.aiHypotheses.map((hypothesis: any, index: number) => (
+                        <div key={index} className="p-3 border rounded-lg bg-white">
+                          <div className="flex justify-between items-start mb-2">
+                            <h5 className="font-medium">{hypothesis.hypothesis}</h5>
+                            <Badge variant={hypothesis.aiConfidence > 80 ? "default" : "secondary"}>
+                              {hypothesis.aiConfidence}% AI Confidence
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{hypothesis.reasoning}</p>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50">
+                              ✅ Accept
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
+                              ❌ Reject
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-blue-600 hover:bg-blue-50">
+                              ✏️ Modify
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="pt-4 border-t">
+                  <Button 
+                    onClick={() => {
+                      setShowHumanVerification(false);
+                      console.log('[HUMAN VERIFICATION] User proceeding with incident-only analysis');
+                    }}
+                    className="w-full"
+                  >
+                    Proceed with Verified Hypotheses
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {isGenerating && (
           <Alert className="mb-6">
             <Brain className="h-4 w-4 animate-spin" />
             <AlertDescription>
-              <strong>AI Analysis in Progress:</strong> Generating equipment-specific evidence checklist based on your incident details and symptoms...
+              <strong>Incident-Only AI Analysis:</strong> Extracting symptoms from incident description (no equipment assumptions)...
             </AlertDescription>
           </Alert>
         )}
@@ -313,7 +376,7 @@ export default function EvidenceChecklist() {
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Lightbulb className="h-4 w-4" />
             <AlertDescription>
-              <strong>AI Generated Checklist:</strong> Based on your equipment type ({(incident as Incident)?.equipmentType}) and reported symptoms, 
+              <strong>AI Incident Analysis:</strong> Based on the incident description, 
               our AI has identified {evidenceItems?.length || 0} evidence items. Focus on completing all Critical items and at least 80% of High priority items.
               {eliminationSummary && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-green-800">

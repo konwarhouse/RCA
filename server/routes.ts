@@ -493,62 +493,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate AI evidence checklist (Step 3) - Enhanced with Elimination Logic
+  // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Incident-Only Evidence Generation (Step 3)
   app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      // UNIVERSAL FIX: Always fetch incident data for equipment details and symptoms
+      console.log(`[INCIDENT-ONLY EVIDENCE] Incident ${id}: Generating checklist from INCIDENT TEXT ONLY`);
+      console.log(`[INCIDENT-ONLY EVIDENCE] NO equipment-type logic - pure incident symptom analysis`);
+      
       const incident = await investigationStorage.getIncident(id);
       if (!incident) {
         return res.status(404).json({ message: "Incident not found" });
       }
 
-      // Extract equipment details from incident (not request body)
-      const equipmentGroup = incident.equipmentGroup;
-      const equipmentType = incident.equipmentType;
-      const equipmentSubtype = incident.equipmentSubtype;
-      const symptomDescription = incident.symptomDescription || incident.description || '';
+      const incidentText = incident.symptomDescription || incident.description || '';
+      if (!incidentText.trim()) {
+        return res.status(400).json({ message: "No incident description available for analysis" });
+      }
 
-      console.log(`[Evidence Generation] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
-      console.log(`[Evidence Generation] Symptoms: ${symptomDescription}`);
-
-      // Validate that equipment details exist
-      if (!equipmentGroup || !equipmentType) {
-        return res.status(400).json({ 
-          message: "Equipment classification incomplete. Please complete equipment selection first." 
+      // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Extract symptoms using AI/NLP ONLY
+      const { IncidentOnlyRCAEngine } = await import('./incident-only-rca-engine');
+      const incidentEngine = new IncidentOnlyRCAEngine();
+      
+      const analysis = await incidentEngine.performIncidentOnlyRCA(id.toString(), incidentText);
+      
+      // Generate evidence requests based ONLY on AI-extracted symptoms
+      const evidenceItems = [];
+      
+      // For each extracted symptom, generate relevant evidence questions
+      for (const symptom of analysis.extractedSymptoms || []) {
+        evidenceItems.push({
+          category: `Symptom Analysis`,
+          title: `${symptom.keyword} Investigation`,
+          description: `Evidence required for: ${symptom.context}`,
+          priority: symptom.confidence > 80 ? 'High' : 'Medium',
+          confidence: symptom.confidence,
+          specificToEquipment: false,
+          source: 'AI-extracted symptom',
+          questions: [
+            `Provide detailed measurements or observations of ${symptom.keyword}`,
+            `When was ${symptom.keyword} first observed?`,
+            `What data exists to quantify ${symptom.keyword}?`
+          ]
         });
       }
 
-      // Step 1: Get elimination results to filter evidence requirements
-      const { EliminationEngine } = await import("./elimination-engine");
-      const eliminationResults = await EliminationEngine.performEliminationAnalysis(
-        equipmentGroup, 
-        equipmentType, 
-        equipmentSubtype || '', 
-        symptomDescription
-      );
-
-      console.log(`[Evidence Generation] Eliminated modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
+      // CRITICAL: Message shows this is AI-suggested, requires human verification
+      const responseMessage = `AI has analyzed the incident description: "${incidentText.substring(0, 100)}..." and suggests ${evidenceItems.length} evidence categories. Please review and proceed with human verification of AI hypotheses.`;
       
-      // Step 2: Generate elimination-aware evidence checklist
-      const evidenceResult = await generateEliminationAwareEvidenceChecklist(
-        equipmentGroup, 
-        equipmentType, 
-        equipmentSubtype || '',
-        symptomDescription, 
-        eliminationResults
-      );
+      console.log(`[INCIDENT-ONLY EVIDENCE] Generated ${evidenceItems.length} symptom-based evidence items`);
+      console.log(`[INCIDENT-ONLY EVIDENCE] NO equipment-type assumptions made`);
       
-      // Return structured response with active and eliminated evidence
       res.json({
-        evidenceItems: evidenceResult.activeEvidence,
-        eliminatedEvidence: evidenceResult.eliminatedEvidence,
-        eliminationSummary: evidenceResult.eliminationSummary
+        evidenceItems: evidenceItems,
+        aiAnalysis: analysis,
+        generationMethod: 'incident-only-ai-analysis',
+        incidentTextAnalyzed: incidentText,
+        requiresHumanVerification: true,
+        message: responseMessage,
+        enforcementCompliant: true
       });
+      
     } catch (error) {
-      console.error("[RCA] Error generating evidence checklist:", error);
-      res.status(500).json({ message: "Failed to generate evidence checklist" });
+      console.error("[INCIDENT-ONLY EVIDENCE] Error:", error);
+      res.status(500).json({ message: "Failed to generate incident-only evidence checklist" });
     }
   });
 

@@ -151,7 +151,28 @@ Focus on engineering logic connecting symptoms to failure modes. Be suggestive, 
       
     } catch (error) {
       console.error('AI hypothesis generation failed:', error);
-      return [];
+      
+      // FALLBACK_LOGIC_LOW_CONFIDENCE_RCA: When AI fails, provide manual hypotheses
+      console.log('[INCIDENT-ONLY RCA] AI unavailable, generating basic hypotheses for human verification');
+      
+      return [
+        {
+          id: "manual-1",
+          hypothesis: "Human Analysis Required",
+          reasoning: "AI service unavailable - please manually identify potential failure modes based on the described symptoms",
+          aiConfidence: 0,
+          symptomsBasis: extractedSymptoms.map(s => s.keyword),
+          suggestedEvidence: ["Manual symptom analysis", "Expert engineering assessment", "Historical failure data"]
+        },
+        {
+          id: "manual-2", 
+          hypothesis: "Investigator-Defined Failure Mode",
+          reasoning: "Add your own failure hypothesis based on experience and symptom analysis",
+          aiConfidence: 0,
+          symptomsBasis: extractedSymptoms.map(s => s.keyword),
+          suggestedEvidence: ["Field observations", "Technical measurements", "Maintenance records"]
+        }
+      ];
     }
   }
 
