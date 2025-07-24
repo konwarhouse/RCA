@@ -124,19 +124,29 @@ export default function EquipmentSelection() {
   const eliminatedItems = eliminationData?.eliminatedFailureModes || [];
   const eliminationSummary = eliminationData?.eliminationSummary;
 
-  // Update equipment selection mutation
+  // Update equipment selection mutation - UNIVERSAL RCA INTEGRATION
   const updateIncidentMutation = useMutation({
     mutationFn: async (data: EquipmentSymptomForm & { equipmentLibraryId?: number }) => {
+      // UNIVERSAL RCA: Add workflow status to trigger Universal RCA flow
+      const updatePayload = {
+        ...data,
+        workflowStatus: "universal_rca_ready", // Flag for Universal RCA system
+        currentStep: 2
+      };
+      
+      console.log(`[UNIVERSAL RCA INTEGRATION] Updating incident ${incidentId} with symptom description length: ${data.symptomDescription?.length || 0}`);
+      console.log(`[UNIVERSAL RCA INTEGRATION] Will trigger Universal RCA analysis with AI hypothesis generation`);
+      
       return await apiRequest(`/api/incidents/${incidentId}/equipment-symptoms`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify(updatePayload),
         headers: { "Content-Type": "application/json" },
       });
     },
     onSuccess: () => {
       toast({
         title: "Equipment & Symptoms Updated",
-        description: "Proceeding to AI evidence checklist generation...",
+        description: "Proceeding to Universal RCA Analysis - AI will analyze your incident description",
       });
       setLocation(`/evidence-checklist?incident=${incidentId}`);
     },
@@ -150,6 +160,18 @@ export default function EquipmentSelection() {
   });
 
   const onSubmit = (data: EquipmentSymptomForm) => {
+    // UNIVERSAL RCA VALIDATION: Ensure sufficient data for AI analysis
+    if (!data.symptomDescription || data.symptomDescription.trim().length < 20) {
+      toast({
+        title: "More Details Needed",
+        description: "Please provide a detailed symptom description (at least 20 characters) for Universal RCA AI analysis",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log(`[UNIVERSAL RCA] Submitting incident with ${data.symptomDescription.length} character symptom description - sufficient for Universal RCA Engine`);
+    
     const payload = {
       ...data,
       equipmentLibraryId: selectedEquipmentFromLibrary?.id,
@@ -214,22 +236,7 @@ export default function EquipmentSelection() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      {/* FORCE VISIBLE DEBUG */}
-      <div style={{
-        position: 'fixed', 
-        top: '0', 
-        left: '0', 
-        right: '0', 
-        backgroundColor: 'green', 
-        color: 'white', 
-        padding: '10px', 
-        zIndex: 9999,
-        fontSize: '18px'
-      }}>
-        ✅ EQUIPMENT SELECTION LOADED - Incident #{incidentId}: {incident?.title}
-      </div>
-      <div style={{marginTop: '60px'}}>
-        <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -371,10 +378,13 @@ export default function EquipmentSelection() {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                  <p>No library items found for this equipment type.</p>
-                  <p className="text-sm">Proceed with manual entry.</p>
+                <div className="text-center py-8 text-blue-500">
+                  <FileText className="h-12 w-12 mx-auto mb-3 text-blue-300" />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="font-semibold text-blue-900 mb-2">🤖 Universal RCA Ready</p>
+                    <p className="text-sm text-blue-700">No equipment-specific templates needed. Our AI will analyze your incident description directly using Universal RCA Engine.</p>
+                    <p className="text-xs text-blue-600 mt-2">→ Fill in symptom details to activate AI analysis</p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -565,7 +575,6 @@ export default function EquipmentSelection() {
             </CardContent>
           </Card>
         </div>
-      </div>
       </div>
     </div>
   );

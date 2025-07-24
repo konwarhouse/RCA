@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         topEvent: 'Equipment Failure',
         confidence: structuredRCA.confidence,
-        analysisMethod: getAnalysisMethodForInvestigationType(investigation.investigationType || "equipment_failure"),
+        analysisMethod: 'universal_rca',
         structuredAnalysis: structuredRCA,
         // Enhanced context for RCA Tree visualization
         equipmentGroup: investigation.equipmentGroup,
@@ -339,15 +339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const analysesFromInvestigations = filteredInvestigations.map(inv => ({
           id: inv.id,
           investigationId: inv.investigationId,
-          title: `${inv.whatHappened} - ${inv.evidenceData?.equipment_type || 'Equipment'} ${inv.evidenceData?.equipment_tag || ''}`.trim(),
+          title: `${inv.whatHappened} - ${(inv.evidenceData as any)?.equipment_type || 'Equipment'} ${(inv.evidenceData as any)?.equipment_tag || ''}`.trim(),
           status: inv.status === 'completed' ? 'completed' : inv.currentStep,
           createdAt: inv.createdAt,
           updatedAt: inv.updatedAt,
           confidence: inv.confidence ? parseFloat(inv.confidence) * 100 : 80,
-          equipmentType: inv.evidenceData?.equipment_type || 'Unknown',
-          location: inv.whereHappened || inv.evidenceData?.operating_location || 'Unknown',
-          cause: inv.analysisResults?.structuredAnalysis?.rootCause || 
-                 inv.analysisResults?.causes?.[0]?.description || 
+          equipmentType: (inv.evidenceData as any)?.equipment_type || 'Unknown',
+          location: inv.whereHappened || (inv.evidenceData as any)?.operating_location || 'Unknown',
+          cause: (inv.analysisResults as any)?.structuredAnalysis?.rootCause || 
+                 (inv.analysisResults as any)?.causes?.[0]?.description || 
                  'Equipment failure analysis',
           priority: inv.consequence?.toLowerCase().includes('safety') ? 'high' : 
                    inv.consequence?.toLowerCase().includes('production') ? 'medium' : 'low',
@@ -363,12 +363,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add incidents based on status filter - all incidents if status='all', only completed if not status='all'
       const filteredIncidents = status === 'all' ? incidents : 
-        incidents.filter(inc => inc.currentStep >= 6 && inc.workflowStatus !== 'created' && inc.aiAnalysis);
+        incidents.filter(inc => (inc.currentStep || 0) >= 6 && inc.workflowStatus !== 'created' && inc.aiAnalysis);
       
 
       
       const analysesFromIncidents = filteredIncidents.map(inc => {
-        const isDraft = !inc.aiAnalysis || inc.currentStep < 6;
+        const isDraft = !inc.aiAnalysis || (inc.currentStep || 0) < 6;
 
         return {
           id: inc.id,
@@ -378,11 +378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isDraft: isDraft,
           createdAt: inc.createdAt,
           updatedAt: inc.updatedAt,
-          confidence: inc.analysisResults?.overallConfidence || 85,
+          confidence: (inc.analysisResults as any)?.overallConfidence || 85,
           equipmentType: inc.equipmentType || 'Unknown',
           location: inc.location || 'Unknown',
           cause: isDraft ? 'Draft - Analysis pending' : 
-                 (inc.analysisResults?.rootCauses?.[0]?.description || 'Root cause analysis completed'),
+                 ((inc.analysisResults as any)?.rootCauses?.[0]?.description || 'Root cause analysis completed'),
           priority: inc.priority?.toLowerCase() === 'critical' ? 'high' : 
                    inc.priority?.toLowerCase() === 'high' ? 'high' :
                    inc.priority?.toLowerCase() === 'medium' ? 'medium' : 'low',
@@ -451,15 +451,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update incident equipment/symptoms (Step 2)
+  // Update incident equipment/symptoms (Step 2) - UNIVERSAL RCA INTEGRATION
   app.put("/api/incidents/:id/equipment-symptoms", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // UNIVERSAL RCA: Check if this should trigger Universal RCA flow
+      const hasRichSymptomData = req.body.symptomDescription && 
+                                req.body.symptomDescription.trim().length >= 20;
+      
       const updateData = {
         ...req.body,
         currentStep: 2,
-        workflowStatus: "equipment_selected",
+        workflowStatus: hasRichSymptomData ? req.body.workflowStatus || "universal_rca_ready" : "equipment_selected",
       };
+      
+      console.log(`[UNIVERSAL RCA INTEGRATION] Incident ${id}: Updating with workflow status: ${updateData.workflowStatus}`);
+      console.log(`[UNIVERSAL RCA INTEGRATION] Symptom description length: ${req.body.symptomDescription?.length || 0} characters`);
       
       const incident = await investigationStorage.updateIncident(id, updateData);
       res.json(incident);
@@ -716,14 +724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const equipmentType = incident.equipmentType || 'Pumps';
       const equipmentSubtype = incident.equipmentSubtype || 'Centrifugal';
       
-      const evidenceResults = await EvidenceLibraryOperations.searchEvidenceLibraryByEquipment(
+      const evidenceResults = await investigationStorage.searchEvidenceLibraryByEquipment(
         equipmentGroup,
         equipmentType, 
         equipmentSubtype
       );
       
       // Convert to evidence checklist format
-      const evidenceItems = evidenceResults.map((item, index) => ({
+      const evidenceItems = evidenceResults.map((item: any, index: number) => ({
         id: `legacy-${id}-${Date.now()}-${index}`,
         category: item.category || 'Equipment Analysis',
         title: item.componentFailureMode,
@@ -734,7 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         required: item.criticality === 'Critical',
         aiGenerated: false,
         specificToEquipment: true,
-        examples: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()) : [],
+        examples: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map((q: string) => q.trim()) : [],
         completed: false,
         isUnavailable: false,
         unavailableReason: '',
