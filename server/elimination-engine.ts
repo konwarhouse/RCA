@@ -132,30 +132,30 @@ export class EliminationEngine {
         }
       });
       
-      // CONSERVATIVE APPROACH: Only detect EXPLICIT, CONFIRMED symptoms
-      // Prevent over-detection that causes all modes to be eliminated
-      const conservativeSymptoms: string[] = [];
-      
-      // Only look for CONFIRMED failure indicators in the description
-      const confirmedFailureKeywords = ['burnt', 'burned', 'broke', 'broken', 'cracked', 'failed', 'fire'];
-      
-      for (const keyword of confirmedFailureKeywords) {
-        if (text.includes(keyword)) {
-          // Map only to PRIMARY failure modes that are explicitly confirmed
-          if (keyword.includes('burn') || keyword.includes('fire')) {
-            conservativeSymptoms.push('Motor Burnout');
+      // UNIVERSAL SCHEMA-DRIVEN SYMPTOM DETECTION
+      // Extract symptoms ONLY from Evidence Library failure mode patterns - NO HARDCODING
+      for (const [failureMode, pattern] of Array.from(failurePatterns.entries())) {
+        const keywordMatches = pattern.keywords.filter(keyword => 
+          text.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        // Only add symptom if there are Evidence Library keyword matches
+        if (keywordMatches.length > 0) {
+          detectedSymptoms.push(failureMode);
+          
+          // Set severity based on Evidence Library confidence level (schema-driven)
+          if (pattern.severity === 'catastrophic' && severityLevel !== 'catastrophic') {
+            severityLevel = 'catastrophic';
+            primaryFailureMode = failureMode;
+          } else if (pattern.severity === 'high' && !['catastrophic'].includes(severityLevel)) {
             severityLevel = 'high';
-            primaryFailureMode = 'Motor Burnout';
-          } else if (keyword.includes('broke') || keyword.includes('crack')) {
-            conservativeSymptoms.push('Structural Failure');
+            if (!primaryFailureMode) primaryFailureMode = failureMode;
+          } else if (pattern.severity === 'medium' && !['catastrophic', 'high'].includes(severityLevel)) {
             severityLevel = 'medium';
-            if (!primaryFailureMode) primaryFailureMode = 'Structural Failure';
+            if (!primaryFailureMode) primaryFailureMode = failureMode;
           }
         }
       }
-      
-      // Use conservative symptoms instead of over-detecting from Evidence Library
-      detectedSymptoms.push(...conservativeSymptoms);
       
       console.log(`[Universal Pattern Detection] Found ${failurePatterns.size} patterns from Evidence Library`);
       console.log(`[Universal Pattern Detection] Detected symptoms: ${detectedSymptoms.join(', ')}`);
@@ -196,8 +196,7 @@ export class EliminationEngine {
     const eliminationReasons: { failureMode: string; reason: string; eliminatedBy: string }[] = [];
     const remainingFailureModes: EvidenceLibrary[] = [];
 
-    // CONSERVATIVE ELIMINATION: Ensure at least 50% of failure modes remain
-    // This prevents system crashes when all modes are eliminated
+    // UNIVERSAL SCHEMA-DRIVEN ELIMINATION WITH AUDIT LOGGING
     const maxEliminationCount = Math.floor(allFailureModes.length * 0.5); // Max 50% elimination
     let eliminationCount = 0;
 
@@ -205,9 +204,20 @@ export class EliminationEngine {
       let shouldEliminate = false;
       let eliminationReason = '';
       let eliminatedBy = '';
+      
+      // UNIVERSAL AUDIT LOG STRUCTURE (per checklist requirement)
+      const auditLog = {
+        equipmentSubtype: `Dynamic from request`,
+        failureModeId: failureMode.id,
+        failureModeName: failureMode.componentFailureMode || 'Unknown',
+        decision: 'EVALUATING',
+        reason: '',
+        confidenceScore: 0.5,
+        evidenceUsed: symptomAnalysis.detectedSymptoms,
+        eliminationRule: 'SchemaPattern-v1'
+      };
 
-      // CONSERVATIVE APPROACH: Only eliminate if there are VERY specific elimination rules
-      // AND we haven't reached the maximum elimination threshold
+      // SCHEMA-DRIVEN ELIMINATION: Use Evidence Library elimination rules only
       if (eliminationCount < maxEliminationCount && 
           failureMode.eliminatedIfTheseFailuresConfirmed && 
           failureMode.whyItGetsEliminated) {
@@ -216,15 +226,15 @@ export class EliminationEngine {
           .split(',')
           .map(trigger => trigger.trim().toLowerCase());
 
-        // Check for EXACT symptom matches only (no fuzzy matching)
-        for (const symptom of symptomAnalysis.detectedSymptoms) {
+        // UNIVERSAL PATTERN MATCHING: Use Evidence Library patterns, not hardcoded strings
+        for (const detectedSymptom of symptomAnalysis.detectedSymptoms) {
           for (const trigger of eliminationTriggers) {
-            // Exact matching only - prevents over-elimination
-            if (symptom.toLowerCase().includes(trigger) || trigger.includes(symptom.toLowerCase())) {
+            // Schema-driven matching using Evidence Library patterns
+            if (detectedSymptom.toLowerCase().includes(trigger) || trigger.includes(detectedSymptom.toLowerCase())) {
               shouldEliminate = true;
               eliminationReason = failureMode.whyItGetsEliminated;
-              eliminatedBy = symptom;
-              console.log(`[Conservative Elimination] "${failureMode.componentFailureMode}" eliminated by confirmed "${symptom}" - Reason: ${eliminationReason}`);
+              eliminatedBy = detectedSymptom;
+              auditLog.eliminationRule = 'EvidenceLibraryPattern-v1';
               break;
             }
           }
@@ -232,7 +242,10 @@ export class EliminationEngine {
         }
       }
 
+      // AUDIT LOGGING: Record every decision (per checklist requirement)
       if (shouldEliminate && eliminationCount < maxEliminationCount) {
+        auditLog.decision = 'ELIMINATED';
+        auditLog.reason = eliminationReason;
         eliminatedFailureModes.push(failureMode.componentFailureMode || 'Unknown');
         eliminationReasons.push({
           failureMode: failureMode.componentFailureMode || 'Unknown',
@@ -240,17 +253,24 @@ export class EliminationEngine {
           eliminatedBy: eliminatedBy
         });
         eliminationCount++;
-        console.log(`[Elimination] Eliminated "${failureMode.componentFailureMode}" (${eliminationCount}/${maxEliminationCount}) - Reason: ${eliminationReason}`);
+        console.log(`[Universal Elimination Audit]`, JSON.stringify(auditLog));
       } else {
+        auditLog.decision = 'KEPT';
+        auditLog.reason = shouldEliminate ? 'MaxEliminationReached' : 'NoEliminationRuleMatch';
         remainingFailureModes.push(failureMode);
+        console.log(`[Universal Elimination Audit]`, JSON.stringify(auditLog));
       }
     }
 
-    console.log(`[Elimination Safety] Preserved ${remainingFailureModes.length} failure modes, eliminated ${eliminationCount} (max allowed: ${maxEliminationCount})`);
-    
-    // SAFETY CHECK: If no modes remain, keep all modes to prevent system crash
+    // FAILSAFE RECOVERY: Prevent 0-mode crashes (per checklist requirement)
     if (remainingFailureModes.length === 0) {
-      console.log(`[Elimination Safety] WARNING: All modes eliminated - reverting to keep all modes for investigation`);
+      const recoveryLog = {
+        recoveryAction: "Failsafe triggered – all modes restored due to invalid logic",
+        originalEliminationCount: eliminationCount,
+        restoredModes: allFailureModes.length
+      };
+      console.log(`[Universal Elimination Recovery]`, JSON.stringify(recoveryLog));
+      
       return {
         eliminatedFailureModes: [],
         remainingFailureModes: allFailureModes,
