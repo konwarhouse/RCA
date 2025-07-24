@@ -539,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: incident.equipmentType,
               subtype: incident.equipmentSubtype
             },
-            analysis.extractedSymptoms?.map(s => s.keyword),
+            analysis.extractedSymptoms?.map(s => s.keyword) || [],
             [] // Evidence summary would come from uploaded files
           );
           

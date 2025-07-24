@@ -102,7 +102,7 @@ export default function EvidenceChecklist() {
         console.log(`[INCIDENT-ONLY EVIDENCE] Generated ${data.evidenceItems.length} symptom-based evidence items`);
         
         // Handle fallback analysis or regular AI analysis
-        if (data.fallbackAnalysis) {
+        if (data.fallbackAnalysis && data.fallbackAnalysis.inferredFailureModes) {
           console.log('[FALLBACK LOGIC] Evidence Library confidence LOW - showing AI-inferred failure modes');
           setAIAnalysis({
             extractedSymptoms: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
@@ -111,20 +111,34 @@ export default function EvidenceChecklist() {
               context: mode.reasoning
             })),
             aiHypotheses: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
-              id: mode.id,
+              id: mode.id || `fallback-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
               hypothesis: mode.failureMode,
               reasoning: mode.reasoning,
               aiConfidence: mode.confidence,
-              confidenceSource: mode.confidenceSource
+              confidenceSource: mode.confidenceSource || 'AI-Inferred'
             })),
             fallbackMode: true,
             generationMethod: data.generationMethod
           });
           setShowHumanVerification(true);
         } else if (data.aiAnalysis) {
-          setAIAnalysis(data.aiAnalysis);
+          // Ensure all hypotheses have proper IDs for button functionality  
+          let hypothesesWithIds = [];
+          if (data.aiAnalysis.aiHypotheses && Array.isArray(data.aiAnalysis.aiHypotheses)) {
+            hypothesesWithIds = data.aiAnalysis.aiHypotheses.map((hypothesis: any, index: number) => ({
+              ...hypothesis,
+              id: hypothesis.id || `hypothesis-${Date.now()}-${index}-${Math.random().toString(36).substr(2,9)}`
+            }));
+          }
+          
+          setAIAnalysis({
+            ...data.aiAnalysis,
+            aiHypotheses: hypothesesWithIds
+          });
           setShowHumanVerification(data.requiresHumanVerification || false);
           console.log('[INCIDENT-ONLY EVIDENCE] AI analysis ready for human verification');
+          console.log('Hypotheses with IDs:', hypothesesWithIds);
+          console.log('Full AI analysis:', data.aiAnalysis);
         }
       } else {
         console.error('Invalid incident-only evidence format:', data);
@@ -347,14 +361,14 @@ export default function EvidenceChecklist() {
                   </div>
                 </div>
                 
-                {aiAnalysis.aiHypotheses && aiAnalysis.aiHypotheses.length > 0 && (
+                {aiAnalysis.aiHypotheses && Array.isArray(aiAnalysis.aiHypotheses) && aiAnalysis.aiHypotheses.length > 0 && (
                   <div>
                     <h4 className="font-medium mb-2">
                       {aiAnalysis?.fallbackMode ? 'AI-Inferred Failure Modes (Review Required):' : 'AI Failure Hypotheses (Review Required):'}
                     </h4>
                     <div className="space-y-3">
                       {aiAnalysis.aiHypotheses.map((hypothesis: any, index: number) => (
-                        <div key={index} className="p-3 border rounded-lg bg-white">
+                        <div key={hypothesis.id || index} className="p-3 border rounded-lg bg-white">
                           <div className="flex justify-between items-start mb-2">
                             <h5 className="font-medium">{hypothesis.hypothesis}</h5>
                             <Badge variant={hypothesis.aiConfidence > 80 ? "default" : "secondary"}>
@@ -367,7 +381,15 @@ export default function EvidenceChecklist() {
                               size="sm" 
                               variant={hypothesesFeedback[hypothesis.id] === 'accept' ? "default" : "outline"}
                               className="text-green-600 hover:bg-green-50"
-                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'accept'}))}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                console.log('Accept clicked for hypothesis:', hypothesis.id, hypothesis);
+                                setHypothesesFeedback(prev => {
+                                  const updated = {...prev, [hypothesis.id]: 'accept'};
+                                  console.log('Updated feedback state:', updated);
+                                  return updated;
+                                });
+                              }}
                             >
                               ✅ Accept
                             </Button>
@@ -375,7 +397,15 @@ export default function EvidenceChecklist() {
                               size="sm" 
                               variant={hypothesesFeedback[hypothesis.id] === 'reject' ? "default" : "outline"}
                               className="text-red-600 hover:bg-red-50"
-                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'reject'}))}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                console.log('Reject clicked for hypothesis:', hypothesis.id, hypothesis);
+                                setHypothesesFeedback(prev => {
+                                  const updated = {...prev, [hypothesis.id]: 'reject'};
+                                  console.log('Updated feedback state:', updated);
+                                  return updated;
+                                });
+                              }}
                             >
                               ❌ Reject
                             </Button>
@@ -383,7 +413,15 @@ export default function EvidenceChecklist() {
                               size="sm" 
                               variant={hypothesesFeedback[hypothesis.id] === 'modify' ? "default" : "outline"}
                               className="text-blue-600 hover:bg-blue-50"
-                              onClick={() => setHypothesesFeedback(prev => ({...prev, [hypothesis.id]: 'modify'}))}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                console.log('Modify clicked for hypothesis:', hypothesis.id, hypothesis);
+                                setHypothesesFeedback(prev => {
+                                  const updated = {...prev, [hypothesis.id]: 'modify'};
+                                  console.log('Updated feedback state:', updated);
+                                  return updated;
+                                });
+                              }}
                             >
                               ✏️ Modify
                             </Button>
@@ -477,7 +515,12 @@ export default function EvidenceChecklist() {
                       }
                     }}
                     className="w-full"
-                    disabled={Object.keys(hypothesesFeedback).length === 0 && customFailureModes.length === 0}
+                    disabled={
+                      aiAnalysis?.aiHypotheses && 
+                      aiAnalysis.aiHypotheses.length > 0 && 
+                      Object.keys(hypothesesFeedback).length === 0 && 
+                      customFailureModes.length === 0
+                    }
                   >
                     {aiAnalysis?.fallbackMode ? 'Submit Investigator Feedback' : 'Proceed with Verified Hypotheses'}
                   </Button>
