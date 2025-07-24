@@ -2750,14 +2750,17 @@ async function validateInvestigationCompleteness(incident: any) {
     issues.push("Root cause analysis confidence too low for closure");
     recommendedActions.push("Investigate additional potential causes to increase confidence");
     
-    // Generate potential failure modes based on equipment type
-    const equipmentBasedModes = generateEquipmentSpecificFailureModes(
-      incident.equipmentGroup, 
-      incident.equipmentType, 
-      incident.equipmentSubtype,
-      equipmentSymptoms
-    );
-    potentialFailureModes.push(...equipmentBasedModes);
+    // EVIDENCE LIBRARY FILTERING ENFORCEMENT: NO equipment-type preloading allowed
+    // Instead, query Evidence Library based on INCIDENT SYMPTOMS only
+    console.log(`[Evidence Library Filtering] Using symptom-based filtering instead of equipment preloading`);
+    
+    // Only suggest failure modes if they match actual incident symptoms
+    if (equipmentSymptoms && equipmentSymptoms.length > 0) {
+      const symptomBasedModes = await getFailureModesBySymptoms(equipmentSymptoms);
+      potentialFailureModes.push(...symptomBasedModes);
+    } else {
+      console.log(`[Evidence Library Filtering] No symptoms provided - no failure modes suggested (NO FALLBACK)`);
+    }
   }
 
   // 4. ESSENTIAL OPERATIONAL DATA CHECK
@@ -2890,36 +2893,45 @@ function analyzeFailureMode(incident: any, symptoms: any) {
   };
 }
 
-// Generate equipment-specific failure modes based on type
-function generateEquipmentSpecificFailureModes(group: string, type: string, subtype: string, symptoms: any) {
-  const equipmentKey = `${group}-${type}${subtype ? `-${subtype}` : ''}`;
-  
-  // Universal equipment failure mode library
-  const equipmentFailureModes = {
-    "Rotating-Pumps": [
-      { mode: "Impeller Cavitation", causes: ["Low suction pressure", "High temperature", "Restricted intake"], indicators: ["Noise", "Vibration", "Performance drop"] },
-      { mode: "Mechanical Seal Failure", causes: ["Dry running", "Misalignment", "Wrong material", "Installation error"], indicators: ["Leakage", "High temperature", "Seal face damage"] },
-      { mode: "Bearing Failure", causes: ["Lubrication failure", "Contamination", "Overload", "Misalignment"], indicators: ["Vibration", "Temperature rise", "Noise"] }
-    ],
-    "Rotating-Motors": [
-      { mode: "Winding Insulation Failure", causes: ["Overheating", "Voltage spikes", "Contamination", "Age"], indicators: ["Ground fault", "Phase imbalance", "Insulation resistance low"] },
-      { mode: "Rotor Bar Failure", causes: ["Thermal cycling", "Manufacturing defect", "Overload"], indicators: ["Slip variation", "Torque pulsation", "Current signature"] },
-      { mode: "Bearing Failure", causes: ["Lubrication issues", "Misalignment", "Contamination"], indicators: ["Vibration", "Temperature", "Noise"] }
-    ],
-    "Static-Heat Exchangers": [
-      { mode: "Tube Corrosion", causes: ["Process chemistry", "Velocity erosion", "Galvanic corrosion"], indicators: ["Leakage", "Pressure loss", "Performance drop"] },
-      { mode: "Fouling", causes: ["Process contamination", "Poor water quality", "Low velocity"], indicators: ["Pressure drop increase", "Heat transfer reduction"] },
-      { mode: "Gasket Failure", causes: ["Over-pressure", "Temperature excursion", "Material degradation"], indicators: ["External leakage", "Cross-contamination"] }
-    ],
-    "Static-Pressure Vessels": [
-      { mode: "Material Degradation", causes: ["Corrosion", "Fatigue", "Stress corrosion cracking"], indicators: ["Wall thinning", "Crack formation", "Leakage"] },
-      { mode: "Weld Failure", causes: ["Poor welding", "Thermal stress", "Corrosion"], indicators: ["Crack at welds", "Distortion", "Leakage"] }
-    ]
-  };
-
-  return equipmentFailureModes[equipmentKey] || [
-    { mode: "General Equipment Failure", causes: ["Material degradation", "Operational stress", "Maintenance issues"], indicators: ["Performance degradation", "Abnormal conditions"] }
-  ];
+// EVIDENCE LIBRARY FILTERING ENFORCEMENT: Get failure modes by SYMPTOMS only (NO equipment preloading)
+async function getFailureModesBySymptoms(symptoms: string[]): Promise<any[]> {
+  try {
+    const { investigationStorage } = await import("./storage");
+    const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
+    const relevantModes: any[] = [];
+    
+    console.log(`[Evidence Library Filtering] Searching for failure modes matching symptoms: ${symptoms.join(', ')}`);
+    
+    for (const entry of allEvidenceEntries) {
+      const failureMode = (entry.componentFailureMode || '').toLowerCase();
+      const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
+      const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
+      
+      // Check if ANY symptom matches this failure mode
+      const hasMatch = symptoms.some(symptom => 
+        failureMode.includes(symptom.toLowerCase()) || 
+        faultSignature.includes(symptom.toLowerCase()) ||
+        questions.includes(symptom.toLowerCase())
+      );
+      
+      if (hasMatch) {
+        relevantModes.push({
+          mode: entry.componentFailureMode,
+          causes: [entry.primaryRootCause || 'Unknown cause'],
+          indicators: [entry.faultSignaturePattern || 'Check evidence requirements']
+        });
+        
+        console.log(`[Evidence Library Filtering] Matched: ${entry.componentFailureMode} based on symptom relevance`);
+      }
+    }
+    
+    console.log(`[Evidence Library Filtering] Found ${relevantModes.length} symptom-matched failure modes (NO equipment preloading)`);
+    return relevantModes;
+    
+  } catch (error) {
+    console.error('[Evidence Library Filtering] Error querying by symptoms:', error);
+    return []; // NO FALLBACK - return empty if error
+  }
 }
 
 // Check operational data completeness

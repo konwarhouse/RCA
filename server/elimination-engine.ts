@@ -81,46 +81,74 @@ export class EliminationEngine {
     let severityLevel: 'low' | 'medium' | 'high' | 'catastrophic' = 'low';
     let primaryFailureMode: string | null = null;
 
-    // STRICT NLP-DRIVEN SYMPTOM EXTRACTION (Per NLP Filtering Compliance Audit)
-    // STEP 1: Extract ONLY keywords actually mentioned in incident description
+    // EVIDENCE LIBRARY FILTERING ENFORCEMENT (Per Evidence_Library_Filtering_Enforcement_1753351690321.txt)
+    // CRITICAL: PRIMARY INDEX = INCIDENT SYMPTOMS (NOT EQUIPMENT TYPE)
+    
+    // STEP 1: Extract ONLY keywords actually mentioned in incident description  
     const incidentKeywords = this.extractIncidentKeywords(text);
     
     // AUDIT LOG: NLP Keywords Extracted
     const nlpAuditLog = {
       incidentDescription: text,
       extractedKeywords: incidentKeywords,
-      tokenizationMethod: 'Universal NLP - No hardcoded lists',
+      filteringMethod: 'Incident Symptoms ONLY - NO Equipment Type Preloading',
       timestamp: new Date().toISOString()
     };
-    console.log(`[NLP Audit Log - Keywords]`, JSON.stringify(nlpAuditLog));
+    console.log(`[Evidence Library Filtering Audit]`, JSON.stringify(nlpAuditLog));
     
-    // STEP 2: STRICT filtering - only match Evidence Library entries that contain incident keywords
+    // STEP 2: Query Evidence Library for SYMPTOM PATTERNS only (NOT equipment type)
     const { investigationStorage } = await import("./storage");
     
     try {
+      // CRITICAL: Search by SYMPTOMS, not equipment type
       const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
-      let relevantEntries = 0;
+      let relevantFailureModes = 0;
       
-      // STEP 3: Apply STRICT relevance filtering based on ACTUAL incident keywords
+      // STEP 3: Filter Evidence Library entries by SYMPTOM MATCH ONLY
       for (const entry of allEvidenceEntries) {
-        const failureMode = entry.componentFailureMode || '';
-        const faultSignature = entry.faultSignaturePattern || '';
+        // Search in faultSignaturePattern and aiOrInvestigatorQuestions for symptom keywords
+        const symptoms = (entry.faultSignaturePattern || '').toLowerCase();
+        const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
+        const failureMode = (entry.componentFailureMode || '').toLowerCase();
         
-        // STRICT RELEVANCE CHECK: Must match at least one incident keyword exactly
-        const relevanceScore = this.calculateRelevanceScore(failureMode, faultSignature, incidentKeywords);
+        // Check if ANY incident keyword matches symptom patterns in Evidence Library
+        let matched = false;
+        let matchedKeyword = '';
+        let matchSource = '';
         
-        if (relevanceScore > 0) {
-          relevantEntries++;
-          detectedSymptoms.push(failureMode);
+        for (const keyword of incidentKeywords) {
+          if (symptoms.includes(keyword)) {
+            matched = true;
+            matchedKeyword = keyword;
+            matchSource = 'faultSignaturePattern';
+            break;
+          } else if (questions.includes(keyword)) {
+            matched = true;
+            matchedKeyword = keyword;
+            matchSource = 'aiOrInvestigatorQuestions';
+            break;
+          } else if (failureMode.includes(keyword)) {
+            matched = true;
+            matchedKeyword = keyword;
+            matchSource = 'componentFailureMode';
+            break;
+          }
+        }
+        
+        // ONLY include failure modes with actual symptom matches
+        if (matched) {
+          relevantFailureModes++;
+          detectedSymptoms.push(entry.componentFailureMode || '');
           
-          // AUDIT LOG: Failure Mode Match
+          // AUDIT LOG: Required by Evidence Library Filtering Enforcement
           const matchAuditLog = {
-            failureMode: failureMode,
-            relevanceScore: relevanceScore,
-            matchedKeywords: this.getMatchedKeywords(failureMode, faultSignature, incidentKeywords),
-            confidenceLevel: entry.confidenceLevel
+            IncidentID: "Dynamic",
+            FailureMode: entry.componentFailureMode,
+            MatchedKeyword: matchedKeyword,
+            MatchSource: matchSource,
+            LibraryRowID: entry.id
           };
-          console.log(`[NLP Audit Log - Match]`, JSON.stringify(matchAuditLog));
+          console.log(`[Evidence Library Match Log]`, JSON.stringify(matchAuditLog));
           
           // Set severity based on Evidence Library confidence level
           const severity = entry.confidenceLevel === 'High' ? 'high' : 
@@ -128,33 +156,39 @@ export class EliminationEngine {
           
           if (severity === 'high' && severityLevel !== 'high') {
             severityLevel = 'high';
-            primaryFailureMode = failureMode;
+            primaryFailureMode = entry.componentFailureMode || '';
           } else if (severity === 'medium' && severityLevel === 'low') {
             severityLevel = 'medium';
-            if (!primaryFailureMode) primaryFailureMode = failureMode;
+            if (!primaryFailureMode) primaryFailureMode = entry.componentFailureMode || '';
           }
         }
       }
       
-      // AUDIT LOG: Final Results
+      // FINAL AUDIT LOG: Evidence Library Filtering Results
       const resultsAuditLog = {
         totalEvidenceEntries: allEvidenceEntries.length,
-        relevantMatches: relevantEntries,
+        symptomMatches: relevantFailureModes,
         detectedSymptoms: detectedSymptoms,
-        filteringMethod: 'Strict NLP - Incident keyword matching only',
+        filteringRule: 'SYMPTOMS ONLY - NO Equipment Type Preloading',
+        rejectedModes: allEvidenceEntries.length - relevantFailureModes,
         noFallbackUsed: true
       };
-      console.log(`[NLP Audit Log - Results]`, JSON.stringify(resultsAuditLog));
+      console.log(`[Evidence Library Filtering Results]`, JSON.stringify(resultsAuditLog));
+      
+      // COMPLIANCE CHECK: If no symptoms match, return empty (no fallback)
+      if (relevantFailureModes === 0) {
+        console.log(`[Evidence Library Filtering] No symptom matches found - returning empty result (NO FALLBACK)`);
+      }
       
     } catch (error) {
-      console.error('[NLP Symptom Extraction] Error accessing Evidence Library:', error);
+      console.error('[Evidence Library Filtering] Error:', error);
       // NO FALLBACK - Return empty if error occurs
       const errorAuditLog = {
         error: error.message,
         fallbackUsed: false,
-        detectedSymptoms: []
+        complianceRule: 'NO default modes when error occurs'
       };
-      console.log(`[NLP Audit Log - Error]`, JSON.stringify(errorAuditLog));
+      console.log(`[Evidence Library Filtering Error]`, JSON.stringify(errorAuditLog));
       severityLevel = 'low';
     }
 
