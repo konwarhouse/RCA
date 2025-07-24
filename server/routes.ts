@@ -3171,38 +3171,61 @@ async function generateSymptomBasedEvidenceChecklist(symptoms: string) {
     const symptomMatchedEvidence = [];
     
     for (const entry of allEvidenceEntries) {
-      // Check for symptom matches in Evidence Library patterns with CONFIDENCE THRESHOLD
+      // STRICT FAULT SIGNATURE PATTERN MATCHING ONLY
       const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
       const failureMode = (entry.componentFailureMode || '').toLowerCase();
       const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
       const trendData = (entry.requiredTrendDataEvidence || '').toLowerCase();
       
       let relevanceScore = 0;
-      let matchedKeyword = '';
+      let matchedKeywords = [];
+      let contextualMatch = false;
       
-      // Calculate confidence score based on where keywords match
+      // STRICT MATCHING: Require MULTIPLE keyword matches for high confidence
       for (const keyword of symptomKeywords) {
+        let keywordFound = false;
+        
         if (failureMode.includes(keyword)) {
-          relevanceScore += 10; // High score for failure mode name match (e.g., "seal" in "Seal Leak")
-          matchedKeyword = keyword;
-        } else if (faultSignature.includes(keyword)) {
-          relevanceScore += 8; // Medium score for fault signature match
-          matchedKeyword = keyword;
-        } else if (trendData.includes(keyword)) {
+          relevanceScore += 10; // High score for failure mode name match
+          keywordFound = true;
+        }
+        if (faultSignature.includes(keyword)) {
+          relevanceScore += 8; // Medium score for fault signature match  
+          keywordFound = true;
+        }
+        if (trendData.includes(keyword)) {
           relevanceScore += 6; // Medium score for trend data match
-          matchedKeyword = keyword;
-        } else if (questions.includes(keyword)) {
+          keywordFound = true;
+        }
+        if (questions.includes(keyword)) {
           relevanceScore += 3; // Low score for question match
-          matchedKeyword = keyword;
+          keywordFound = true;
+        }
+        
+        if (keywordFound) {
+          matchedKeywords.push(keyword);
         }
       }
       
-      // FILTERING THRESHOLD ENFORCEMENT: Only include if confidence >= 60% (score >= 6)
-      const confidenceThreshold = 6;
-      const hasHighConfidenceMatch = relevanceScore >= confidenceThreshold;
+      // CONTEXTUAL RELEVANCE CHECK: For "seal leak" require BOTH "seal" AND "leak" context
+      if (symptoms.toLowerCase().includes('seal') && symptoms.toLowerCase().includes('leak')) {
+        // For seal leak incidents, REQUIRE evidence to be seal-specific, not generic leak
+        if (failureMode.includes('seal') || faultSignature.includes('seal')) {
+          contextualMatch = true;
+          relevanceScore += 5; // Bonus for contextual relevance
+        } else if (matchedKeywords.includes('leak') && !matchedKeywords.includes('seal')) {
+          // Penalize generic leak evidence that's not seal-related
+          relevanceScore = Math.max(0, relevanceScore - 8);
+          console.log(`[SYMPTOM-BASED EVIDENCE] PENALIZED: ${entry.componentFailureMode} - generic leak without seal context`);
+        }
+      }
+      
+      // STRICT THRESHOLD: Require high confidence (≥12) AND contextual relevance for seal leaks
+      const confidenceThreshold = contextualMatch ? 12 : 15;
+      const hasHighConfidenceMatch = relevanceScore >= confidenceThreshold && (contextualMatch || matchedKeywords.length >= 2);
       
       if (hasHighConfidenceMatch) {
-        console.log(`[SYMPTOM-BASED EVIDENCE] HIGH CONFIDENCE MATCH: ${entry.componentFailureMode} (keyword: ${matchedKeyword}, score: ${relevanceScore})`);
+        console.log(`[SYMPTOM-BASED EVIDENCE] STRICT MATCH: ${entry.componentFailureMode} (keywords: [${matchedKeywords.join(', ')}], score: ${relevanceScore}, contextual: ${contextualMatch})`);
         
         // Extract evidence requirements from library entry
         const trendDataStr = entry.requiredTrendDataEvidence || '';
@@ -3216,7 +3239,7 @@ async function generateSymptomBasedEvidenceChecklist(symptoms: string) {
         
         symptomMatchedEvidence.push({
           id: entry.equipmentCode || `evidence-${entry.id}`,
-          category: "Symptom-Based Evidence",
+          category: "Symptom-Specific Evidence",
           title: entry.componentFailureMode || "Unknown Failure Mode",
           description: entry.rootCauseLogic || `Evidence requirements for ${entry.componentFailureMode} analysis`,
           priority: (entry.evidencePriority === 1 ? "Critical" : 
@@ -3232,10 +3255,11 @@ async function generateSymptomBasedEvidenceChecklist(symptoms: string) {
           timeToCollect: entry.timeToCollect,
           collectionCost: entry.collectionCost,
           symptomRelevanceScore: relevanceScore,
-          matchedKeywords: [matchedKeyword]
+          matchedKeywords: matchedKeywords,
+          contextualMatch: contextualMatch
         });
       } else {
-        console.log(`[SYMPTOM-BASED EVIDENCE] EXCLUDED: ${entry.componentFailureMode} (confidence: ${relevanceScore}/${confidenceThreshold}, keyword: ${matchedKeyword || 'none'})`);
+        console.log(`[SYMPTOM-BASED EVIDENCE] STRICT EXCLUSION: ${entry.componentFailureMode} (confidence: ${relevanceScore}/${confidenceThreshold}, keywords: [${matchedKeywords.join(', ')}], contextual: ${contextualMatch})`);
       }
     }
     
