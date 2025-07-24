@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import * as fs from "fs";
+import * as path from "path";
 import { investigationStorage } from "./storage";
 import { investigationEngine } from "./investigation-engine";
 import { RCAAnalysisEngine } from "./rca-analysis-engine";
@@ -239,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         topEvent: 'Equipment Failure',
         confidence: structuredRCA.confidence,
-        analysisMethod: getAnalysisMethodForInvestigationType(investigation.investigationType),
+        analysisMethod: getAnalysisMethodForInvestigationType(investigation.investigationType || "equipment_failure"),
         structuredAnalysis: structuredRCA,
         // Enhanced context for RCA Tree visualization
         equipmentGroup: investigation.equipmentGroup,
@@ -400,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Combine both sources and sort by creation date (newest first)
       const allAnalyses = [...analysesFromInvestigations, ...analysesFromIncidents]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
 
       
@@ -2009,7 +2011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const confidenceResult = await UniversalConfidenceEngine.calculateConfidenceScore(
         equipmentContext.group,
         equipmentContext.type,
-        equipmentContext.subtype,
+        equipmentContext.subtype || "",
         evidenceData || {}
       );
 

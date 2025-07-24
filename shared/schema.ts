@@ -118,6 +118,19 @@ export const investigations = pgTable("investigations", {
   // Workflow Management
   currentStep: varchar("current_step").default("problem_definition"), // problem_definition, investigation_type, evidence_collection, analysis_ready, ai_processing, completed
   
+  // Equipment Details (needed for analysis)
+  equipmentGroup: varchar("equipment_group"),
+  equipmentType: varchar("equipment_type"),
+  equipmentSubtype: varchar("equipment_subtype"),
+  symptoms: text("symptoms"),
+  description: text("description"),
+  
+  // Evidence files and checklist
+  evidenceFiles: jsonb("evidence_files"),
+  evidenceChecklist: jsonb("evidence_checklist"),
+  evidenceCategories: jsonb("evidence_categories"),
+  operatingParameters: jsonb("operating_parameters"),
+  
   // Evidence Collection Data (All 8 Sections for Fault Tree + ECFA sections)
   evidenceData: jsonb("evidence_data"), // Structured storage for all questionnaire responses
   evidenceCompleteness: decimal("evidence_completeness", { precision: 5, scale: 2 }).default("0.00"),
