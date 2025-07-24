@@ -122,6 +122,38 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 - **Testing Results**: System now analyzes incident content first, extracts relevant keywords, and filters Evidence Library to show only applicable failure modes with targeted evidence requirements
 - **Impact**: **CORRECTIVE INSTRUCTION FULLY IMPLEMENTED** - Platform now provides truly intelligent, keyword-driven failure mode filtering that responds to actual incident content. System eliminates irrelevant failure modes and focuses evidence collection on incident-specific requirements. Universal design maintained with zero hardcoded equipment logic.
 
+### UNIVERSAL QUESTIONNAIRE ENGINE IMPLEMENTED (RCA INITIAL QUESTIONNAIRE CORRECTION)
+- **Date**: January 24, 2025 (Final Implementation of RCA Initial Questionnaire Correction Instruction)
+- **User Issue Resolved**: System was presenting only static failure modes without dynamic questionnaire logic based on incident keywords and Evidence Library intelligence
+- **Critical Problem**: Incident 65 ("motor failed all of sudden... rotor had burnt mark") only showed 2 static failure modes without AI clarification, evidence prompting, or keyword-driven filtering
+- **RCA Initial Questionnaire Correction Implementation**:
+  - **Step 1 - NLP Keyword Extraction**: Universal patterns extract thermal (burnt, burn, overheated), mechanical (crack, break, seized), electrical (voltage, current, fault), dynamic (noise, vibration), and performance (sudden, load drop) keywords
+  - **Step 2 - Dynamic Failure Mode Filtering**: Queries Evidence Library using equipment classification + extracted keywords, filters by relevance score > 0
+  - **Step 3 - AI Clarification Layer**: Generates clarifying questions when incident description is vague (confidence < 30% or < 50 characters)
+  - **Step 4 - Evidence Prompting Logic**: Prompts only for evidence types required by filtered failure modes, includes file upload capability
+  - **Step 5 - Confidence Gap Handling**: Degrades confidence when evidence missing, triggers AI fallback suggestions
+  - **Step 6 - User Control**: Allows manual addition of failure modes while maintaining keyword-filtered default list
+- **Technical Implementation**:
+  - **Universal Questionnaire Engine**: `server/universal-questionnaire-engine.ts` implements full corrective instruction with universal keyword extraction, dynamic filtering, and AI clarification
+  - **API Endpoint**: `/api/incidents/:id/generate-universal-questionnaire` provides complete questionnaire generation with corrective instruction compliance
+  - **Questionnaire Interface**: `client/src/components/universal-questionnaire-interface.tsx` implements full questionnaire workflow with clarification, evidence, and timeline steps
+  - **Universal Keywords**: NO hardcoded equipment logic - uses pattern recognition for failure types (thermal, mechanical, electrical, dynamic, performance)
+  - **Dynamic Question Generation**: Creates equipment-specific questions based on keyword context and Evidence Library intelligence
+- **Example Behavior (Corrective Instruction Compliant)**:
+  - **Input**: "motor failed all of sudden... rotor had burnt mark"
+  - **Keywords Extracted**: "burnt", "rotor", "sudden", "failed" with thermal/electrical context
+  - **Clarification Questions**: "What type of failure occurred?", "Were there any alarms/warnings?", "What was equipment doing when failure occurred?"
+  - **Filtered Evidence**: IR reports, temperature trends, alarm logs (NOT generic bearing/seal evidence)
+  - **Timeline Questions**: Universal anchors + failure mode specific timing questions
+- **Zero Hardcoding Verification**:
+  - ✅ NO hardcoded failure modes tied to equipment names
+  - ✅ NO static equipment-type logic in frontend or backend
+  - ✅ Universal keyword patterns work for ANY equipment combination
+  - ✅ All prompts/evidence/scoring driven by Evidence Library intelligence
+  - ✅ Scalable for all industrial assets (motors, pumps, heat exchangers, etc.)
+- **Testing Results**: System now generates dynamic questionnaires with AI clarification, keyword-filtered failure modes, and targeted evidence prompting based on actual incident content
+- **Impact**: **RCA INITIAL QUESTIONNAIRE CORRECTION FULLY IMPLEMENTED** - Platform provides comprehensive universal questionnaire logic that extracts keywords from incident descriptions, dynamically filters failure modes, adds AI clarification questions, and prompts for targeted evidence. System maintains absolute zero hardcoding while providing intelligent, adaptive questionnaire generation for any equipment type or failure scenario.
+
 ### Previous: COMPLETE HARDCODED LOGIC ELIMINATION & AI ATTACHMENT ANALYSIS IMPLEMENTED 
 - **Date**: January 24, 2025 (Final System-Wide Hardcoding Elimination + AI Content Analysis)
 - **User Issues Resolved**: 
