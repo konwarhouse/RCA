@@ -949,16 +949,23 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       console.log(`[Evidence Files] Found ${evidenceFiles.length} evidence files in incident data`);
       console.log(`[Evidence Files] Evidence categories available: ${Object.keys(evidenceCategories).length}`);
       
-      // Convert stored evidence files to expected format
-      const formattedFiles = evidenceFiles.map((file: any) => ({
-        id: file.id || Date.now().toString(),
-        fileName: file.name || file.fileName || 'Unknown File',
-        fileSize: file.size || file.fileSize || 0,
-        mimeType: file.type || file.mimeType || 'application/octet-stream',
-        uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
-        category: file.category,
-        description: file.description
-      }));
+      // Convert stored evidence files to expected format with null safety
+      const formattedFiles = evidenceFiles.map((file: any) => {
+        if (!file || typeof file !== 'object') {
+          console.log(`[Evidence Files] Invalid file object:`, file);
+          return null;
+        }
+        
+        return {
+          id: file.id || file.fileId || Date.now().toString(),
+          fileName: file.name || file.fileName || file.originalname || 'Unknown File',
+          fileSize: file.size || file.fileSize || 0,
+          mimeType: file.type || file.mimeType || file.mimetype || 'application/octet-stream',
+          uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+          category: file.category,
+          description: file.description
+        };
+      }).filter(Boolean); // Remove null entries
       
       // Also check evidence categories for file references
       const categoryFiles: any[] = [];
@@ -967,11 +974,16 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           const category = categoryData as any;
           if (category.files && Array.isArray(category.files)) {
             category.files.forEach((file: any) => {
+              if (!file || typeof file !== 'object') {
+                console.log(`[Evidence Files] Invalid category file object:`, file);
+                return;
+              }
+              
               categoryFiles.push({
-                id: file.id || Date.now().toString(),
-                fileName: file.fileName || file.name || 'Category File',
+                id: file.id || file.fileId || Date.now().toString(),
+                fileName: file.fileName || file.name || file.originalname || 'Category File',
                 fileSize: file.fileSize || file.size || 0,
-                mimeType: file.mimeType || file.type || 'application/octet-stream',
+                mimeType: file.mimeType || file.type || file.mimetype || 'application/octet-stream',
                 uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
                 category: categoryId,
                 description: file.description

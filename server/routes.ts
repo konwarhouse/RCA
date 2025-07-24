@@ -18,7 +18,7 @@ import { EvidenceValidationEngine } from "./evidence-validation-engine";
 // Configure multer for file uploads
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for evidence files
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
