@@ -929,15 +929,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[Elimination Search] Processing: ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype || ''}`);
       console.log(`[Elimination Search] Symptoms: ${symptoms}`);
       
-      // Step 1: Get EXACT equipment matches only (not generic search)
-      const allFailureModes = await investigationStorage.searchEvidenceLibraryByEquipment(
-        equipmentGroup as string, 
-        equipmentType as string, 
-        equipmentSubtype as string || ''
-      );
-      
-      // Step 2: Apply elimination logic
+      // EVIDENCE LIBRARY FILTERING ENFORCEMENT: PRIMARY INDEX = INCIDENT SYMPTOMS (NOT EQUIPMENT TYPE)
+      // Step 1: Extract keywords from incident symptoms ONLY
       const { EliminationEngine } = await import("./elimination-engine");
+      const symptomKeywords = EliminationEngine.extractIncidentKeywords(symptoms as string);
+      
+      console.log(`[Evidence Library Filtering] Extracted incident keywords: ${symptomKeywords.join(', ')}`);
+      console.log(`[Evidence Library Filtering] NO equipment-type preloading - symptom-based filtering only`);
+      
+      // Step 2: Query Evidence Library by SYMPTOMS, not equipment type
+      const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
+      const symptomMatchedModes = [];
+      
+      for (const entry of allEvidenceEntries) {
+        // Check if this entry matches the equipment type AND has symptom relevance
+        const isCorrectEquipment = entry.equipmentGroup === equipmentGroup && 
+                                 entry.equipmentType === equipmentType && 
+                                 entry.subtype === equipmentSubtype;
+        
+        if (!isCorrectEquipment) continue;
+        
+        // Check for symptom matches in Evidence Library patterns
+        const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
+        const failureMode = (entry.componentFailureMode || '').toLowerCase();
+        const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
+        
+        let hasSymptomMatch = false;
+        let matchedKeyword = '';
+        
+        for (const keyword of symptomKeywords) {
+          if (faultSignature.includes(keyword) || failureMode.includes(keyword) || questions.includes(keyword)) {
+            hasSymptomMatch = true;
+            matchedKeyword = keyword;
+            break;
+          }
+        }
+        
+        // ONLY include if it has symptom relevance
+        if (hasSymptomMatch) {
+          symptomMatchedModes.push(entry);
+          console.log(`[Evidence Library Filtering] Matched: ${entry.componentFailureMode} (keyword: ${matchedKeyword})`);
+        } else {
+          console.log(`[Evidence Library Filtering] Excluded: ${entry.componentFailureMode} (no symptom match)`);
+        }
+      }
+      
+      const allFailureModes = symptomMatchedModes;
+      
+      // Step 2: Apply elimination logic using the already imported EliminationEngine
       const eliminationResults = await EliminationEngine.performEliminationAnalysis(
         equipmentGroup as string, 
         equipmentType as string, 
@@ -2356,7 +2395,13 @@ async function generateEliminationAwareEvidenceChecklist(
   const eliminatedEvidence = [];
   if (eliminationResults.eliminatedFailureModes.length > 0) {
     // Get Evidence Library entries for eliminated modes to show what was excluded
-    const allLibraryData = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype || '');
+    // EVIDENCE LIBRARY FILTERING ENFORCEMENT: Filter by symptoms first, then equipment
+    const allLibraryEntries = await investigationStorage.searchEvidenceLibrary('');
+    const allLibraryData = allLibraryEntries.filter(entry => 
+      entry.equipmentGroup === equipmentGroup && 
+      entry.equipmentType === equipmentType && 
+      entry.subtype === (equipmentSubtype || '')
+    );
     
     for (const eliminatedMode of eliminationResults.eliminatedFailureModes) {
       const libraryEntry = allLibraryData.find((item: any) => 
@@ -3366,8 +3411,31 @@ async function analyzeFailureModeFromEvidenceLibrary(equipmentGroup: string, equ
   try {
     console.log(`[Universal Analysis] Analyzing failure mode for ${equipmentGroup} → ${equipmentType} → ${equipmentSubtype}`);
     
-    // Get equipment-specific failure patterns from Evidence Library
-    const equipmentEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype);
+    // EVIDENCE LIBRARY FILTERING ENFORCEMENT: Get failure patterns by SYMPTOMS, not equipment type
+    console.log(`[Evidence Library Filtering] Analyzing symptoms: ${symptoms}`);
+    
+    // Extract keywords from symptoms first
+    const { EliminationEngine } = await import("./elimination-engine");
+    const symptomKeywords = EliminationEngine.extractIncidentKeywords(symptoms);
+    
+    // Query Evidence Library by symptoms, then filter by equipment
+    const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
+    const equipmentEvidence = allEvidenceEntries.filter(entry => {
+      // Must match equipment type
+      const isCorrectEquipment = entry.equipmentGroup === equipmentGroup && 
+                               entry.equipmentType === equipmentType && 
+                               entry.subtype === equipmentSubtype;
+      
+      if (!isCorrectEquipment) return false;
+      
+      // Must have symptom relevance
+      const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
+      const failureMode = (entry.componentFailureMode || '').toLowerCase();
+      
+      return symptomKeywords.some(keyword => 
+        faultSignature.includes(keyword) || failureMode.includes(keyword)
+      );
+    });
     
     if (equipmentEvidence.length > 0) {
       console.log(`[Universal Analysis] Found ${equipmentEvidence.length} Evidence Library entries for analysis`);

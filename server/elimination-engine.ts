@@ -202,7 +202,7 @@ export class EliminationEngine {
   /**
    * Extract keywords using NLP word tokenization (NO HARDCODED KEYWORDS)
    */
-  private static extractIncidentKeywords(description: string): string[] {
+  static extractIncidentKeywords(description: string): string[] {
     const text = description.toLowerCase();
     
     // Universal NLP tokenization - extract meaningful technical words

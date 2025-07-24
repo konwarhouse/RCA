@@ -339,12 +339,9 @@ export class IntelligentFailureModeFilter {
     
     console.log(`[Failure Mode Filter] No keyword matches found, using AI similarity fallback`);
     
-    // Get all failure modes for equipment
-    const allFailureModes = await investigationStorage.searchEvidenceLibraryByEquipment(
-      equipmentGroup,
-      equipmentType,
-      equipmentSubtype
-    );
+    // EVIDENCE LIBRARY FILTERING ENFORCEMENT: NO equipment-based fallback allowed
+    console.log(`[Evidence Library Filtering] NO FALLBACK - returning empty when no symptom matches`);
+    return []; // NO FALLBACK to equipment-type preloading
     
     // Return top 3 most common failure modes as fallback
     const fallbackModes = allFailureModes.slice(0, 3).map((entry, index) => ({
