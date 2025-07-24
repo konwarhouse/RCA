@@ -9,7 +9,7 @@
  * All logic must be dynamically generated, schema-driven, and AI/NLP inferred.
  */
 
-import OpenAI from 'openai';
+import { DynamicAIConfig } from './dynamic-ai-config';
 
 interface AIRCAInference {
   incidentId: string;
@@ -49,20 +49,15 @@ interface AuditEntry {
 }
 
 export class UniversalAIRCAEngine {
-  private openai: OpenAI;
   
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // NO HARDCODED AI CONFIGURATION
+    // All AI settings loaded dynamically from database
   }
 
   /**
-   * STEP 2: NLP-BASED SYMPTOM EXTRACTION (NO HARDCODED WORDS)
-   * Uses OpenAI GPT to extract key technical phrases dynamically
+   * STEP 2: NLP-BASED SYMPTOM EXTRACTION (NO HARDCODED WORDS)  
+   * Uses DYNAMIC AI CONFIGURATION to extract key technical phrases
    */
   async extractSymptomKeywordsAI(incidentDescription: string): Promise<string[]> {
     const prompt = `
@@ -81,19 +76,18 @@ Return ONLY a JSON array of extracted keywords/phrases, no explanation:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-        max_tokens: 200
-      });
+      // Use DYNAMIC AI configuration (NO HARDCODING)
+      const response = await DynamicAIConfig.performAIAnalysis(
+        'symptom-extraction',
+        prompt,
+        'Symptom Keyword Extraction',
+        'system'
+      );
 
-      const content = response.choices[0]?.message?.content?.trim();
-      if (!content) return [];
-      
-      // Parse AI response as JSON array
-      const keywords = JSON.parse(content);
+      const keywords = JSON.parse(response);
+      console.log('[AI Symptom Extraction] Keywords extracted:', keywords);
       return Array.isArray(keywords) ? keywords : [];
+      
     } catch (error) {
       console.error('AI symptom extraction failed:', error);
       // Fallback to basic tokenization if AI fails
@@ -141,17 +135,15 @@ Provide 3-8 most likely causes ranked by probability. Be specific and technical.
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.2,
-        max_tokens: 1500
-      });
+      // Use DYNAMIC AI configuration (NO HARDCODING)
+      const response = await DynamicAIConfig.performAIAnalysis(
+        'failure-inference',
+        prompt,
+        'Failure Cause Inference',
+        'system'
+      );
 
-      const content = response.choices[0]?.message?.content?.trim();
-      if (!content) return [];
-      
-      const causes = JSON.parse(content);
+      const causes = JSON.parse(response);
       return Array.isArray(causes) ? causes : [];
     } catch (error) {
       console.error('AI failure cause inference failed:', error);
@@ -219,18 +211,17 @@ Generate 2-4 most important evidence requests for this cause.
 `;
 
       try {
-        const response = await this.openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 800
-        });
+        // Use DYNAMIC AI configuration (NO HARDCODING)
+        const response = await DynamicAIConfig.performAIAnalysis(
+          'evidence-requests',
+          prompt,
+          'Evidence Request Generation',
+          'system'
+        );
 
-        const content = response.choices[0]?.message?.content?.trim();
-        if (content) {
-          const requests = JSON.parse(content);
-          if (Array.isArray(requests)) {
-            requests.forEach(req => {
+        const requests = JSON.parse(response);
+        if (Array.isArray(requests)) {
+          requests.forEach(req => {
               evidenceRequests.push({
                 forCause: cause.causeName,
                 questionPrompt: req.questionPrompt,
@@ -307,17 +298,15 @@ Respond with JSON:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-        max_tokens: 1200
-      });
+      // Use DYNAMIC AI configuration (NO HARDCODING)
+      const response = await DynamicAIConfig.performAIAnalysis(
+        'root-cause-determination',
+        prompt,
+        'Root Cause Determination',
+        'system'
+      );
 
-      const content = response.choices[0]?.message?.content?.trim();
-      if (content) {
-        return JSON.parse(content);
-      }
+      return JSON.parse(response);
     } catch (error) {
       console.error('Root cause determination failed:', error);
     }
