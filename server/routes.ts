@@ -2357,8 +2357,8 @@ async function generateEliminationAwareEvidenceChecklist(
   console.log(`[Enhanced Evidence] Generating elimination-aware checklist for ${equipmentType}`);
   console.log(`[Enhanced Evidence] Eliminated failure modes: [${eliminationResults.eliminatedFailureModes.join(', ')}]`);
   
-  // Get base equipment template
-  const baseTemplate = await generateEvidenceChecklist(equipmentGroup, equipmentType, symptoms, equipmentSubtype);
+  // EVIDENCE LIBRARY FILTERING ENFORCEMENT: Use symptom-based evidence generation (NO equipment-type preloading)
+  const baseTemplate = await generateSymptomBasedEvidenceChecklist(symptoms);
   
   // CORRECT ELIMINATION LOGIC: Filter out evidence for eliminated failure modes
   const eliminatedFailures = new Set(eliminationResults.eliminatedFailureModes.map((f: string) => f.toLowerCase()));
@@ -3154,86 +3154,115 @@ function calculateCompleteness(evidenceChecklist: any[], issues: string[]) {
 // regardless of incident context. New Universal Timeline Engine uses NLP keyword
 // extraction and contextual filtering per enforcement requirements.
 
-// Helper functions for evidence generation
-async function generateEvidenceChecklist(equipmentGroup: string, equipmentType: string, symptoms: string, equipmentSubtype?: string) {
-  // Generate equipment-specific evidence checklist based on equipment type
+// SYMPTOM-BASED EVIDENCE GENERATION (EVIDENCE LIBRARY FILTERING ENFORCEMENT)
+async function generateSymptomBasedEvidenceChecklist(symptoms: string) {
+  console.log(`[SYMPTOM-BASED EVIDENCE] Generating evidence checklist ONLY from incident symptoms: "${symptoms}"`);
+  console.log(`[SYMPTOM-BASED EVIDENCE] NO equipment-type preloading - Pure symptom-based filtering`);
   
-  // UNIVERSAL EVIDENCE GENERATION: Build templates from Evidence Library (NO HARDCODING!)
-  console.log(`[Universal Evidence] Generating evidence from Evidence Library for ${equipmentGroup} → ${equipmentType}`);
+  // EVIDENCE LIBRARY FILTERING ENFORCEMENT: Extract keywords from symptoms FIRST
+  const { EliminationEngine } = await import("./elimination-engine");
+  const symptomKeywords = EliminationEngine.extractIncidentKeywords(symptoms);
+  
+  console.log(`[SYMPTOM-BASED EVIDENCE] Extracted symptom keywords: [${symptomKeywords.join(', ')}]`);
   
   try {
-    // Get equipment-specific evidence from Evidence Library
-    const libraryEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(equipmentGroup, equipmentType, equipmentSubtype || '');
+    // CRITICAL: Query Evidence Library by SYMPTOMS, not equipment type
+    const allEvidenceEntries = await investigationStorage.searchEvidenceLibrary('');
+    const symptomMatchedEvidence = [];
     
-    if (libraryEvidence.length > 0) {
-      console.log(`[Universal Evidence] Found ${libraryEvidence.length} Evidence Library entries for ${equipmentType}`);
+    for (const entry of allEvidenceEntries) {
+      // Check for symptom matches in Evidence Library patterns with CONFIDENCE THRESHOLD
+      const faultSignature = (entry.faultSignaturePattern || '').toLowerCase();
+      const failureMode = (entry.componentFailureMode || '').toLowerCase();
+      const questions = (entry.aiOrInvestigatorQuestions || '').toLowerCase();
+      const trendData = (entry.requiredTrendDataEvidence || '').toLowerCase();
       
-      // Build evidence checklist from library data
-      const libraryBasedEvidence = libraryEvidence.map((item: any, index: number) => {
-        // Extract evidence requirements from multiple library fields
-        const trendData = item.requiredTrendDataEvidence || '';
-        const attachments = item.attachmentsEvidenceRequired || '';
-        const questions = item.aiOrInvestigatorQuestions || '';
+      let relevanceScore = 0;
+      let matchedKeyword = '';
+      
+      // Calculate confidence score based on where keywords match
+      for (const keyword of symptomKeywords) {
+        if (failureMode.includes(keyword)) {
+          relevanceScore += 10; // High score for failure mode name match (e.g., "seal" in "Seal Leak")
+          matchedKeyword = keyword;
+        } else if (faultSignature.includes(keyword)) {
+          relevanceScore += 8; // Medium score for fault signature match
+          matchedKeyword = keyword;
+        } else if (trendData.includes(keyword)) {
+          relevanceScore += 6; // Medium score for trend data match
+          matchedKeyword = keyword;
+        } else if (questions.includes(keyword)) {
+          relevanceScore += 3; // Low score for question match
+          matchedKeyword = keyword;
+        }
+      }
+      
+      // FILTERING THRESHOLD ENFORCEMENT: Only include if confidence >= 60% (score >= 6)
+      const confidenceThreshold = 6;
+      const hasHighConfidenceMatch = relevanceScore >= confidenceThreshold;
+      
+      if (hasHighConfidenceMatch) {
+        console.log(`[SYMPTOM-BASED EVIDENCE] HIGH CONFIDENCE MATCH: ${entry.componentFailureMode} (keyword: ${matchedKeyword}, score: ${relevanceScore})`);
+        
+        // Extract evidence requirements from library entry
+        const trendDataStr = entry.requiredTrendDataEvidence || '';
+        const attachments = entry.attachmentsEvidenceRequired || '';
         
         // Parse different types of evidence from library fields
         const evidenceTypes = [
-          ...(trendData.split(',').map(t => t.trim()).filter(Boolean)),
-          ...(attachments.split(',').map(a => a.trim()).filter(Boolean)),
-          ...(questions.split('?').map(q => q.trim()).filter(Boolean).slice(0, 2))
+          ...(trendDataStr.split(',').map(t => t.trim()).filter(Boolean)),
+          ...(attachments.split(',').map(a => a.trim()).filter(Boolean))
         ].filter(Boolean);
         
-        return {
-          id: item.equipmentCode || `evidence-${index + 1}`,
-          category: item.equipmentGroup || "General Evidence",
-          title: item.componentFailureMode || `${equipmentType} Evidence`,
-          description: item.rootCauseLogic || `Evidence requirements for ${equipmentType} analysis`,
-          priority: (item.evidencePriority === 1 ? "Critical" : 
-                    item.evidencePriority === 2 ? "High" :
-                    item.evidencePriority === 3 ? "Medium" : "Low") as const,
-          required: item.diagnosticValue === "Critical" || item.diagnosticValue === "Important",
+        symptomMatchedEvidence.push({
+          id: entry.equipmentCode || `evidence-${entry.id}`,
+          category: "Symptom-Based Evidence",
+          title: entry.componentFailureMode || "Unknown Failure Mode",
+          description: entry.rootCauseLogic || `Evidence requirements for ${entry.componentFailureMode} analysis`,
+          priority: (entry.evidencePriority === 1 ? "Critical" : 
+                    entry.evidencePriority === 2 ? "High" :
+                    entry.evidencePriority === 3 ? "Medium" : "Low") as const,
+          required: entry.diagnosticValue === "Critical" || entry.diagnosticValue === "Important",
           aiGenerated: true,
-          specificToEquipment: true,
+          specificToEquipment: false, // NOT equipment-specific, symptom-specific
           examples: evidenceTypes.slice(0, 3),
           completed: false,
-          // Preserve all configurable intelligence metadata
           librarySource: true,
-          confidenceLevel: item.confidenceLevel,
-          timeToCollect: item.timeToCollect,
-          collectionCost: item.collectionCost,
-          industryRelevance: item.industryRelevance
-        };
-      });
-      
-      console.log(`[Universal Evidence] Generated ${libraryBasedEvidence.length} evidence items from Evidence Library`);
-      return libraryBasedEvidence;
+          confidenceLevel: entry.confidenceLevel,
+          timeToCollect: entry.timeToCollect,
+          collectionCost: entry.collectionCost,
+          symptomRelevanceScore: relevanceScore,
+          matchedKeywords: [matchedKeyword]
+        });
+      } else {
+        console.log(`[SYMPTOM-BASED EVIDENCE] EXCLUDED: ${entry.componentFailureMode} (confidence: ${relevanceScore}/${confidenceThreshold}, keyword: ${matchedKeyword || 'none'})`);
+      }
     }
+    
+    console.log(`[SYMPTOM-BASED EVIDENCE] Generated ${symptomMatchedEvidence.length} evidence items from symptom analysis`);
+    return symptomMatchedEvidence;
+    
   } catch (error) {
-    console.error('[Universal Evidence] Error accessing Evidence Library:', error);
+    console.error('[SYMPTOM-BASED EVIDENCE] Error accessing Evidence Library:', error);
   }
   
-  // Fallback: Minimal universal evidence if no library data
-  console.log(`[Universal Evidence] Using minimal universal fallback (Evidence Library expansion needed)`);
-  const universalFallback = [
+  // EMERGENCY FALLBACK: Only if symptoms analysis completely fails
+  console.log(`[SYMPTOM-BASED EVIDENCE] FALLBACK: No symptom matches found - request clarification`);
+  return [
     {
-      id: "basic-documentation",
-      category: "Basic Evidence",
-      title: "Equipment Documentation",
-      description: "Basic equipment documentation and failure description",
+      id: "symptom-clarification",
+      category: "Symptom Clarification Required",
+      title: "Incident Description Clarification",
+      description: "Please provide more specific symptom details to generate targeted evidence requirements",
       priority: "Critical" as const,
       required: true,
       aiGenerated: true,
       specificToEquipment: false,
-      examples: [
-        "Equipment nameplate data",
-        "Failure description and timeline",
-        "Basic operating parameters"
-      ],
+      examples: ["More detailed failure description", "Specific symptoms observed", "Timeline of events"],
       completed: false,
       librarySource: false
     }
   ];
-  
-  return universalFallback;
 }
 
 async function generateEvidenceCategories(equipmentGroup: string, equipmentType: string, evidenceChecklist: any[]) {
