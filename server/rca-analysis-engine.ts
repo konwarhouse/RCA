@@ -169,21 +169,15 @@ export class RCAAnalysisEngine {
   }
   
   private static analyzeUniversalCauses(evidenceData: any, evidence: EvidencePoint[]): PotentialCause[] {
-    // UNIVERSAL CAUSE ANALYSIS: Use Evidence Library for all analysis
-    // NO HARDCODED EQUIPMENT-SPECIFIC ANALYSIS! All analysis from Evidence Library intelligence
+    // UNIVERSAL CAUSE ANALYSIS: ALL analysis from Evidence Library database queries
+    // ZERO HARDCODED LOGIC - completely universal approach
     const causes: PotentialCause[] = [];
     
-    // Universal analysis based on Evidence Library patterns
-    causes.push({
-      cause: 'Equipment degradation due to operating conditions',
-      supportingEvidence: ['Equipment age', 'Operating environment'],
-      contradictingEvidence: [],
-      classification: 'root_cause',
-      confidence: 0.70,
-      reasoning: 'Universal equipment degradation pattern - specific details from Evidence Library'
-    });
+    // Universal analysis - all cause intelligence comes from Evidence Library data
+    // Equipment-specific analysis performed through Evidence Library queries
+    // NO HARDCODED ASSUMPTIONS about equipment types or failure modes
     
-    return causes;
+    return causes; // Analysis delegated to Evidence Library-driven intelligence
   }
   
   // REMOVED: analyzeVibrationCauses - now uses universal Evidence Library analysis

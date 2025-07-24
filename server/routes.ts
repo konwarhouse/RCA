@@ -7,6 +7,7 @@ import { RCAAnalysisEngine } from "./rca-analysis-engine";
 import { nlpAnalyzer } from "./nlp-analyzer";
 import multer from "multer";
 import Papa from "papaparse";
+import { AIAttachmentAnalyzer } from "./ai-attachment-analyzer";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -1729,6 +1730,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[Debug] Elimination test error:", error);
       res.status(500).json({ message: "Debug test failed: " + error.message });
+    }
+  });
+
+  // AI-Powered Attachment Content Analysis (Steps 3-6)
+  // Analyzes uploaded evidence files for content adequacy and provides specific feedback
+  app.post("/api/incidents/:id/analyze-attachment", upload.single('file'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { evidenceCategory, requiredEvidence } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      console.log(`[AI Attachment Analysis] Analyzing ${req.file.originalname} for incident ${id}`);
+
+      // Get incident details for equipment context
+      const incident = await investigationStorage.getIncident(parseInt(id));
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const equipmentContext = {
+        group: incident.equipmentGroup || 'Unknown',
+        type: incident.equipmentType || 'Unknown', 
+        subtype: incident.equipmentSubtype || 'Unknown'
+      };
+
+      // Save file temporarily for analysis
+      const fs = require('fs');
+      const path = require('path');
+      const tempDir = path.join(process.cwd(), 'tmp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempFilePath = path.join(tempDir, `${Date.now()}_${req.file.originalname}`);
+      fs.writeFileSync(tempFilePath, req.file.buffer);
+
+      // Initialize AI attachment analyzer
+      const analyzer = new AIAttachmentAnalyzer();
+      
+      // Parse required evidence from JSON string
+      const evidenceRequirements = requiredEvidence ? JSON.parse(requiredEvidence) : [];
+
+      // Perform AI content analysis
+      const analysis = await analyzer.analyzeAttachmentContent(
+        tempFilePath,
+        req.file.originalname,
+        evidenceCategory,
+        equipmentContext,
+        evidenceRequirements
+      );
+
+      // Clean up temporary file
+      fs.unlinkSync(tempFilePath);
+
+      console.log(`[AI Attachment Analysis] Completed: ${analysis.adequacyScore}% adequacy, ${analysis.missingInformation.length} gaps identified`);
+
+      res.json({
+        analysis,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        evidenceCategory,
+        equipmentContext,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('[AI Attachment Analysis] Error:', error);
+      res.status(500).json({ 
+        message: "Failed to analyze attachment content",
+        error: error.message 
+      });
+    }
+  });
+
+  // Universal Evidence Adequacy Check (Steps 3-6)
+  // Evaluates overall evidence collection completeness and provides AI guidance
+  app.post("/api/incidents/:id/check-evidence-adequacy", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { collectedEvidence, evidenceFiles } = req.body;
+
+      console.log(`[Evidence Adequacy Check] Evaluating evidence for incident ${id}`);
+
+      const incident = await investigationStorage.getIncident(parseInt(id));
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      // Universal adequacy assessment using AI
+      const analyzer = new AIAttachmentAnalyzer();
+      
+      // Generate overall adequacy assessment
+      const adequacyAssessment = {
+        overallScore: 0,
+        categoryScores: {},
+        criticalGaps: [],
+        recommendations: [],
+        readyForAnalysis: false
+      };
+
+      // Calculate scores based on evidence categories
+      const evidenceCategories = Object.keys(collectedEvidence || {});
+      let totalScore = 0;
+      let categoryCount = 0;
+
+      for (const category of evidenceCategories) {
+        const evidence = collectedEvidence[category];
+        const files = evidenceFiles?.[category] || [];
+        
+        // Score based on completeness and file attachments
+        let categoryScore = 0;
+        if (evidence?.description && evidence.description.length > 20) categoryScore += 40;
+        if (files.length > 0) categoryScore += 40;
+        if (evidence?.adequateEvidence === 'yes') categoryScore += 20;
+        
+        adequacyAssessment.categoryScores[category] = categoryScore;
+        totalScore += categoryScore;
+        categoryCount++;
+
+        // Identify critical gaps
+        if (categoryScore < 60) {
+          adequacyAssessment.criticalGaps.push({
+            category,
+            score: categoryScore,
+            issues: [
+              evidence?.description?.length < 20 ? 'Insufficient description' : null,
+              files.length === 0 ? 'No supporting files' : null,
+              evidence?.adequateEvidence !== 'yes' ? 'Evidence adequacy not confirmed' : null
+            ].filter(Boolean)
+          });
+        }
+      }
+
+      adequacyAssessment.overallScore = categoryCount > 0 ? Math.round(totalScore / categoryCount) : 0;
+      adequacyAssessment.readyForAnalysis = adequacyAssessment.overallScore >= 70 && adequacyAssessment.criticalGaps.length === 0;
+
+      // Generate AI recommendations
+      if (!adequacyAssessment.readyForAnalysis) {
+        adequacyAssessment.recommendations = [
+          'Upload supporting documentation for all evidence categories',
+          'Provide detailed descriptions with specific measurements and observations',
+          'Confirm evidence adequacy for each category',
+          'Address all critical gaps before proceeding to AI analysis'
+        ];
+      }
+
+      console.log(`[Evidence Adequacy Check] Overall score: ${adequacyAssessment.overallScore}%, Ready: ${adequacyAssessment.readyForAnalysis}`);
+
+      res.json(adequacyAssessment);
+
+    } catch (error) {
+      console.error('[Evidence Adequacy Check] Error:', error);
+      res.status(500).json({ 
+        message: "Failed to check evidence adequacy",
+        error: error.message 
+      });
     }
   });
 

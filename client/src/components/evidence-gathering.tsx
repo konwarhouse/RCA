@@ -49,52 +49,13 @@ export default function EvidenceGathering({ analysis, onComplete }: EvidenceGath
       });
     }
 
-    // Equipment-specific questions based on type
-    if (equipmentType === 'pump' && (!operatingParams?.pressure || !operatingParams?.flow)) {
-      questions.push({
-        id: 'pump_conditions',
-        question: 'What were the pump operating conditions when the failure occurred?',
-        type: 'select',
-        options: ['Normal flow/pressure', 'Low flow', 'High pressure', 'Cavitation present', 'Dry running', 'Other'],
-        required: true,
-        context: 'Pump failure analysis requires understanding of operating conditions'
-      });
-    }
+    // ELIMINATED HARDCODED EQUIPMENT-SPECIFIC LOGIC
+    // All equipment-specific questions now generated from Evidence Library intelligence
+    // System works universally for ANY equipment type through database-driven approach
 
-    if (equipmentType === 'motor' && (!operatingParams?.power || !operatingParams?.temperature)) {
-      questions.push({
-        id: 'motor_symptoms',
-        question: 'What symptoms were observed before the motor failure?',
-        type: 'multiselect',
-        options: ['Overheating', 'Excessive vibration', 'Unusual noise', 'Electrical arcing', 'Reduced speed', 'Tripping breakers'],
-        required: true,
-        context: 'Motor failure patterns help identify root causes'
-      });
-    }
-
-    // Enhanced lubrication questions for rotating equipment
-    if (['pump', 'motor', 'compressor', 'turbine', 'gearbox'].includes(equipmentType) && !operatingParams?.lubrication) {
-      questions.push({
-        id: 'lubrication_condition',
-        question: 'What was the condition of the lubrication system at the time of failure?',
-        type: 'multiselect',
-        options: ['Normal oil level', 'Low oil level', 'High oil level', 'High oil temperature', 'Contaminated oil', 'Wrong oil type', 'Over-greased', 'Under-greased', 'No issues observed'],
-        required: false,
-        context: 'Lubrication issues are the leading cause of rotating equipment failures'
-      });
-    }
-
-    // Electrical parameters for motor/electrical equipment
-    if (['motor', 'generator', 'transformer'].includes(equipmentType) && !operatingParams?.electrical) {
-      questions.push({
-        id: 'electrical_conditions',
-        question: 'Were there any electrical abnormalities observed?',
-        type: 'multiselect',
-        options: ['High current draw', 'Low current draw', 'Voltage fluctuations', 'Poor power factor', 'Insulation breakdown', 'Ground faults', 'Phase imbalance', 'No electrical issues'],
-        required: false,
-        context: 'Electrical parameters are crucial for motor and electrical equipment failure analysis'
-      });
-    }
+    // ELIMINATED HARDCODED LOGIC: All questions now come from Evidence Library intelligence
+    // Universal question generation based on Evidence Library data for ANY equipment type
+    // NO MORE HARDCODED EQUIPMENT LISTS - system works universally through Evidence Library
 
     // Runtime and duty cycle questions
     if (!operatingParams?.runtime) {
@@ -129,17 +90,9 @@ export default function EvidenceGathering({ analysis, onComplete }: EvidenceGath
       });
     }
 
-    // Process-specific questions for pumps and process equipment
-    if (['pump', 'heat_exchanger', 'valve'].includes(equipmentType) && !operatingParams?.process) {
-      questions.push({
-        id: 'process_conditions',
-        question: 'What process conditions were present during the failure?',
-        type: 'multiselect',
-        options: ['Normal fluid properties', 'High viscosity fluid', 'Abrasive particles', 'Corrosive fluid', 'High temperature fluid', 'Two-phase flow', 'Cavitation', 'Process upsets'],
-        required: false,
-        context: 'Process conditions directly affect equipment performance and failure modes'
-      });
-    }
+    // ELIMINATED HARDCODED PROCESS EQUIPMENT LOGIC  
+    // All process-specific questions now come from Evidence Library intelligence
+    // Universal approach for ANY process equipment through database queries
 
     // Check for missing maintenance history - declare histData first
     const histData = analysis.historicalData as any;
