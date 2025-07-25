@@ -49,6 +49,13 @@ export default function AIStatusIndicator() {
     refetchInterval: 10000, // Refresh every 10 seconds
     retry: false,
   });
+  
+  // Clear old test results when status is working to prevent confusion
+  useEffect(() => {
+    if (statusData?.status?.systemHealth === 'working' && statusData?.status?.activeProvider?.isTestSuccessful) {
+      setLastTestResult(null);
+    }
+  }, [statusData]);
 
   const status = statusData?.status;
 
@@ -243,8 +250,8 @@ export default function AIStatusIndicator() {
             {testInProgress ? 'Testing Configuration...' : 'Test AI Configuration'}
           </Button>
           
-          {/* Test Result */}
-          {lastTestResult && (
+          {/* Test Result - Only show if recent test or system not working */}
+          {lastTestResult && (status?.systemHealth !== 'working' || testInProgress) && (
             <div className={`mt-2 p-2 rounded-lg text-xs ${
               lastTestResult.success 
                 ? 'bg-green-50 border border-green-200 text-green-700'

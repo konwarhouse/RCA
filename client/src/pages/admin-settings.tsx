@@ -455,9 +455,9 @@ export default function AdminSettings() {
   };
 
   const getStatusBadge = (status: string | null, isActive: boolean) => {
-    if (!status) return <Badge variant="outline">Not Tested</Badge>;
+    if (!status) return <Badge variant="outline">Unknown</Badge>;
     if (status === "success" && isActive) return <Badge variant="default" className="bg-green-500">Active</Badge>;
-    if (status === "success") return <Badge variant="outline">Tested</Badge>;
+    if (status === "success") return <Badge variant="outline">Success</Badge>;
     if (status === "failed") return <Badge variant="destructive">Failed</Badge>;
     return <Badge variant="outline">Unknown</Badge>;
   };
@@ -657,7 +657,30 @@ export default function AdminSettings() {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm">Test</Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const response = await apiRequest("/api/admin/ai-status/test", {
+                                method: "POST"
+                              });
+                              toast({
+                                title: "Test Successful",
+                                description: "AI provider connection verified successfully",
+                              });
+                              queryClient.invalidateQueries({ queryKey: ["/api/admin/ai-settings"] });
+                            } catch (error) {
+                              toast({
+                                title: "Test Failed",
+                                description: "Unable to connect to AI provider.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Test
+                        </Button>
                         <Button variant="ghost" size="sm">Remove</Button>
                       </div>
                     </TableCell>
