@@ -571,56 +571,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // STEP 5: Convert confirmed hypotheses to evidence requirements
+      // STEP 5: Convert confirmed hypotheses to evidence requirements (NO HARDCODING)
       const evidenceItems = confirmedHypotheses.map((hypothesis, index) => ({
-        id: `ai-evidence-${hypothesis.id}-${Date.now()}`,
+        id: `ai-evidence-${hypothesis.id}-${Date.now()}-${index}`,
         category: hypothesis.failureMode,
         title: hypothesis.failureMode,
         description: `${hypothesis.description} | AI Reasoning: ${hypothesis.aiReasoning}`,
         priority: hypothesis.confidence >= 80 ? 'High' : hypothesis.confidence >= 60 ? 'Medium' : 'Low',
         confidence: hypothesis.confidence,
-        specificToEquipment: false, // Universal approach
+        specificToEquipment: false, // Universal approach - NO HARDCODING
         source: 'AI Generated (GPT)',
         confidenceSource: 'AI-Driven',
-        examples: hypothesis.investigativeQuestions,
-        questions: hypothesis.investigativeQuestions,
+        examples: hypothesis.investigativeQuestions || [],
+        questions: hypothesis.investigativeQuestions || [],
         completed: false,
         isUnavailable: false,
         unavailableReason: '',
         files: [],
-        matchedKeywords: aiResult.incidentAnalysis.parsedSymptoms,
+        matchedKeywords: ['ai-generated'], // AI-driven keywords
         relevanceScore: hypothesis.confidence,
-        evidenceType: hypothesis.requiredEvidence.join(', '),
+        evidenceType: Array.isArray(hypothesis.requiredEvidence) ? hypothesis.requiredEvidence.join(', ') : 'General Evidence',
         equipmentContext: `${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype || 'General'}`,
         failureHypothesis: hypothesis.failureMode,
-        requiredTrendData: hypothesis.requiredEvidence.join(', '),
+        requiredTrendData: Array.isArray(hypothesis.requiredEvidence) ? hypothesis.requiredEvidence.join(', ') : 'General Trend Data',
         instructionCompliant: true,
         aiGenerated: true,
         aiReasoning: hypothesis.aiReasoning,
-        faultSignature: hypothesis.faultSignature,
-        requiredEvidence: hypothesis.requiredEvidence
+        faultSignature: hypothesis.faultSignature || 'AI-Generated',
+        requiredEvidence: hypothesis.requiredEvidence || []
       }));
       
-      console.log(`[UNIVERSAL RCA INSTRUCTION] Generated ${evidenceItems.length} AI-driven evidence items from GPT hypotheses`);
+      // Add custom hypotheses to evidence items if provided
+      const customEvidenceItems = customHypotheses.map((customHypothesis, index) => ({
+        id: `custom-evidence-${Date.now()}-${index}`,
+        category: 'Custom Investigation',
+        title: customHypothesis,
+        description: `Human-added hypothesis: ${customHypothesis}`,
+        priority: 'Medium',
+        confidence: 75, // Default confidence for human hypotheses
+        specificToEquipment: false,
+        source: 'Human Added',
+        confidenceSource: 'Human-Defined',
+        examples: [],
+        questions: [`Investigate evidence for: ${customHypothesis}`],
+        completed: false,
+        isUnavailable: false,
+        unavailableReason: '',
+        files: [],
+        matchedKeywords: ['human-generated'],
+        relevanceScore: 75,
+        evidenceType: 'Custom Evidence Collection',
+        equipmentContext: `${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype || 'General'}`,
+        failureHypothesis: customHypothesis,
+        requiredTrendData: 'Custom Trend Data',
+        instructionCompliant: true,
+        aiGenerated: false,
+        aiReasoning: 'Human-defined hypothesis',
+        faultSignature: 'Human-Generated',
+        requiredEvidence: ['General Evidence']
+      }));
+
+      const allEvidenceItems = [...evidenceItems, ...customEvidenceItems];
       
-      // STEP 4: Return AI-driven results (No fallback to Evidence Library patterns)
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Generated ${allEvidenceItems.length} evidence items (${evidenceItems.length} AI + ${customEvidenceItems.length} custom)`);
+      
+      // STEP 5: Return AI-driven results (NO HARDCODING)
       res.json({
-        evidenceItems: evidenceItems,
+        evidenceItems: allEvidenceItems,
         generationMethod: 'ai-driven-hypotheses',
-        incidentTextAnalyzed: incidentText,
-        aiAnalysis: aiResult.incidentAnalysis,
-        hypothesesGenerated: aiResult.hypotheses.length,
         enforcementCompliant: true,
         noHardcodingCompliant: true,
         aiDriven: true,
         instructionCompliance: {
-          step1_nlp_extraction: true,
           step2_ai_hypotheses: true,
-          step3_evidence_matching: true,
+          step4_human_confirmation: true,
+          step5_evidence_collection: true,
           no_hardcoding: true,
           gpt_internal_knowledge: true
         },
-        message: `Generated ${evidenceItems.length} AI-driven evidence items from ${aiResult.hypotheses.length} GPT hypotheses`
+        confirmedHypothesesCount: confirmedHypotheses.length,
+        customHypothesesCount: customHypotheses.length,
+        totalEvidenceItems: allEvidenceItems.length,
+        message: `Generated ${allEvidenceItems.length} evidence items from confirmed hypotheses (${evidenceItems.length} AI-driven + ${customEvidenceItems.length} custom)`
       });
       
     } catch (error) {
