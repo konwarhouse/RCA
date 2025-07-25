@@ -65,7 +65,12 @@ interface AnalysisResults {
 export default function AIAnalysis() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/incidents/:id/analysis');
-  const incidentId = params?.id ? parseInt(params.id) : null;
+  
+  // Extract incident ID from URL parameter OR query string (Universal RCA - NO HARDCODING)
+  const searchParams = new URLSearchParams(window.location.search);
+  const incidentId = params?.id ? parseInt(params.id) : 
+                    searchParams.get('incident') ? parseInt(searchParams.get('incident')!) : null;
+                    
   const [analysisPhase, setAnalysisPhase] = useState<string>("initializing");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);

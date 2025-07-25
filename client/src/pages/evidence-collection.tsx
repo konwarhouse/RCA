@@ -213,7 +213,7 @@ export default function EvidenceCollection() {
 
   const handleProceedToAnalysis = () => {
     if (incidentId) {
-      setLocation(`/ai-analysis?incident=${incidentId}`);
+      setLocation(`/incidents/${incidentId}/analysis`);
     }
   };
 
