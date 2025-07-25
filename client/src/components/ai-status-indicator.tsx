@@ -52,17 +52,25 @@ export default function AIStatusIndicator() {
 
   const status = statusData?.status;
 
-  // Test AI configuration
+  // Enhanced test with error handling
   const handleTestConfiguration = async () => {
     setTestInProgress(true);
     try {
       const response = await apiRequest("/api/admin/ai-status/test", {
         method: "POST"
       });
+      
+      console.log('[AI Status Test] Response:', response);
       setLastTestResult(response);
       refetch(); // Refresh status after test
-    } catch (error) {
-      setLastTestResult({ success: false, message: 'Test failed' });
+    } catch (error: any) {
+      console.error('[AI Status Test] Error:', error);
+      setLastTestResult({ 
+        success: false, 
+        message: 'Test failed',
+        error: error.message || 'Unknown error occurred',
+        errorType: 'network_error'
+      });
     } finally {
       setTestInProgress(false);
     }

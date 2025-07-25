@@ -51,14 +51,24 @@ export class AIStatusMonitor {
       // NO ENVIRONMENT VARIABLE CHECKS - ADMIN DATABASE ONLY
       // System is compliant when active provider exists from admin database
       
-      // STEP 3: Determine system health
+      // STEP 3: Determine system health - FIXED LOGIC
       let systemHealth: 'working' | 'configuration-required' | 'error' = 'configuration-required';
       
       if (activeProvider) {
-        if (activeProvider.isTestSuccessful) {
-          systemHealth = 'working';
+        // If we have an active provider with valid API key and recent successful test
+        if (activeProvider.isTestSuccessful && activeProvider.lastTestedAt) {
+          const lastTestTime = new Date(activeProvider.lastTestedAt).getTime();
+          const now = new Date().getTime();
+          const timeSinceTest = now - lastTestTime;
+          const maxTestAge = 24 * 60 * 60 * 1000; // 24 hours
+          
+          if (timeSinceTest < maxTestAge) {
+            systemHealth = 'working';
+          } else {
+            systemHealth = 'configuration-required'; // Test too old
+          }
         } else {
-          systemHealth = 'configuration-required';
+          systemHealth = 'configuration-required'; // Never tested or failed
         }
       }
       
