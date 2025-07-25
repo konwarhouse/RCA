@@ -147,8 +147,6 @@ export class UniversalEvidenceAnalyzer {
            mimeType.includes('text/plain') ||
            mimeType.includes('application/json') ||
            mimeType.includes('tab-separated');
-           fileName.toLowerCase().endsWith('.xls') ||
-           fileName.toLowerCase().endsWith('.tsv');
   }
   
   /**
@@ -254,109 +252,6 @@ export class UniversalEvidenceAnalyzer {
           confidence: 0
         });
       });
-    });
-        }
-        
-        # Auto-detect column patterns (NO HARDCODING)
-        time_cols = [col for col in df.columns if any(word in col.lower() for word in ['time', 'timestamp', 'date', 'hour', 'minute', 'second'])]
-        velocity_cols = [col for col in df.columns if any(word in col.lower() for word in ['velocity', 'vel', 'speed'])]
-        acceleration_cols = [col for col in df.columns if any(word in col.lower() for word in ['acceleration', 'accel', 'acc'])]
-        temperature_cols = [col for col in df.columns if any(word in col.lower() for word in ['temperature', 'temp', 'celsius', 'fahrenheit'])]
-        pressure_cols = [col for col in df.columns if any(word in col.lower() for word in ['pressure', 'press', 'psi', 'bar'])]
-        rpm_cols = [col for col in df.columns if any(word in col.lower() for word in ['rpm', 'rotation', 'frequency', 'hz'])]
-        
-        # Analyze detected parameters
-        all_detected_cols = time_cols + velocity_cols + acceleration_cols + temperature_cols + pressure_cols + rpm_cols
-        
-        for col in all_detected_cols:
-            if col in df.columns and pd.api.types.is_numeric_dtype(df[col]):
-                values = df[col].dropna()
-                if len(values) > 0:
-                    result['technical_parameters'].append(col)
-                    result['statistics'][col] = {
-                        'mean': float(values.mean()),
-                        'std': float(values.std()),
-                        'min': float(values.min()),
-                        'max': float(values.max()),
-                        'rms': float(np.sqrt((values**2).mean())) if len(values) > 0 else 0
-                    }
-                    
-                    # Trend analysis
-                    if len(values) > 2:
-                        x = np.arange(len(values))
-                        slope = np.polyfit(x, values, 1)[0]
-                        result['trends'][col] = 'increasing' if slope > 0 else 'decreasing' if slope < 0 else 'stable'
-        
-        # Calculate confidence based on data quality
-        if result['rows'] > 0 and result['columns'] > 0:
-            confidence = min(100, (len(result['technical_parameters']) * 20) + (result['rows'] / 10))
-            result['confidence'] = int(confidence)
-        
-        return result
-        
-    except Exception as e:
-        return {
-            'error': str(e),
-            'rows': 0,
-            'columns': 0,
-            'column_names': [],
-            'technical_parameters': [],
-            'trends': {},
-            'statistics': {},
-            'confidence': 0
-        }
-
-# Execute analysis
-if __name__ == "__main__":
-    file_path = sys.argv[1]
-    result = analyze_tabular_universal(file_path)
-    print(json.dumps(result, indent=2))
-`;
-
-      // Write Python script to temporary file
-      const tempScriptPath = `/tmp/universal_tabular_${Date.now()}.py`;
-      fs.writeFileSync(tempScriptPath, pythonScript);
-      
-      // Execute Python analysis
-      const pythonProcess = spawn('python3', [tempScriptPath, filePath]);
-      
-      let stdout = '';
-      let stderr = '';
-      
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-      
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      pythonProcess.on('close', (code) => {
-        // Clean up temp script
-        try {
-          fs.unlinkSync(tempScriptPath);
-        } catch (e) {}
-        
-        if (code === 0 && stdout) {
-          try {
-            const result = JSON.parse(stdout);
-            resolve({
-              data: result,
-              confidence: result.confidence || 0
-            });
-          } catch (parseError) {
-            reject(new Error(`Python output parsing failed: ${parseError}`));
-          }
-        } else {
-          reject(new Error(`Python analysis failed: ${stderr || 'Unknown error'}`));
-        }
-      });
-      
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        pythonProcess.kill();
-        reject(new Error('Python analysis timeout'));
-      }, 30000);
     });
   }
   
