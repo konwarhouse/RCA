@@ -43,6 +43,7 @@ export interface IInvestigationStorage {
   deleteEvidenceLibrary(id: number): Promise<void>;
   searchEvidenceLibrary(searchTerm: string): Promise<EvidenceLibrary[]>;
   searchEvidenceLibraryByEquipment(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<EvidenceLibrary[]>;
+  searchEvidenceLibraryBySymptoms(symptoms: string[]): Promise<EvidenceLibrary[]>;
   bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   bulkUpsertEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   
@@ -467,6 +468,53 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     
     console.log(`[Storage] Found ${results.length} exact equipment matches for ${equipmentSubtype} ${equipmentType}`);
     return results;
+  }
+
+  async searchEvidenceLibraryBySymptoms(symptoms: string[]): Promise<EvidenceLibrary[]> {
+    console.log(`[Storage] Searching evidence library by symptoms: ${symptoms.join(', ')}`);
+    
+    if (symptoms.length === 0) {
+      return [];
+    }
+    
+    // Build dynamic search conditions for symptoms
+    const symptomConditions = symptoms.map(symptom => {
+      const pattern = `%${symptom.toLowerCase()}%`;
+      return or(
+        sql`LOWER(${evidenceLibrary.componentFailureMode}) LIKE ${pattern}`,
+        sql`LOWER(${evidenceLibrary.faultSignaturePattern}) LIKE ${pattern}`,
+        sql`LOWER(${evidenceLibrary.requiredTrendDataEvidence}) LIKE ${pattern}`,
+        sql`LOWER(${evidenceLibrary.aiOrInvestigatorQuestions}) LIKE ${pattern}`
+      );
+    });
+    
+    const results = await db
+      .select()
+      .from(evidenceLibrary)
+      .where(
+        and(
+          eq(evidenceLibrary.isActive, true),
+          or(...symptomConditions)
+        )
+      )
+      .orderBy(evidenceLibrary.diagnosticValue, evidenceLibrary.evidencePriority);
+    
+    // Calculate relevance scores based on symptom matches
+    const scoredResults = results.map((item: any) => {
+      let relevanceScore = 0;
+      const itemText = `${item.componentFailureMode} ${item.faultSignaturePattern} ${item.requiredTrendDataEvidence}`.toLowerCase();
+      
+      symptoms.forEach(symptom => {
+        if (itemText.includes(symptom.toLowerCase())) {
+          relevanceScore += 20;
+        }
+      });
+      
+      return { ...item, relevanceScore };
+    });
+    
+    console.log(`[Storage] Found ${scoredResults.length} symptom-based matches`);
+    return scoredResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
   }
 
   // Configurable intelligence tracking - all admin-configurable via Evidence Library fields

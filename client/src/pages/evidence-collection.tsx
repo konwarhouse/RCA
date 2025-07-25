@@ -120,10 +120,18 @@ export default function EvidenceCollection() {
         formData.append('description', data.description);
       }
 
-      return fetch(`/api/incidents/${incidentId}/upload-evidence`, {
+      const response = await fetch(`/api/incidents/${incidentId}/upload-evidence`, {
         method: 'POST',
         body: formData,
-      }).then(res => res.json());
+      });
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Upload failed:', text);
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data, variables) => {
       // Update the category with the new file

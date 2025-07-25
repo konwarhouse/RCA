@@ -20,6 +20,7 @@ import { UniversalTimelineEngine } from "./universal-timeline-engine";
 import { IncidentOnlyRCAEngine } from "./incident-only-rca-engine";
 import { UniversalRCAEngine } from "./universal-rca-engine";
 import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
+import { UniversalRCAFallbackEngine } from "./universal-rca-fallback-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -1046,7 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update incident with new evidence file
       // Get current evidence files or initialize empty array
-      const currentFiles = incident.evidenceResponses || [];
+      const currentFiles = Array.isArray(incident.evidenceResponses) ? incident.evidenceResponses : [];
       const updatedFiles = [...currentFiles, fileRecord];
       
       await investigationStorage.updateIncident(incidentId, {
@@ -1152,6 +1153,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[EVIDENCE CATEGORIES] Generation failed:', error);
       res.status(500).json({ message: "Failed to generate evidence categories" });
+    }
+  });
+
+  // UNIVERSAL RCA FALLBACK ENGINE ENDPOINT (NO HARDCODING)
+  app.post("/api/incidents/:id/fallback-analysis", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { evidenceAvailability, uploadedFiles } = req.body;
+      
+      console.log(`[FALLBACK RCA] Starting fallback analysis for incident ${incidentId}`);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      const fallbackEngine = new UniversalRCAFallbackEngine();
+      
+      // Step 1: Analyze incident description
+      const incidentAnalysis = await fallbackEngine.analyzeIncidentDescription(
+        incident.symptomDescription || incident.description,
+        {
+          equipmentGroup: incident.equipmentGroup,
+          equipmentType: incident.equipmentType,
+          equipmentSubtype: incident.equipmentSubtype
+        }
+      );
+      
+      // Step 2: Check Evidence Library match
+      const evidenceLibraryCheck = await fallbackEngine.checkEvidenceLibraryMatch(
+        incidentAnalysis.extractedSymptoms,
+        incident.equipmentGroup,
+        incident.equipmentType
+      );
+      
+      if (!evidenceLibraryCheck.activateFallback) {
+        // Use Evidence Library results
+        return res.json({
+          useEvidenceLibrary: true,
+          matches: evidenceLibraryCheck.matches,
+          confidence: evidenceLibraryCheck.confidence,
+          message: "High-confidence Evidence Library match found"
+        });
+      }
+      
+      // Step 3: Generate fallback hypotheses
+      const fallbackHypotheses = await fallbackEngine.generateFallbackHypotheses(
+        incident.symptomDescription || incident.description,
+        incidentAnalysis.extractedSymptoms,
+        {
+          equipmentGroup: incident.equipmentGroup,
+          equipmentType: incident.equipmentType,
+          equipmentSubtype: incident.equipmentSubtype
+        }
+      );
+      
+      // Step 4: Assess evidence availability
+      const evidenceAssessment = await fallbackEngine.assessEvidenceAvailability(
+        fallbackHypotheses,
+        evidenceAvailability
+      );
+      
+      // Step 5: Generate final fallback analysis
+      const finalAnalysis = await fallbackEngine.generateFallbackAnalysis(
+        fallbackHypotheses,
+        evidenceAssessment,
+        uploadedFiles
+      );
+      
+      // Update incident with fallback analysis
+      await investigationStorage.updateIncident(incidentId, {
+        aiAnalysis: finalAnalysis,
+        analysisConfidence: finalAnalysis.confidence,
+        workflowStatus: 'analysis_complete',
+        currentStep: 6
+      });
+      
+      res.json({
+        success: true,
+        fallbackAnalysis: finalAnalysis,
+        hypotheses: fallbackHypotheses,
+        evidenceAssessment,
+        incidentAnalysis,
+        message: `Fallback analysis complete - ${finalAnalysis.confidence}% confidence`
+      });
+      
+    } catch (error) {
+      console.error('[FALLBACK RCA] Analysis failed:', error);
+      res.status(500).json({ message: "Fallback analysis failed" });
     }
   });
 
