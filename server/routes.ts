@@ -21,7 +21,7 @@ import { IncidentOnlyRCAEngine } from "./incident-only-rca-engine";
 import { UniversalRCAEngine } from "./universal-rca-engine";
 import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
 import { UniversalRCAFallbackEngine } from "./universal-rca-fallback-engine";
-import { UniversalAIEvidenceAnalyzer } from "./universal-ai-evidence-analyzer";
+import { EvidenceLibraryOperations } from "./evidence-library-operations";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -1116,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // UPLOAD EVIDENCE FILES WITH AI ANALYSIS (UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC)
+  // UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC - STEPS 3-4 IMPLEMENTATION
   app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
@@ -1127,96 +1127,284 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      console.log(`[AI EVIDENCE UPLOAD] Processing file upload for incident ${incidentId}, category ${categoryId}`);
-      console.log(`[AI EVIDENCE UPLOAD] File: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
+      console.log(`[UNIVERSAL EVIDENCE] Processing file upload for incident ${incidentId}`);
+      console.log(`[UNIVERSAL EVIDENCE] File: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
       
-      // Get incident to access current evidence data
+      // Get incident for equipment context (NO HARDCODED requirements)
       const incident = await investigationStorage.getIncident(incidentId);
       if (!incident) {
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
-      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      // Save file temporarily for analysis
+      const tempFilePath = `/tmp/temp_${Date.now()}_${file.originalname}`;
+      fs.writeFileSync(tempFilePath, file.buffer);
       
-      // Create evidence configuration from incident context (SCHEMA-DRIVEN)
-      const evidenceConfig = {
-        equipmentGroup: incident.equipmentGroup || 'Unknown',
-        equipmentType: incident.equipmentType || 'Unknown', 
-        equipmentSubtype: incident.equipmentSubtype || 'Unknown',
-        evidenceCategory: evidenceCategory || 'General Evidence',
-        expectedFileTypes: ['csv', 'txt', 'xlsx', 'pdf', 'jpg', 'png'],
-        aiPrompt: description || 'Upload evidence file for analysis',
-        required: true
-      };
-      
-      // STEP 4 – EVIDENCE FILE HANDLING & AI ANALYSIS (Per Universal RCA Instruction)
-      console.log(`[AI EVIDENCE ANALYSIS] Starting AI analysis for ${file.originalname}`);
-      const aiAnalysisResult = await evidenceAnalyzer.analyzeEvidenceFile(
-        file.buffer,
-        file.originalname,
-        evidenceConfig
-      );
-      
-      // Create comprehensive file record with AI analysis (NO HARDCODING)
-      const fileRecord = {
-        id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: file.originalname,
-        size: file.size,
-        type: file.mimetype,
-        categoryId: categoryId,
-        description: description || '',
-        uploadedAt: new Date().toISOString(),
-        content: file.buffer.toString('base64'),
-        // AI Analysis Results (Per Universal RCA Instruction)
-        diagnosticValue: aiAnalysisResult.diagnosticValue,
-        parsedResultSummary: aiAnalysisResult.parsedResultSummary,
-        evidenceConfidenceImpact: aiAnalysisResult.evidenceConfidenceImpact,
-        aiRemarks: aiAnalysisResult.aiRemarks,
-        status: aiAnalysisResult.status,
-        detectedColumns: aiAnalysisResult.detectedColumns,
-        extractedFeatures: aiAnalysisResult.extractedFeatures,
-        aiAnalysisDetails: aiAnalysisResult.aiAnalysisDetails,
-        requiresUserClarification: aiAnalysisResult.requiresUserClarification,
-        clarificationPrompt: aiAnalysisResult.clarificationPrompt
-      };
-      
-      console.log(`[AI EVIDENCE ANALYSIS] Analysis complete: ${aiAnalysisResult.diagnosticValue} diagnostic value, ${aiAnalysisResult.evidenceConfidenceImpact}% confidence impact`);
-      
-      // Update incident with analyzed evidence file
-      const currentFiles = incident.evidenceResponses || [];
-      const updatedFiles = [...currentFiles, fileRecord];
-      
-      await investigationStorage.updateIncident(incidentId, {
-        evidenceResponses: updatedFiles
-      });
-      
-      console.log(`[AI EVIDENCE UPLOAD] Successfully uploaded and analyzed file ${file.originalname} for incident ${incidentId}`);
-      
-      // Return comprehensive response with AI analysis (Per Universal RCA Instruction)
-      res.json({
-        success: true,
-        file: {
+      try {
+        // Import Universal Evidence Analyzer (NO HARDCODING)
+        const { UniversalEvidenceAnalyzer } = await import("./universal-evidence-analyzer");
+        
+        // Build equipment context from incident (SCHEMA-DRIVEN)
+        const equipmentContext = {
+          group: incident.equipmentGroup,
+          type: incident.equipmentType,
+          subtype: incident.equipmentSubtype,
+          symptoms: incident.symptomDescription || incident.description
+        };
+        
+        // Get required evidence from Evidence Library (NO HARDCODED REQUIREMENTS)
+        const evidenceLibraryOps = new EvidenceLibraryOperations();
+        const requiredEvidence = await evidenceLibraryOps.getRequiredEvidenceForEquipment(
+          incident.equipmentGroup || '',
+          incident.equipmentType || '',
+          incident.equipmentSubtype || ''
+        ) || [];
+        
+        console.log(`[UNIVERSAL EVIDENCE] Starting universal evidence analysis using schema-driven logic`);
+        
+        // STAGE 3/4: EVIDENCE INGESTION & PARSING (Per Universal RCA Instruction)
+        const analysisResult = await UniversalEvidenceAnalyzer.analyzeEvidence(
+          tempFilePath,
+          file.originalname,
+          equipmentContext,
+          requiredEvidence.map((e: any) => e.evidenceType)
+        );
+        
+        console.log(`[UNIVERSAL EVIDENCE] Analysis complete: ${analysisResult.success ? 'SUCCESS' : 'FAILED'}`);
+        console.log(`[UNIVERSAL EVIDENCE] Engine: ${analysisResult.analysisEngine}, Adequacy: ${analysisResult.adequacyScore}%`);
+        console.log(`[UNIVERSAL EVIDENCE] AI Summary: ${analysisResult.aiSummary}`);
+        console.log(`[UNIVERSAL EVIDENCE] User Prompt: ${analysisResult.userPrompt}`);
+        
+        // Create file record with Universal Evidence Analysis results
+        const fileRecord = {
+          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: file.originalname,
           size: file.size,
           type: file.mimetype,
-          categoryId
-        },
-        aiAnalysis: {
-          diagnosticValue: aiAnalysisResult.diagnosticValue,
-          parsedResultSummary: aiAnalysisResult.parsedResultSummary,
-          evidenceConfidenceImpact: aiAnalysisResult.evidenceConfidenceImpact,
-          aiRemarks: aiAnalysisResult.aiRemarks,
-          status: aiAnalysisResult.status,
-          requiresUserClarification: aiAnalysisResult.requiresUserClarification,
-          clarificationPrompt: aiAnalysisResult.clarificationPrompt
-        },
-        message: `File analyzed: ${aiAnalysisResult.diagnosticValue} diagnostic value, ${aiAnalysisResult.evidenceConfidenceImpact}% confidence impact`
+          categoryId: categoryId,
+          description: description || '',
+          uploadedAt: new Date().toISOString(),
+          content: file.buffer.toString('base64'),
+          // Universal Evidence Analysis Results (Per Universal RCA Instruction)
+          universalAnalysis: {
+            success: analysisResult.success,
+            fileType: analysisResult.fileType,
+            analysisEngine: analysisResult.analysisEngine,
+            parsedData: analysisResult.parsedData,
+            aiSummary: analysisResult.aiSummary,
+            adequacyScore: analysisResult.adequacyScore,
+            missingRequirements: analysisResult.missingRequirements,
+            userPrompt: analysisResult.userPrompt,
+            confidence: analysisResult.confidence
+          }
+        };
+        
+        // Update incident with analyzed evidence file
+        const currentFiles = (incident.evidenceResponses as any[]) || [];
+        const updatedFiles = [...currentFiles, fileRecord];
+        
+        await investigationStorage.updateIncident(incidentId, {
+          evidenceResponses: updatedFiles
+        });
+        
+        console.log(`[UNIVERSAL EVIDENCE] Successfully uploaded and analyzed file ${file.originalname} for incident ${incidentId}`);
+        
+        // Return Universal Evidence Analysis response (Per Universal RCA Instruction)
+        res.json({
+          success: true,
+          file: {
+            name: file.originalname,
+            size: file.size,
+            type: file.mimetype,
+            categoryId
+          },
+          universalAnalysis: {
+            success: analysisResult.success,
+            fileType: analysisResult.fileType,
+            analysisEngine: analysisResult.analysisEngine,
+            aiSummary: analysisResult.aiSummary,
+            adequacyScore: analysisResult.adequacyScore,
+            userPrompt: analysisResult.userPrompt,
+            confidence: analysisResult.confidence,
+            missingRequirements: analysisResult.missingRequirements
+          },
+          message: analysisResult.aiSummary
+        });
+        
+      } finally {
+        // Clean up temporary file
+        try {
+          fs.unlinkSync(tempFilePath);
+        } catch (cleanupError) {
+          console.warn('[UNIVERSAL EVIDENCE] Temp file cleanup failed:', cleanupError);
+        }
+      }
+      
+    } catch (error) {
+      console.error('[UNIVERSAL EVIDENCE] File upload and analysis failed:', error);
+      res.status(500).json({ 
+        message: "Universal evidence analysis failed",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
+  app.post("/api/incidents/:id/evidence-adequacy-check", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      console.log(`[STAGE 4] Evidence adequacy check for incident ${incidentId}`);
+      
+      // Get incident with evidence files
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Get required evidence from Evidence Library (NO HARDCODED REQUIREMENTS)
+      const evidenceLibraryOps = new EvidenceLibraryOperations();
+      const requiredEvidence = await evidenceLibraryOps.getRequiredEvidenceForEquipment(
+        incident.equipmentGroup || '',
+        incident.equipmentType || '',
+        incident.equipmentSubtype || ''
+      ) || [];
+      
+      const uploadedFiles = (incident.evidenceResponses as any[]) || [];
+      
+      console.log(`[STAGE 4] Required evidence: ${requiredEvidence.length} types`);
+      console.log(`[STAGE 4] Uploaded files: ${uploadedFiles.length} files`);
+      
+      // Import Universal Evidence Analyzer for adequacy scoring
+      const { UniversalEvidenceAnalyzer } = await import("./universal-evidence-analyzer");
+      
+      let overallAdequacyScore = 0;
+      let totalEvidenceRequired = requiredEvidence.length;
+      let evidenceGaps: string[] = [];
+      let aiSummary = "";
+      let userPrompt = "";
+      
+      if (totalEvidenceRequired > 0) {
+        // Calculate adequacy based on uploaded files vs required evidence
+        const providedEvidenceTypes = new Set();
+        
+        for (const file of uploadedFiles) {
+          if (file.universalAnalysis?.success) {
+            // Extract evidence type from AI analysis
+            const analysisData = file.universalAnalysis.parsedData;
+            if (analysisData && analysisData.technical_parameters) {
+              analysisData.technical_parameters.forEach((param: string) => {
+                providedEvidenceTypes.add(param.toLowerCase());
+              });
+            }
+          }
+        }
+        
+        // Check coverage against required evidence
+        const coveredEvidence = requiredEvidence.filter((req: any) => {
+          const reqType = req.evidenceType.toLowerCase();
+          return Array.from(providedEvidenceTypes).some((provided: any) => 
+            provided.includes(reqType) || reqType.includes(provided)
+          );
+        });
+        
+        overallAdequacyScore = totalEvidenceRequired > 0 
+          ? Math.round((coveredEvidence.length / totalEvidenceRequired) * 100)
+          : 0;
+        
+        // Identify evidence gaps
+        evidenceGaps = requiredEvidence
+          .filter((req: any) => {
+            const reqType = req.evidenceType.toLowerCase();
+            return !Array.from(providedEvidenceTypes).some((provided: any) => 
+              provided.includes(reqType) || reqType.includes(provided)
+            );
+          })
+          .map((req: any) => req.evidenceType);
+        
+        // Generate AI summary and user prompt (Per Universal RCA Instruction)
+        try {
+          const { DynamicAIConfig } = await import("./dynamic-ai-config");
+          
+          const adequacyPrompt = `
+STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK
+Equipment: ${incident.equipmentGroup} → ${incident.equipmentType} → ${incident.equipmentSubtype}
+Required Evidence: ${requiredEvidence.map((e: any) => e.evidenceType).join(', ')}
+Uploaded Files: ${uploadedFiles.map(f => f.name).join(', ')}
+Adequacy Score: ${overallAdequacyScore}%
+Missing Evidence: ${evidenceGaps.join(', ')}
+
+Generate:
+1. Plain-language summary of what evidence is present/missing
+2. User-friendly prompt for next actions if inadequate
+
+Format your response as JSON:
+{
+  "summary": "Evidence summary here",
+  "userPrompt": "User prompt here"
+}`;
+
+          const aiResponse = await DynamicAIConfig.performAIAnalysis(
+            incidentId.toString(),
+            adequacyPrompt,
+            'evidence-adequacy-check',
+            'stage-4-feedback'
+          );
+          
+          try {
+            const aiResult = JSON.parse(aiResponse || '{}');
+            aiSummary = aiResult.summary || `Evidence adequacy: ${overallAdequacyScore}%`;
+            userPrompt = aiResult.userPrompt || 
+              (overallAdequacyScore < 100 
+                ? `Additional evidence required: ${evidenceGaps.join(', ')}. Please provide or mark as unavailable.`
+                : "All required evidence provided. Proceeding to root cause inference.");
+          } catch (parseError) {
+            aiSummary = `Evidence adequacy: ${overallAdequacyScore}%`;
+            userPrompt = overallAdequacyScore < 100 
+              ? `Additional evidence needed: ${evidenceGaps.join(', ')}`
+              : "All required evidence provided.";
+          }
+        } catch (aiError) {
+          console.error('[STAGE 4] AI adequacy analysis failed:', aiError);
+          aiSummary = `Evidence adequacy: ${overallAdequacyScore}%`;
+          userPrompt = overallAdequacyScore < 100 
+            ? `Additional evidence required: ${evidenceGaps.join(', ')}`
+            : "All required evidence provided.";
+        }
+      } else {
+        // No required evidence defined in schema
+        aiSummary = "No specific evidence requirements defined for this equipment type.";
+        userPrompt = "Upload any available evidence files for analysis.";
+        overallAdequacyScore = uploadedFiles.length > 0 ? 50 : 0; // Partial score for generic evidence
+      }
+      
+      console.log(`[STAGE 4] Overall adequacy: ${overallAdequacyScore}%`);
+      console.log(`[STAGE 4] Evidence gaps: ${evidenceGaps.length}`);
+      console.log(`[STAGE 4] User prompt: ${userPrompt}`);
+      
+      res.json({
+        success: true,
+        adequacyScore: overallAdequacyScore,
+        totalRequired: totalEvidenceRequired,
+        totalUploaded: uploadedFiles.length,
+        evidenceGaps,
+        aiSummary,
+        userPrompt,
+        canProceedToRCA: overallAdequacyScore >= 60, // Threshold for proceeding
+        requiredEvidence: requiredEvidence.map((e: any) => e.evidenceType),
+        uploadedEvidence: uploadedFiles.map(f => ({
+          name: f.name,
+          adequacyScore: f.universalAnalysis?.adequacyScore || 0,
+          success: f.universalAnalysis?.success || false
+        }))
       });
       
     } catch (error) {
-      console.error('[AI EVIDENCE UPLOAD] File upload and analysis failed:', error);
-      res.status(500).json({ message: "File upload and AI analysis failed" });
+      console.error('[STAGE 4] Evidence adequacy check failed:', error);
+      res.status(500).json({ 
+        message: "Evidence adequacy check failed",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
