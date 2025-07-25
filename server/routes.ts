@@ -974,6 +974,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // EQUIPMENT CASCADING DROPDOWN ENDPOINTS - NO HARDCODING
+  // Level 1: Get distinct equipment groups from Evidence Library
+  app.get("/api/cascading/equipment-groups", async (req, res) => {
+    try {
+      const groups = await investigationStorage.getDistinctEquipmentGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error('[Cascading Dropdown] Equipment groups failed:', error);
+      res.status(500).json({ message: "Failed to get equipment groups" });
+    }
+  });
+
+  // Level 2: Get equipment types for selected group
+  app.get("/api/cascading/equipment-types/:group", async (req, res) => {
+    try {
+      const { group } = req.params;
+      const types = await investigationStorage.getEquipmentTypesForGroup(group);
+      res.json(types);
+    } catch (error) {
+      console.error('[Cascading Dropdown] Equipment types failed:', error);
+      res.status(500).json({ message: "Failed to get equipment types" });
+    }
+  });
+
+  // Level 3: Get equipment subtypes for selected group and type
+  app.get("/api/cascading/equipment-subtypes/:group/:type", async (req, res) => {
+    try {
+      const { group, type } = req.params;
+      const subtypes = await investigationStorage.getEquipmentSubtypesForGroupAndType(group, type);
+      res.json(subtypes);
+    } catch (error) {
+      console.error('[Cascading Dropdown] Equipment subtypes failed:', error);
+      res.status(500).json({ message: "Failed to get equipment subtypes" });
+    }
+  });
+
   app.get('/api/hello', (req, res) => {
     res.json({ message: 'Universal RCA API Ready' });
   });

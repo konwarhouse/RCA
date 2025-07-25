@@ -70,6 +70,11 @@ export interface IInvestigationStorage {
   deleteRiskRanking(id: number): Promise<void>;
   toggleRiskRankingStatus(id: number): Promise<RiskRanking>;
   
+  // Cascading dropdown operations - NO HARDCODING
+  getDistinctEquipmentGroups(): Promise<string[]>;
+  getEquipmentTypesForGroup(group: string): Promise<string[]>;
+  getEquipmentSubtypesForGroupAndType(group: string, type: string): Promise<string[]>;
+  
   // Incident operations - New RCA workflow
   createIncident(data: Partial<InsertIncident>): Promise<Incident>;
   getIncident(id: number): Promise<Incident | undefined>;
@@ -1099,6 +1104,68 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   async updateHistoricalPattern(id: number, data: any): Promise<any> {
     console.log(`[Historical Learning] Updating historical pattern ${id}`);
     return { id, ...data };
+  }
+
+  // CASCADING DROPDOWN OPERATIONS - NO HARDCODING
+  // Uses Evidence Library database to populate dropdowns dynamically
+  async getDistinctEquipmentGroups(): Promise<string[]> {
+    try {
+      const result = await db
+        .selectDistinct({ group: evidenceLibrary.equipmentGroup })
+        .from(evidenceLibrary)
+        .where(sql`${evidenceLibrary.equipmentGroup} IS NOT NULL AND ${evidenceLibrary.equipmentGroup} != ''`)
+        .orderBy(evidenceLibrary.equipmentGroup);
+      
+      return result.map(row => row.group);
+    } catch (error) {
+      console.error('[Storage] Error getting equipment groups:', error);
+      return [];
+    }
+  }
+
+  async getEquipmentTypesForGroup(group: string): Promise<string[]> {
+    try {
+      const result = await db
+        .selectDistinct({ type: evidenceLibrary.equipmentType })
+        .from(evidenceLibrary)
+        .where(and(
+          eq(evidenceLibrary.equipmentGroup, group),
+          sql`${evidenceLibrary.equipmentType} IS NOT NULL AND ${evidenceLibrary.equipmentType} != ''`
+        ))
+        .orderBy(evidenceLibrary.equipmentType);
+      
+      return result.map(row => row.type);
+    } catch (error) {
+      console.error('[Storage] Error getting equipment types:', error);
+      return [];
+    }
+  }
+
+  async getEquipmentSubtypesForGroupAndType(group: string, type: string): Promise<string[]> {
+    try {
+      // Use correct column name 'subtype' instead of 'equipment_subtype'
+      const result = await db
+        .select({ subtype: evidenceLibrary.subtype })
+        .from(evidenceLibrary)
+        .where(and(
+          eq(evidenceLibrary.equipmentGroup, group),
+          eq(evidenceLibrary.equipmentType, type)
+        ));
+      
+      // Extract subtypes, filter unique ones, and sort
+      const subtypes = result
+        .map(row => row.subtype)
+        .filter((subtype, index, array) => 
+          subtype && subtype.trim() !== '' && array.indexOf(subtype) === index
+        )
+        .sort();
+      
+      console.log(`[Storage] Found ${subtypes.length} subtypes for ${group}/${type}:`, subtypes);
+      return subtypes;
+    } catch (error) {
+      console.error('[Storage] Error getting equipment subtypes:', error);
+      return [];
+    }
   }
 }
 
