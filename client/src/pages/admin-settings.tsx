@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Eye, EyeOff, TestTube, Save, Shield, AlertTriangle, Database, Plus, Edit3, Download, Upload, Home, ArrowLeft, FileUp, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import type { AiSettings, InsertAiSettings, EquipmentGroup, RiskRanking } from "@shared/schema";
+import AIStatusIndicator from "@/components/ai-status-indicator";
 
 export default function AdminSettings() {
   const [showApiKey, setShowApiKey] = useState(false);
