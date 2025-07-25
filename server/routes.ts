@@ -635,6 +635,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[UNIVERSAL RCA INSTRUCTION] Generated ${allEvidenceItems.length} evidence items (${evidenceItems.length} AI + ${customEvidenceItems.length} custom)`);
       
+      // CRITICAL FIX: Save evidence checklist to database
+      await investigationStorage.updateIncident(id, {
+        evidenceChecklist: allEvidenceItems,
+        currentStep: 4, // Move to Step 4 - Evidence Collection
+        workflowStatus: 'evidence_collection'
+      });
+      
+      console.log(`[EVIDENCE CHECKLIST] Saved ${allEvidenceItems.length} evidence items to database for incident ${id}`);
+      
       // STEP 5: Return AI-driven results (NO HARDCODING)
       res.json({
         evidenceItems: allEvidenceItems,
@@ -999,6 +1008,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Admin Library Updates] Decision processing failed:', error);
       res.status(500).json({ message: "Failed to process proposal decision" });
+    }
+  });
+
+  // UPLOAD EVIDENCE FILES (ZERO HARDCODING)
+  app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { categoryId, description } = req.body;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      console.log(`[EVIDENCE UPLOAD] Processing file upload for incident ${incidentId}, category ${categoryId}`);
+      console.log(`[EVIDENCE UPLOAD] File: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
+      
+      // Get incident to access current evidence data
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Create file record - ZERO HARDCODING approach
+      const fileRecord = {
+        id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        categoryId: categoryId,
+        description: description || '',
+        uploadedAt: new Date().toISOString(),
+        content: file.buffer.toString('base64'), // Store file content as base64
+        status: 'uploaded'
+      };
+      
+      // Update incident with new evidence file
+      // Get current evidence files or initialize empty array
+      const currentFiles = incident.evidenceResponses || [];
+      const updatedFiles = [...currentFiles, fileRecord];
+      
+      await investigationStorage.updateIncident(incidentId, {
+        evidenceResponses: updatedFiles
+      });
+      
+      console.log(`[EVIDENCE UPLOAD] Successfully uploaded file ${file.originalname} for incident ${incidentId}`);
+      
+      res.json({ 
+        success: true,
+        file: fileRecord,
+        message: `File ${file.originalname} uploaded successfully`
+      });
+      
+    } catch (error) {
+      console.error('[EVIDENCE UPLOAD] Upload failed:', error);
+      res.status(500).json({ message: "Failed to upload evidence file" });
     }
   });
 
