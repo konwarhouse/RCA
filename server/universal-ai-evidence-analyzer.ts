@@ -11,6 +11,7 @@ import * as path from 'path';
 import mimeTypes from 'mime-types';
 import Papa from 'papaparse';
 import { investigationStorage } from './storage';
+import { spawn } from 'child_process';
 
 interface EvidenceParseResult {
   filename: string;
@@ -142,7 +143,7 @@ export class UniversalAIEvidenceAnalyzer {
   }
 
   /**
-   * CSV/TXT File Parsing - Auto-detect columns dynamically
+   * CSV/TXT File Parsing - REAL DATA SCIENCE with Python/pandas/NumPy
    */
   private async parseCsvTextFile(
     fileBuffer: Buffer,
@@ -150,68 +151,150 @@ export class UniversalAIEvidenceAnalyzer {
     evidenceConfig: FileAnalysisConfig
   ): Promise<EvidenceParseResult> {
     
-    const fileContent = fileBuffer.toString('utf-8');
+    console.log(`[AI Evidence Analyzer] Starting REAL data science analysis with Python for ${filename}`);
     
     try {
-      // Parse CSV/TXT with Papa Parse
-      const parseResult = Papa.parse(fileContent, {
-        header: true,
-        skipEmptyLines: true,
-        delimiter: this.detectDelimiter(fileContent)
-      });
-
-      if (parseResult.errors.length > 0) {
+      // Call Python data science analyzer
+      const fileContent = fileBuffer.toString('utf-8');
+      const pythonResult = await this.callPythonAnalyzer(fileContent, filename, evidenceConfig);
+      
+      if (pythonResult.status === 'error') {
         return {
           filename,
           evidenceType: evidenceConfig.evidenceCategory,
           diagnosticValue: 'Low',
-          parsedResultSummary: 'CSV parsing errors detected',
-          evidenceConfidenceImpact: 20,
-          aiRemarks: `Parse errors: ${parseResult.errors.map(e => e.message).join(', ')}`,
+          parsedResultSummary: 'Python data science analysis failed',
+          evidenceConfidenceImpact: 10,
+          aiRemarks: `Python error: ${pythonResult.error}`,
           status: 'Incomplete',
           requiresUserClarification: true,
-          clarificationPrompt: 'File has parsing errors. Please check format and column headers.'
+          clarificationPrompt: 'File could not be analyzed with data science methods. Please check format.'
         };
       }
-
-      const headers = parseResult.meta.fields || [];
-      const data = parseResult.data as any[];
-
-      // Auto-detect column types (NO HARDCODING)
-      const detectedColumns = this.detectColumnTypes(headers, data);
       
-      // Analyze data patterns
-      const analysisResults = this.analyzeDataPatterns(data, detectedColumns, evidenceConfig);
+      console.log(`[AI Evidence Analyzer] Python analysis complete: ${pythonResult.diagnosticValue} diagnostic value`);
       
-      return {
-        filename,
-        evidenceType: evidenceConfig.evidenceCategory,
-        diagnosticValue: analysisResults.diagnosticValue,
-        parsedResultSummary: analysisResults.summary,
-        evidenceConfidenceImpact: analysisResults.confidenceImpact,
-        aiRemarks: analysisResults.remarks,
-        status: 'Available',
-        detectedColumns: headers,
-        extractedFeatures: analysisResults.features
-      };
+      return pythonResult;
 
     } catch (error) {
       return {
         filename,
         evidenceType: evidenceConfig.evidenceCategory,
         diagnosticValue: 'Low',
-        parsedResultSummary: 'Failed to parse CSV/TXT file',
+        parsedResultSummary: 'Failed to parse CSV/TXT file with data science methods',
         evidenceConfidenceImpact: 10,
-        aiRemarks: `Parsing failed: ${error instanceof Error ? error.message : String(error)}`,
+        aiRemarks: `Real parsing failed: ${error instanceof Error ? error.message : String(error)}`,
         status: 'Incomplete',
         requiresUserClarification: true,
-        clarificationPrompt: 'CSV/TXT file could not be parsed. Please verify format or provide different file.'
+        clarificationPrompt: 'CSV/TXT file could not be analyzed. Please verify format or provide different file.'
       };
     }
   }
 
   /**
-   * Spreadsheet File Parsing (XLSX, XLS)
+   * Call Python Data Science Analyzer - REAL pandas/NumPy/Signal Processing
+   */
+  private async callPythonAnalyzer(
+    fileContent: string,
+    filename: string,
+    evidenceConfig: FileAnalysisConfig
+  ): Promise<EvidenceParseResult> {
+    
+    return new Promise((resolve, reject) => {
+      console.log(`[Python Interface] Calling Python data science analyzer for ${filename}`);
+      
+      try {
+        // Spawn Python process with real data science analysis
+        const pythonProcess = spawn('python3', [
+          path.join(__dirname, 'python-evidence-analyzer.py'),
+          fileContent,
+          filename,
+          JSON.stringify(evidenceConfig)
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            try {
+              // Parse the last JSON output from Python
+              const lines = stdout.trim().split('\n');
+              const lastLine = lines[lines.length - 1];
+              const result = JSON.parse(lastLine);
+              
+              console.log(`[Python Interface] Python analysis completed successfully`);
+              resolve(result);
+              
+            } catch (parseError) {
+              console.error(`[Python Interface] Failed to parse Python output:`, parseError);
+              resolve({
+                filename,
+                evidenceType: evidenceConfig.evidenceCategory,
+                diagnosticValue: 'Low',
+                parsedResultSummary: 'Python output parsing failed',
+                evidenceConfidenceImpact: 10,
+                aiRemarks: `Python interface error: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+                status: 'Incomplete'
+              });
+            }
+          } else {
+            console.error(`[Python Interface] Python process failed with code ${code}:`, stderr);
+            resolve({
+              filename,
+              evidenceType: evidenceConfig.evidenceCategory,
+              diagnosticValue: 'Low',
+              parsedResultSummary: 'Python data science analysis failed',
+              evidenceConfidenceImpact: 5,
+              aiRemarks: `Python process error (code ${code}): ${stderr}`,
+              status: 'error',
+              error: stderr
+            });
+          }
+        });
+        
+        pythonProcess.on('error', (error) => {
+          console.error(`[Python Interface] Failed to spawn Python process:`, error);
+          resolve({
+            filename,
+            evidenceType: evidenceConfig.evidenceCategory,
+            diagnosticValue: 'Low',
+            parsedResultSummary: 'Failed to start Python data science analysis',
+            evidenceConfidenceImpact: 5,
+            aiRemarks: `Python spawn error: ${error.message}`,
+            status: 'error',
+            error: error.message
+          });
+        });
+        
+      } catch (error) {
+        console.error(`[Python Interface] Python interface error:`, error);
+        resolve({
+          filename,
+          evidenceType: evidenceConfig.evidenceCategory,
+          diagnosticValue: 'Low',
+          parsedResultSummary: 'Python interface failed',
+          evidenceConfidenceImpact: 5,
+          aiRemarks: `Interface error: ${error instanceof Error ? error.message : String(error)}`,
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+  }
+
+  /**
+   * Spreadsheet File Parsing - REAL DATA SCIENCE with Python/pandas
    */
   private async parseSpreadsheetFile(
     fileBuffer: Buffer,
@@ -219,72 +302,42 @@ export class UniversalAIEvidenceAnalyzer {
     evidenceConfig: FileAnalysisConfig
   ): Promise<EvidenceParseResult> {
     
+    console.log(`[AI Evidence Analyzer] Starting REAL spreadsheet analysis with Python for ${filename}`);
+    
     try {
-      // Dynamic import of xlsx library
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      // Convert buffer to base64 for Python processing
+      const base64Content = fileBuffer.toString('base64');
+      const pythonResult = await this.callPythonAnalyzer(base64Content, filename, evidenceConfig);
       
-      // Get first worksheet
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      
-      // Convert to JSON for analysis
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      
-      if (jsonData.length === 0) {
+      if (pythonResult.status === 'error') {
         return {
           filename,
           evidenceType: evidenceConfig.evidenceCategory,
           diagnosticValue: 'Low',
-          parsedResultSummary: 'Empty spreadsheet detected',
-          evidenceConfidenceImpact: 5,
-          aiRemarks: 'Spreadsheet contains no data',
+          parsedResultSummary: 'Python spreadsheet analysis failed',
+          evidenceConfidenceImpact: 10,
+          aiRemarks: `Python error: ${pythonResult.error}`,
           status: 'Incomplete',
           requiresUserClarification: true,
-          clarificationPrompt: 'Spreadsheet appears empty. Please upload file with data or mark as unavailable.'
+          clarificationPrompt: 'Spreadsheet could not be analyzed with data science methods. Please check format.'
         };
       }
-
-      // Extract headers and data
-      const headers = jsonData[0] as string[];
-      const dataRows = jsonData.slice(1);
       
-      // Convert to object format for analysis
-      const objectData = dataRows.map(row => {
-        const obj: any = {};
-        headers.forEach((header, index) => {
-          obj[header] = (row as any[])[index];
-        });
-        return obj;
-      });
-
-      // Analyze patterns
-      const detectedColumns = this.detectColumnTypes(headers, objectData);
-      const analysisResults = this.analyzeDataPatterns(objectData, detectedColumns, evidenceConfig);
+      console.log(`[AI Evidence Analyzer] Python spreadsheet analysis complete: ${pythonResult.diagnosticValue} diagnostic value`);
       
-      return {
-        filename,
-        evidenceType: evidenceConfig.evidenceCategory,
-        diagnosticValue: analysisResults.diagnosticValue,
-        parsedResultSummary: analysisResults.summary,
-        evidenceConfidenceImpact: analysisResults.confidenceImpact,
-        aiRemarks: analysisResults.remarks,
-        status: 'Available',
-        detectedColumns: headers,
-        extractedFeatures: analysisResults.features
-      };
+      return pythonResult;
 
     } catch (error) {
       return {
         filename,
         evidenceType: evidenceConfig.evidenceCategory,
         diagnosticValue: 'Low',
-        parsedResultSummary: 'Failed to parse spreadsheet',
+        parsedResultSummary: 'Failed to parse spreadsheet with data science methods',
         evidenceConfidenceImpact: 10,
-        aiRemarks: `Spreadsheet parsing failed: ${error instanceof Error ? error.message : String(error)}`,
+        aiRemarks: `Real spreadsheet parsing failed: ${error instanceof Error ? error.message : String(error)}`,
         status: 'Incomplete',
         requiresUserClarification: true,
-        clarificationPrompt: 'Spreadsheet could not be read. Please save as CSV or verify file integrity.'
+        clarificationPrompt: 'Spreadsheet could not be analyzed. Please save as CSV or verify file integrity.'
       };
     }
   }
