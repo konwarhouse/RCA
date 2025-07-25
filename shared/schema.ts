@@ -177,6 +177,45 @@ export const insertAiSettingsSchema = createInsertSchema(aiSettings);
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
 
+// Admin Library Update System (NEW - Step 8 Requirements)
+export const libraryUpdateProposals = pgTable("library_update_proposals", {
+  id: serial("id").primaryKey(),
+  incidentId: integer("incident_id"), // Link to incident that triggered the proposal
+  proposalType: varchar("proposal_type").notNull(), // "new_fault_signature", "new_prompt_style", "pattern_enhancement"
+  proposedData: jsonb("proposed_data").notNull(), // Structured proposal data
+  aiReasoning: text("ai_reasoning"), // AI explanation for the proposal
+  evidencePatterns: jsonb("evidence_patterns"), // New patterns detected
+  adminStatus: varchar("admin_status").default("pending"), // "pending", "accepted", "rejected", "modified"
+  adminComments: text("admin_comments"), // Admin feedback
+  reviewedBy: varchar("reviewed_by"), // Admin who reviewed
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLibraryUpdateProposalSchema = createInsertSchema(libraryUpdateProposals);
+export type InsertLibraryUpdateProposal = z.infer<typeof insertLibraryUpdateProposalSchema>;
+export type LibraryUpdateProposal = typeof libraryUpdateProposals.$inferSelect;
+
+// Historical Learning Patterns (NEW - Step 9 Requirements)
+export const historicalPatterns = pgTable("historical_patterns", {
+  id: serial("id").primaryKey(),
+  equipmentGroup: varchar("equipment_group").notNull(),
+  equipmentType: varchar("equipment_type").notNull(),
+  equipmentSubtype: varchar("equipment_subtype"),
+  symptomPattern: text("symptom_pattern").notNull(), // Normalized symptom description
+  rootCausePattern: text("root_cause_pattern").notNull(), // Confirmed root cause
+  evidencePattern: jsonb("evidence_pattern"), // Evidence that confirmed the cause
+  incidentContext: jsonb("incident_context"), // Operating conditions, timeline, etc.
+  confidence: decimal("confidence", { precision: 5, scale: 2 }), // Pattern confidence
+  occurrenceCount: integer("occurrence_count").default(1), // How many times this pattern occurred
+  lastOccurrence: timestamp("last_occurrence").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertHistoricalPatternSchema = createInsertSchema(historicalPatterns);
+export type InsertHistoricalPattern = z.infer<typeof insertHistoricalPatternSchema>;
+export type HistoricalPattern = typeof historicalPatterns.$inferSelect;
+
 // Equipment Groups table - Admin editable dropdown values
 export const equipmentGroups = pgTable("equipment_groups", {
   id: serial("id").primaryKey(),
@@ -255,6 +294,21 @@ export const incidents = pgTable("incidents", {
   engineerReview: jsonb("engineer_review"), // Engineer review and approval data
   finalizedAt: timestamp("finalized_at"),
   finalizedBy: varchar("finalized_by"),
+  
+  // PSM Integration Fields (NEW - Step 7 RCA Output Requirements)
+  phaReference: varchar("pha_reference"), // Process Hazard Analysis reference
+  sisComplianceCheck: varchar("sis_compliance_check"), // IEC 61511 SIS compliance status
+  mocReferences: text("moc_references"), // Management of Change references
+  safetyDeviceFunctionalHistory: jsonb("safety_device_functional_history"), // Safety device history data
+  
+  // Enhanced Evidence Status Fields (NEW - Step 4 Requirements)
+  evidenceStatus: jsonb("evidence_status"), // "Available", "Not Available", "Will Upload", "Unknown"
+  criticalEvidenceGaps: jsonb("critical_evidence_gaps"), // AI-identified missing critical evidence
+  lowConfidenceFlag: boolean("low_confidence_flag").default(false), // Triggers fallback RCA flow
+  
+  // Historical Learning Integration (NEW - Step 9)
+  similarIncidentPatterns: jsonb("similar_incident_patterns"), // Links to similar historical incidents
+  historicalLearningApplied: jsonb("historical_learning_applied"), // Patterns applied from previous RCAs
   
   // Workflow tracking
   currentStep: integer("current_step").default(1), // 1-8 step tracking

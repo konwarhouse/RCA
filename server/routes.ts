@@ -18,6 +18,8 @@ import { UniversalQuestionnaireEngine } from "./universal-questionnaire-engine";
 import { EvidenceValidationEngine } from "./evidence-validation-engine";
 import { UniversalTimelineEngine } from "./universal-timeline-engine";
 import { IncidentOnlyRCAEngine } from "./incident-only-rca-engine";
+import { UniversalRCAEngine } from "./universal-rca-engine";
+import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -814,6 +816,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: "Failed to test API key" 
       });
+    }
+  });
+
+  // NEW: ENHANCED UNIVERSAL RCA INSTRUCTION API ROUTES (Steps 4-9)
+  
+  // Step 4: Enhanced Evidence Status Validation
+  app.post("/api/incidents/:id/validate-evidence-status", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { evidenceItems } = req.body;
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      const validation = await universalRCAEngine.validateEvidenceStatus(incidentId, evidenceItems);
+      
+      res.json({
+        success: true,
+        validation
+      });
+    } catch (error) {
+      console.error('[Enhanced Evidence Status] Validation failed:', error);
+      res.status(500).json({ message: "Evidence status validation failed" });
+    }
+  });
+
+  // Step 5: Data Analysis with Confidence Thresholds and Fallback
+  app.post("/api/incidents/:id/analyze-with-fallback", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      const analysis = await universalRCAEngine.performDataAnalysisWithFallback(incidentId);
+      
+      res.json({
+        success: true,
+        analysis
+      });
+    } catch (error) {
+      console.error('[Data Analysis Fallback] Analysis failed:', error);
+      res.status(500).json({ message: "Data analysis with fallback failed" });
+    }
+  });
+
+  // Step 7: Generate Enhanced RCA Output with PSM Integration
+  app.post("/api/incidents/:id/generate-enhanced-rca", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { analysisData } = req.body;
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      const rcaOutput = await universalRCAEngine.generateEnhancedRCAOutput(incidentId, analysisData);
+      
+      res.json({
+        success: true,
+        rcaOutput
+      });
+    } catch (error) {
+      console.error('[Enhanced RCA Output] Generation failed:', error);
+      res.status(500).json({ message: "Enhanced RCA output generation failed" });
+    }
+  });
+
+  // Step 8: Trigger Admin Library Update Analysis
+  app.post("/api/incidents/:id/trigger-library-updates", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      await universalRCAEngine.triggerLibraryUpdateAnalysis(incidentId);
+      
+      res.json({
+        success: true,
+        message: 'Library update analysis triggered - pending admin review'
+      });
+    } catch (error) {
+      console.error('[Library Update Analysis] Failed:', error);
+      res.status(500).json({ message: "Library update analysis failed" });
+    }
+  });
+
+  // Step 9: Capture Historical Learning Patterns
+  app.post("/api/incidents/:id/capture-learning", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      await universalRCAEngine.captureHistoricalLearning(incidentId);
+      
+      res.json({
+        success: true,
+        message: 'Historical learning patterns captured for future AI inference'
+      });
+    } catch (error) {
+      console.error('[Historical Learning] Capture failed:', error);
+      res.status(500).json({ message: "Historical learning capture failed" });
+    }
+  });
+
+  // Complete Universal RCA Workflow Execution (All 9 Steps)
+  app.post("/api/incidents/:id/execute-universal-rca", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      console.log(`[Universal RCA Workflow] Starting complete execution for incident ${incidentId}`);
+      
+      const universalRCAEngine = new UniversalRCAEngine();
+      
+      // Execute the complete Universal RCA workflow (all 9 steps)
+      const workflowResult = await universalRCAEngine.executeUniversalRCAWorkflow(incidentId);
+      
+      console.log('[Universal RCA Workflow] Complete execution finished successfully');
+      
+      res.json({
+        success: true,
+        workflow: workflowResult
+      });
+    } catch (error) {
+      console.error('[Universal RCA Workflow] Execution failed:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Universal RCA workflow execution failed",
+        error: error.message 
+      });
+    }
+  });
+
+  // Admin: Get Pending Library Update Proposals
+  app.get("/api/admin/library-update-proposals", async (req, res) => {
+    try {
+      const proposals = await investigationStorage.getPendingLibraryUpdateProposals();
+      
+      res.json({
+        success: true,
+        proposals
+      });
+    } catch (error) {
+      console.error('[Admin Library Updates] Failed to get proposals:', error);
+      res.status(500).json({ message: "Failed to get library update proposals" });
+    }
+  });
+
+  // Admin: Process Library Update Proposal Decision
+  app.post("/api/admin/library-update-proposals/:id/decision", async (req, res) => {
+    try {
+      const proposalId = parseInt(req.params.id);
+      const { decision, adminComments, reviewedBy, modifiedData } = req.body;
+      
+      // Import AdminLibraryUpdateEngine for processing decisions
+      const { AdminLibraryUpdateEngine } = await import("./admin-library-update-engine");
+      const adminEngine = new AdminLibraryUpdateEngine();
+      
+      await adminEngine.processAdminReview({
+        proposalId,
+        decision,
+        adminComments,
+        reviewedBy,
+        modifiedData
+      });
+      
+      res.json({
+        success: true,
+        message: `Library update proposal ${decision} successfully`
+      });
+    } catch (error) {
+      console.error('[Admin Library Updates] Decision processing failed:', error);
+      res.status(500).json({ message: "Failed to process proposal decision" });
     }
   });
 

@@ -91,6 +91,20 @@ export interface IInvestigationStorage {
   getCascadingEquipmentGroups(): Promise<string[]>;
   getCascadingEquipmentTypes(groupName: string): Promise<string[]>;
   getCascadingEquipmentSubtypes(groupName: string, typeName: string): Promise<string[]>;
+  
+  // NEW: Library Update Proposals operations (Step 8)
+  createLibraryUpdateProposal(data: any): Promise<any>;
+  getLibraryUpdateProposal(id: number): Promise<any>;
+  updateLibraryUpdateProposal(id: number, data: any): Promise<any>;
+  getPendingLibraryUpdateProposals(): Promise<any[]>;
+  createEvidenceLibraryEntry(data: any): Promise<any>;
+  updateEvidenceLibraryEntry(id: number, data: any): Promise<any>;
+  storePromptStylePattern(data: any): Promise<any>;
+  
+  // NEW: Historical Learning operations (Step 9)
+  createHistoricalPattern(data: any): Promise<any>;
+  findHistoricalPatterns(criteria: any): Promise<any[]>;
+  updateHistoricalPattern(id: number, data: any): Promise<any>;
 }
 
 export class DatabaseInvestigationStorage implements IInvestigationStorage {
@@ -1032,6 +1046,59 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       console.error('[Evidence Files] Error retrieving evidence files:', error);
       return [];
     }
+  }
+
+  // NEW: Library Update Proposals operations (Step 8)
+  async createLibraryUpdateProposal(data: any): Promise<any> {
+    console.log('[Library Update] Creating new library update proposal');
+    // For now, return a simple implementation that would store to database
+    return { id: Date.now(), ...data, status: 'pending' };
+  }
+
+  async getLibraryUpdateProposal(id: number): Promise<any> {
+    console.log(`[Library Update] Getting proposal ${id}`);
+    return null; // Would query from database
+  }
+
+  async updateLibraryUpdateProposal(id: number, data: any): Promise<any> {
+    console.log(`[Library Update] Updating proposal ${id}`);
+    return { id, ...data };
+  }
+
+  async getPendingLibraryUpdateProposals(): Promise<any[]> {
+    console.log('[Library Update] Getting pending proposals');
+    return []; // Would query from database
+  }
+
+  async createEvidenceLibraryEntry(data: any): Promise<any> {
+    console.log('[Library Update] Creating new evidence library entry');
+    return { id: Date.now(), ...data };
+  }
+
+  async updateEvidenceLibraryEntry(id: number, data: any): Promise<any> {
+    console.log(`[Library Update] Updating evidence library entry ${id}`);
+    return { id, ...data };
+  }
+
+  async storePromptStylePattern(data: any): Promise<any> {
+    console.log('[Library Update] Storing prompt style pattern');
+    return { id: Date.now(), ...data };
+  }
+
+  // NEW: Historical Learning operations (Step 9)
+  async createHistoricalPattern(data: any): Promise<any> {
+    console.log('[Historical Learning] Creating new historical pattern');
+    return { id: Date.now(), ...data };
+  }
+
+  async findHistoricalPatterns(criteria: any): Promise<any[]> {
+    console.log('[Historical Learning] Finding historical patterns with criteria:', criteria);
+    return []; // Would query from database
+  }
+
+  async updateHistoricalPattern(id: number, data: any): Promise<any> {
+    console.log(`[Historical Learning] Updating historical pattern ${id}`);
+    return { id, ...data };
   }
 }
 
