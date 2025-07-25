@@ -211,9 +211,54 @@ export default function EvidenceCollection() {
     cat.files.length > 0 || (cat.isUnavailable && cat.unavailableReason?.trim())
   );
 
+  // POST-EVIDENCE ANALYSIS MUTATION (Per Universal RCA Final Instructions)
+  const postEvidenceAnalysisMutation = useMutation({
+    mutationFn: async (incidentId: number) => {
+      console.log(`[POST-EVIDENCE] Triggering post-evidence analysis for incident ${incidentId}`);
+      
+      // Gather evidence status from current categories
+      const evidenceStatus = evidenceCategories.map(cat => ({
+        categoryId: cat.id,
+        categoryName: cat.name,
+        filesUploaded: cat.files.length,
+        isUnavailable: cat.isUnavailable || false,
+        unavailableReason: cat.unavailableReason || '',
+        required: cat.required
+      }));
+      
+      const response = await fetch(`/api/incidents/${incidentId}/post-evidence-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evidenceStatus })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`POST-EVIDENCE analysis failed: ${errorData}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      console.log('[POST-EVIDENCE] Analysis completed:', data);
+      // Navigate to AI analysis page after successful backend processing
+      if (incidentId) {
+        setLocation(`/incidents/${incidentId}/analysis`);
+      }
+    },
+    onError: (error) => {
+      console.error('[POST-EVIDENCE] Analysis failed:', error);
+      // Show error but still allow navigation for debugging
+      if (incidentId) {
+        setLocation(`/incidents/${incidentId}/analysis`);
+      }
+    }
+  });
+
   const handleProceedToAnalysis = () => {
     if (incidentId) {
-      setLocation(`/incidents/${incidentId}/analysis`);
+      console.log('[EVIDENCE COLLECTION] Proceeding to POST-EVIDENCE analysis flow');
+      postEvidenceAnalysisMutation.mutate(parseInt(incidentId));
     }
   };
 
@@ -394,11 +439,20 @@ export default function EvidenceCollection() {
           </Button>
           <Button 
             onClick={handleProceedToAnalysis}
-            disabled={!canProceed}
+            disabled={!canProceed || postEvidenceAnalysisMutation.isPending}
             className="flex items-center gap-2"
           >
-            Proceed to AI Analysis
-            <ChevronRight className="h-4 w-4" />
+            {postEvidenceAnalysisMutation.isPending ? (
+              <>
+                <Brain className="h-4 w-4 animate-spin" />
+                Processing Evidence...
+              </>
+            ) : (
+              <>
+                Proceed to AI Analysis
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
           </Button>
         </div>
 
