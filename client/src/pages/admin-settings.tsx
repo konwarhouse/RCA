@@ -526,6 +526,9 @@ export default function AdminSettings() {
         </CardContent>
       </Card>
 
+      {/* AI STATUS INDICATOR - SHOWS EXACTLY WHERE AI KEYS COME FROM */}
+      <AIStatusIndicator />
+
       {/* Add New AI Provider */}
       <Card>
         <CardHeader>
