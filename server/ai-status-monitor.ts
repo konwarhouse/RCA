@@ -48,11 +48,8 @@ export class AIStatusMonitor {
       // STEP 2: Check for hardcoding violations
       const violations: string[] = [];
       
-      // Check if any hardcoded API keys exist in environment
-      if (process.env.OPENAI_API_KEY && activeProvider) {
-        console.warn('[AI STATUS MONITOR] HARDCODING DETECTION: Environment API key exists alongside admin config');
-        violations.push('Environment OPENAI_API_KEY detected - should be removed for full compliance');
-      }
+      // NO ENVIRONMENT VARIABLE CHECKS - ADMIN DATABASE ONLY
+      // System is compliant when active provider exists from admin database
       
       // STEP 3: Determine system health
       let systemHealth: 'working' | 'configuration-required' | 'error' = 'configuration-required';

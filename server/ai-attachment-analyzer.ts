@@ -13,7 +13,7 @@ export class AIAttachmentAnalyzer {
   
   constructor() {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY 
+      apiKey: await DynamicAIConfig.getActiveAPIKey() 
     });
   }
 

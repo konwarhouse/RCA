@@ -13,7 +13,15 @@ import OpenAI from 'openai';
 import * as mimeTypes from 'mime-types';
 import { investigationStorage } from './storage';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Dynamic AI configuration - NO HARDCODING
+const getOpenAIClient = async () => {
+  const { DynamicAIConfig } = await import('./dynamic-ai-config');
+  const activeProvider = await DynamicAIConfig.getActiveAIProvider();
+  if (!activeProvider) {
+    throw new Error('AI provider not configured. Contact admin to set up AI provider.');
+  }
+  return await DynamicAIConfig.createAIClient(activeProvider);
+};
 
 export interface EvidenceValidationResult {
   isValid: boolean;
