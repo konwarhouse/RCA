@@ -21,6 +21,7 @@ import { IncidentOnlyRCAEngine } from "./incident-only-rca-engine";
 import { UniversalRCAEngine } from "./universal-rca-engine";
 import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
 import { UniversalRCAFallbackEngine } from "./universal-rca-fallback-engine";
+import { UniversalAIEvidenceAnalyzer } from "./universal-ai-evidence-analyzer";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -1046,19 +1047,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // UPLOAD EVIDENCE FILES (ZERO HARDCODING)
+  // UPLOAD EVIDENCE FILES WITH AI ANALYSIS (UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC)
   app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
-      const { categoryId, description } = req.body;
+      const { categoryId, description, evidenceCategory } = req.body;
       const file = req.file;
       
       if (!file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      console.log(`[EVIDENCE UPLOAD] Processing file upload for incident ${incidentId}, category ${categoryId}`);
-      console.log(`[EVIDENCE UPLOAD] File: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
+      console.log(`[AI EVIDENCE UPLOAD] Processing file upload for incident ${incidentId}, category ${categoryId}`);
+      console.log(`[AI EVIDENCE UPLOAD] File: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
       
       // Get incident to access current evidence data
       const incident = await investigationStorage.getIncident(incidentId);
@@ -1066,7 +1067,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Create file record - ZERO HARDCODING approach
+      // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
+      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      
+      // Create evidence configuration from incident context (SCHEMA-DRIVEN)
+      const evidenceConfig = {
+        equipmentGroup: incident.equipmentGroup || 'Unknown',
+        equipmentType: incident.equipmentType || 'Unknown', 
+        equipmentSubtype: incident.equipmentSubtype || 'Unknown',
+        evidenceCategory: evidenceCategory || 'General Evidence',
+        expectedFileTypes: ['csv', 'txt', 'xlsx', 'pdf', 'jpg', 'png'],
+        aiPrompt: description || 'Upload evidence file for analysis',
+        required: true
+      };
+      
+      // STEP 4 – EVIDENCE FILE HANDLING & AI ANALYSIS (Per Universal RCA Instruction)
+      console.log(`[AI EVIDENCE ANALYSIS] Starting AI analysis for ${file.originalname}`);
+      const aiAnalysisResult = await evidenceAnalyzer.analyzeEvidenceFile(
+        file.buffer,
+        file.originalname,
+        evidenceConfig
+      );
+      
+      // Create comprehensive file record with AI analysis (NO HARDCODING)
       const fileRecord = {
         id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: file.originalname,
@@ -1075,30 +1098,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: categoryId,
         description: description || '',
         uploadedAt: new Date().toISOString(),
-        content: file.buffer.toString('base64'), // Store file content as base64
-        status: 'uploaded'
+        content: file.buffer.toString('base64'),
+        // AI Analysis Results (Per Universal RCA Instruction)
+        diagnosticValue: aiAnalysisResult.diagnosticValue,
+        parsedResultSummary: aiAnalysisResult.parsedResultSummary,
+        evidenceConfidenceImpact: aiAnalysisResult.evidenceConfidenceImpact,
+        aiRemarks: aiAnalysisResult.aiRemarks,
+        status: aiAnalysisResult.status,
+        detectedColumns: aiAnalysisResult.detectedColumns,
+        extractedFeatures: aiAnalysisResult.extractedFeatures,
+        aiAnalysisDetails: aiAnalysisResult.aiAnalysisDetails,
+        requiresUserClarification: aiAnalysisResult.requiresUserClarification,
+        clarificationPrompt: aiAnalysisResult.clarificationPrompt
       };
       
-      // Update incident with new evidence file
-      // Get current evidence files or initialize empty array
-      const currentFiles = Array.isArray(incident.evidenceResponses) ? incident.evidenceResponses : [];
+      console.log(`[AI EVIDENCE ANALYSIS] Analysis complete: ${aiAnalysisResult.diagnosticValue} diagnostic value, ${aiAnalysisResult.evidenceConfidenceImpact}% confidence impact`);
+      
+      // Update incident with analyzed evidence file
+      const currentFiles = incident.evidenceResponses || [];
       const updatedFiles = [...currentFiles, fileRecord];
       
       await investigationStorage.updateIncident(incidentId, {
         evidenceResponses: updatedFiles
       });
       
-      console.log(`[EVIDENCE UPLOAD] Successfully uploaded file ${file.originalname} for incident ${incidentId}`);
+      console.log(`[AI EVIDENCE UPLOAD] Successfully uploaded and analyzed file ${file.originalname} for incident ${incidentId}`);
       
-      res.json({ 
+      // Return comprehensive response with AI analysis (Per Universal RCA Instruction)
+      res.json({
         success: true,
-        file: fileRecord,
-        message: `File ${file.originalname} uploaded successfully`
+        file: {
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          categoryId
+        },
+        aiAnalysis: {
+          diagnosticValue: aiAnalysisResult.diagnosticValue,
+          parsedResultSummary: aiAnalysisResult.parsedResultSummary,
+          evidenceConfidenceImpact: aiAnalysisResult.evidenceConfidenceImpact,
+          aiRemarks: aiAnalysisResult.aiRemarks,
+          status: aiAnalysisResult.status,
+          requiresUserClarification: aiAnalysisResult.requiresUserClarification,
+          clarificationPrompt: aiAnalysisResult.clarificationPrompt
+        },
+        message: `File analyzed: ${aiAnalysisResult.diagnosticValue} diagnostic value, ${aiAnalysisResult.evidenceConfidenceImpact}% confidence impact`
       });
       
     } catch (error) {
-      console.error('[EVIDENCE UPLOAD] Upload failed:', error);
-      res.status(500).json({ message: "Failed to upload evidence file" });
+      console.error('[AI EVIDENCE UPLOAD] File upload and analysis failed:', error);
+      res.status(500).json({ message: "File upload and AI analysis failed" });
+    }
+  });
+
+  // STEP 3 – EVIDENCE CHECKLIST GENERATION (Per Universal RCA AI Evidence Analysis Instruction)
+  app.post("/api/incidents/:id/generate-evidence-checklist-ai", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(incidentId);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      console.log(`[AI EVIDENCE CHECKLIST] Generating evidence checklist for incident ${incidentId}`);
+      
+      // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
+      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      
+      // STEP 3 – Generate evidence checklist per schema (Per Universal RCA Instruction)
+      const evidenceChecklist = await evidenceAnalyzer.generateEvidenceChecklist(
+        incident.equipmentGroup || 'Unknown',
+        incident.equipmentType || 'Unknown',
+        incident.equipmentSubtype || 'Unknown'
+      );
+      
+      console.log(`[AI EVIDENCE CHECKLIST] Generated ${evidenceChecklist.length} evidence categories`);
+      
+      res.json({
+        success: true,
+        evidenceChecklist,
+        message: `Generated ${evidenceChecklist.length} evidence categories for ${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype}`
+      });
+      
+    } catch (error) {
+      console.error('[AI EVIDENCE CHECKLIST] Generation failed:', error);
+      res.status(500).json({ message: "Evidence checklist generation failed" });
+    }
+  });
+
+  // PARSE EVIDENCE FILES WITH AI (Universal RCA AI Evidence Analysis Endpoint)
+  app.post("/api/incidents/:id/parse-evidence", upload.single('file'), async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { evidenceType } = req.body;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded for parsing" });
+      }
+      
+      console.log(`[AI EVIDENCE PARSING] Parsing evidence file for incident ${incidentId}, type: ${evidenceType}`);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
+      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      
+      // Create evidence configuration (SCHEMA-DRIVEN)
+      const evidenceConfig = {
+        equipmentGroup: incident.equipmentGroup || 'Unknown',
+        equipmentType: incident.equipmentType || 'Unknown',
+        equipmentSubtype: incident.equipmentSubtype || 'Unknown',
+        evidenceCategory: evidenceType,
+        expectedFileTypes: ['csv', 'txt', 'xlsx', 'pdf', 'jpg', 'png'],
+        aiPrompt: `Upload ${evidenceType} for analysis`,
+        required: true
+      };
+      
+      // Parse evidence file with AI (Per Universal RCA Instruction)
+      const parseResult = await evidenceAnalyzer.analyzeEvidenceFile(
+        file.buffer,
+        file.originalname,
+        evidenceConfig
+      );
+      
+      console.log(`[AI EVIDENCE PARSING] Parse complete: ${parseResult.status}, ${parseResult.diagnosticValue} diagnostic value`);
+      
+      res.json({
+        success: true,
+        fileName: file.originalname,
+        evidenceParseResult: {
+          status: parseResult.status.toLowerCase(),
+          confidence: parseResult.evidenceConfidenceImpact,
+          adequacyReason: parseResult.parsedResultSummary,
+          aiRemarks: parseResult.aiRemarks,
+          diagnosticValue: parseResult.diagnosticValue,
+          detectedColumns: parseResult.detectedColumns,
+          extractedFeatures: parseResult.extractedFeatures,
+          requiresUserClarification: parseResult.requiresUserClarification,
+          clarificationPrompt: parseResult.clarificationPrompt
+        }
+      });
+      
+    } catch (error) {
+      console.error('[AI EVIDENCE PARSING] Parsing failed:', error);
+      res.status(500).json({ message: "Evidence parsing failed" });
     }
   });
 
