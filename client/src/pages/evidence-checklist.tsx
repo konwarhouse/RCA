@@ -14,6 +14,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 // EvidenceItemCard is defined locally in this file
 import { UniversalRCAHypothesisReview } from '@/components/universal-rca-hypothesis-review';
+import { HumanConfirmationFlow } from '@/components/human-confirmation-flow';
 import { useToast } from '@/hooks/use-toast';
 
 interface EvidenceItem {
@@ -64,6 +65,13 @@ export default function EvidenceChecklist() {
   const [customFailureModes, setCustomFailureModes] = useState<string[]>([]);
   const [newCustomMode, setNewCustomMode] = useState('');
   const [showUniversalRCAReview, setShowUniversalRCAReview] = useState(false);
+  
+  // UNIVERSAL RCA INSTRUCTION WORKFLOW STAGES
+  const [workflowStage, setWorkflowStage] = useState<'initial' | 'ai-generating' | 'human-confirmation' | 'evidence-collection'>('initial');
+  const [aiHypotheses, setAiHypotheses] = useState<any[]>([]);
+  const [confirmedHypotheses, setConfirmedHypotheses] = useState<any[]>([]);
+  const [customHypotheses, setCustomHypotheses] = useState<string[]>([]);
+  
   const { toast } = useToast();
 
   // Extract incident ID from URL parameters
@@ -81,30 +89,104 @@ export default function EvidenceChecklist() {
     enabled: !!incidentId,
   });
 
-  // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Incident-Only Evidence Generation
-  const generateChecklistMutation = useMutation({
+  // UNIVERSAL RCA INSTRUCTION STEP 2: Generate AI Hypotheses for Human Confirmation
+  const generateAIHypothesesMutation = useMutation({
     mutationFn: async (incidentData: Incident) => {
-      console.log(`[INCIDENT-ONLY EVIDENCE] Requesting incident-only analysis for: "${incidentData.symptomDescription || ''}"`);
-      console.log(`[INCIDENT-ONLY EVIDENCE] NO equipment-type logic - pure incident symptom analysis`);
+      console.log(`[UNIVERSAL RCA INSTRUCTION] STEP 2: Generating AI hypotheses for human confirmation`);
+      console.log(`[AI HYPOTHESIS GENERATOR] Incident: "${incidentData.symptomDescription || incidentData.title}"`);
       
-      // BACKWARD COMPATIBILITY: Check if this is a legacy incident
-      const isLegacyIncident = !incidentData.symptomDescription || 
-                              incidentData.symptomDescription.trim().length < 20 ||
-                              incidentData.workflowStatus === 'equipment_selected';
-      
-      const endpoint = isLegacyIncident 
-        ? `/api/incidents/${incidentData.id}/generate-evidence-checklist-legacy`
-        : `/api/incidents/${incidentData.id}/generate-evidence-checklist`;
-      
-      console.log(`[BACKWARD COMPATIBILITY] Using ${isLegacyIncident ? 'LEGACY' : 'UNIVERSAL RCA'} endpoint for incident ${incidentData.id}`);
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch(`/api/incidents/${incidentData.id}/generate-ai-hypotheses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to generate incident-only checklist: ${response.status}`);
+        throw new Error(`Failed to generate AI hypotheses: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      console.log(`[AI HYPOTHESIS GENERATOR] Generated ${data.aiHypotheses?.length || 0} hypotheses for human confirmation`);
+      setAiHypotheses(data.aiHypotheses || []);
+      setWorkflowStage('human-confirmation');
+      toast({
+        title: "AI Analysis Complete",
+        description: `Generated ${data.aiHypotheses?.length || 0} potential causes for your review`
+      });
+    },
+    onError: (error) => {
+      console.error('[AI HYPOTHESIS GENERATOR] Error:', error);
+      toast({
+        title: "AI Analysis Failed",
+        description: "Failed to generate AI hypotheses. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // UNIVERSAL RCA INSTRUCTION STEP 5: Generate Evidence Checklist After Human Confirmation
+  const generateEvidenceChecklistMutation = useMutation({
+    mutationFn: async ({ confirmedHypotheses, customHypotheses }: { 
+      confirmedHypotheses: any[], 
+      customHypotheses: string[] 
+    }) => {
+      console.log(`[UNIVERSAL RCA INSTRUCTION] STEP 5: Generating evidence checklist from confirmed hypotheses`);
+      
+      const response = await fetch(`/api/incidents/${incidentId}/generate-evidence-checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmedHypotheses, customHypotheses })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate evidence checklist: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      console.log(`[EVIDENCE COLLECTION] Generated ${data.evidenceItems?.length || 0} evidence items from confirmed hypotheses`);
+      setEvidenceItems(data.evidenceItems || []);
+      setWorkflowStage('evidence-collection');
+      toast({
+        title: "Evidence Collection Ready",
+        description: `Generated ${data.evidenceItems?.length || 0} evidence requirements based on your confirmed hypotheses`
+      });
+    },
+    onError: (error) => {
+      console.error('[EVIDENCE COLLECTION] Error:', error);
+      toast({
+        title: "Evidence Generation Failed",
+        description: "Failed to generate evidence checklist. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // UNIVERSAL RCA INSTRUCTION: Human Confirmation Completion Handler
+  const handleHumanConfirmationComplete = (confirmedHypotheses: any[], customHypotheses: string[]) => {
+    console.log(`[HUMAN CONFIRMATION FLOW] Human confirmation completed`);
+    console.log(`[HUMAN CONFIRMATION FLOW] Confirmed: ${confirmedHypotheses.length}, Custom: ${customHypotheses.length}`);
+    
+    setConfirmedHypotheses(confirmedHypotheses);
+    setCustomHypotheses(customHypotheses);
+    setWorkflowStage('ai-generating');
+    
+    // Proceed to Step 5: Evidence Collection
+    generateEvidenceChecklistMutation.mutate({ confirmedHypotheses, customHypotheses });
+  };
+
+  // Legacy mutation for backward compatibility
+  const legacyGenerateChecklistMutation = useMutation({
+    mutationFn: async (incidentData: Incident) => {
+      const response = await fetch(`/api/incidents/${incidentData.id}/generate-evidence-checklist-legacy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate legacy checklist: ${response.status}`);
       }
       
       return await response.json();
@@ -193,13 +275,28 @@ export default function EvidenceChecklist() {
     },
   });
 
-  // Generate evidence checklist when incident loads
+  // UNIVERSAL RCA INSTRUCTION: Initialize workflow when incident loads
   useEffect(() => {
-    if (incident && Array.isArray(evidenceItems) && evidenceItems.length === 0) {
-      setIsGenerating(true);
-      generateChecklistMutation.mutate(incident as Incident);
+    if (incident && workflowStage === 'initial') {
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Starting Universal RCA workflow for incident ${incident.id}`);
+      
+      // Check if this is a legacy incident for backward compatibility
+      const isLegacyIncident = !incident.symptomDescription || 
+                              incident.symptomDescription.trim().length < 20 ||
+                              incident.workflowStatus === 'equipment_selected';
+      
+      if (isLegacyIncident) {
+        console.log(`[BACKWARD COMPATIBILITY] Using legacy workflow for incident ${incident.id}`);
+        setIsGenerating(true);
+        legacyGenerateChecklistMutation.mutate(incident as Incident);
+      } else {
+        // Start Universal RCA Instruction workflow
+        console.log(`[UNIVERSAL RCA INSTRUCTION] STEP 2: Starting AI hypothesis generation`);
+        setWorkflowStage('ai-generating');
+        generateAIHypothesesMutation.mutate(incident as Incident);
+      }
     }
-  }, [incident]);
+  }, [incident, workflowStage]);
 
   // Calculate completion percentage - include unavailable evidence with reasons
   useEffect(() => {
@@ -354,7 +451,61 @@ export default function EvidenceChecklist() {
           </CardHeader>
         </Card>
 
-        {/* Universal RCA Hypothesis Review Interface */}
+        {/* UNIVERSAL RCA INSTRUCTION WORKFLOW STAGES */}
+        
+        {/* STEP 2: AI Hypothesis Generation */}
+        {workflowStage === 'ai-generating' && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 animate-spin" />
+                Step 2: AI Hypothesis Generation
+              </CardTitle>
+              <CardDescription>
+                AI is analyzing the incident and generating potential causes using GPT...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Generating AI-driven POTENTIAL causes</p>
+                  <p className="text-sm text-muted-foreground mt-1">STRICT RULE: NO HARD CODING</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* STEP 4: Human Confirmation Flow */}
+        {workflowStage === 'human-confirmation' && aiHypotheses.length > 0 && (
+          <div className="mb-8">
+            <HumanConfirmationFlow
+              incidentId={incidentId!}
+              aiHypotheses={aiHypotheses}
+              onConfirmationComplete={handleHumanConfirmationComplete}
+            />
+          </div>
+        )}
+
+        {/* STEP 5: Evidence Collection (Only after human confirmation) */}
+        {workflowStage === 'evidence-collection' && evidenceItems.length > 0 && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Step 5: Evidence Collection Interface
+                </CardTitle>
+                <CardDescription>
+                  Collect evidence for confirmed hypotheses based on human verification
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
+
+        {/* Legacy Universal RCA Hypothesis Review Interface */}
         {showUniversalRCAReview && aiAnalysis?.aiHypotheses && (
           <UniversalRCAHypothesisReview
             incidentId={incidentId!}

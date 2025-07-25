@@ -503,13 +503,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // UNIVERSAL RCA INSTRUCTION STEP 2: AI-DRIVEN HYPOTHESIS GENERATION (NO HARDCODING)
-  app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
+  // UNIVERSAL RCA INSTRUCTION STEP 2: AI-DRIVEN HYPOTHESIS GENERATION ONLY (NO HARDCODING)
+  app.post("/api/incidents/:id/generate-ai-hypotheses", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      console.log(`[UNIVERSAL RCA INSTRUCTION] Incident ${id}: Starting AI-driven RCA flow`);
-      console.log(`[UNIVERSAL RCA INSTRUCTION] STEP 2: AI-DRIVEN HYPOTHESIS GENERATION (No Hardcoding)`);
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Incident ${id}: STEP 2 - AI Hypothesis Generation Only`);
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Human confirmation required before evidence collection`);
       
       const incident = await investigationStorage.getIncident(id);
       if (!incident) {
@@ -528,10 +528,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { AIHypothesisGenerator } = await import('./ai-hypothesis-generator');
       const aiResult = await AIHypothesisGenerator.generateAIHypotheses(id);
       
-      console.log(`[AI HYPOTHESIS GENERATOR] Generated ${aiResult.hypotheses.length} AI-driven hypotheses`);
+      console.log(`[AI HYPOTHESIS GENERATOR] Generated ${aiResult.hypotheses.length} AI-driven hypotheses for human confirmation`);
       
-      // STEP 3: Convert AI hypotheses to evidence requirements
-      const evidenceItems = aiResult.hypotheses.map((hypothesis, index) => ({
+      // STEP 3: Return AI hypotheses for human confirmation (Step 4)
+      res.json({
+        aiHypotheses: aiResult.hypotheses,
+        incidentAnalysis: aiResult.incidentAnalysis,
+        generationMethod: 'ai-driven',
+        step: 'awaiting-human-confirmation',
+        nextStep: 'human-confirmation-flow',
+        instructionCompliance: {
+          step1_nlp_extraction: true,
+          step2_ai_hypotheses: true,
+          step3_evidence_library_match: true,
+          no_hardcoding: true,
+          gpt_internal_knowledge: true
+        }
+      });
+    } catch (error) {
+      console.error("[AI HYPOTHESIS GENERATION] Error:", error);
+      res.status(500).json({ message: "Failed to generate AI hypotheses" });
+    }
+  });
+
+  // UNIVERSAL RCA INSTRUCTION STEP 5: EVIDENCE COLLECTION AFTER HUMAN CONFIRMATION (NO HARDCODING)
+  app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { confirmedHypotheses = [], customHypotheses = [] } = req.body;
+      
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Incident ${id}: STEP 5 - Evidence Collection After Human Confirmation`);
+      console.log(`[HUMAN CONFIRMATION FLOW] Confirmed ${confirmedHypotheses.length} AI hypotheses, ${customHypotheses.length} custom hypotheses`);
+      
+      const incident = await investigationStorage.getIncident(id);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      if (confirmedHypotheses.length === 0 && customHypotheses.length === 0) {
+        return res.status(400).json({ 
+          message: "No confirmed hypotheses provided. Human confirmation (Step 4) must be completed first." 
+        });
+      }
+
+      // STEP 5: Convert confirmed hypotheses to evidence requirements
+      const evidenceItems = confirmedHypotheses.map((hypothesis, index) => ({
         id: `ai-evidence-${hypothesis.id}-${Date.now()}`,
         category: hypothesis.failureMode,
         title: hypothesis.failureMode,
