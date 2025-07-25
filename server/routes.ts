@@ -1301,6 +1301,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if can proceed to RCA (all files must be reviewed and accepted)
+  app.get("/api/incidents/:id/can-proceed-to-rca", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const evidenceFiles = incident.evidenceFiles || [];
+      
+      if (evidenceFiles.length === 0) {
+        return res.json({
+          canProceed: false,
+          reason: "No evidence files uploaded yet"
+        });
+      }
+
+      const unreviewed = evidenceFiles.filter((f: any) => !f.reviewStatus || f.reviewStatus === 'UNREVIEWED');
+      const accepted = evidenceFiles.filter((f: any) => f.reviewStatus === 'ACCEPTED');
+      
+      if (unreviewed.length > 0) {
+        return res.json({
+          canProceed: false,
+          reason: `${unreviewed.length} files still need human review`
+        });
+      }
+
+      if (accepted.length === 0) {
+        return res.json({
+          canProceed: false,
+          reason: "No evidence files have been accepted for RCA analysis"
+        });
+      }
+
+      res.json({
+        canProceed: true,
+        reason: `All ${evidenceFiles.length} files have been reviewed, ${accepted.length} accepted for RCA`,
+        acceptedFiles: accepted.length,
+        totalFiles: evidenceFiles.length
+      });
+    } catch (error) {
+      console.error('[CAN PROCEED CHECK] Failed:', error);
+      res.status(500).json({ message: "Failed to check proceed status" });
+    }
+  });
+
+  // HUMAN REVIEW ACTION ENDPOINTS (Per RCA_Stage_4B_Human_Review Instruction)
+  // Accept file as valid for RCA
+  app.post("/api/incidents/:id/human-review/accept", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { fileId, comments } = req.body;
+      
+      console.log(`[HUMAN REVIEW] Accepting file ${fileId} for incident ${incidentId}`);
+      
+      // Update file review status in database
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      // Update evidence file status
+      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            reviewStatus: 'ACCEPTED',
+            reviewComments: comments,
+            reviewedAt: new Date().toISOString()
+          };
+        }
+        return file;
+      });
+
+      await investigationStorage.updateIncident(incidentId, {
+        evidenceFiles: updatedFiles
+      });
+
+      res.json({
+        success: true,
+        message: "File accepted successfully",
+        fileId,
+        reviewStatus: 'ACCEPTED'
+      });
+    } catch (error) {
+      console.error('[HUMAN REVIEW] Accept file failed:', error);
+      res.status(500).json({ message: "Failed to accept file" });
+    }
+  });
+
+  // Request more information for file
+  app.post("/api/incidents/:id/human-review/need-more-info", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { fileId, comments } = req.body;
+      
+      console.log(`[HUMAN REVIEW] Requesting more info for file ${fileId} for incident ${incidentId}`);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            reviewStatus: 'NEEDS_MORE_INFO',
+            reviewComments: comments,
+            reviewedAt: new Date().toISOString()
+          };
+        }
+        return file;
+      });
+
+      await investigationStorage.updateIncident(incidentId, {
+        evidenceFiles: updatedFiles
+      });
+
+      res.json({
+        success: true,
+        message: "More information requested",
+        fileId,
+        reviewStatus: 'NEEDS_MORE_INFO'
+      });
+    } catch (error) {
+      console.error('[HUMAN REVIEW] Request more info failed:', error);
+      res.status(500).json({ message: "Failed to request more info" });
+    }
+  });
+
+  // Mark file for replacement
+  app.post("/api/incidents/:id/human-review/replace", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { fileId, comments } = req.body;
+      
+      console.log(`[HUMAN REVIEW] Marking file ${fileId} for replacement for incident ${incidentId}`);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            reviewStatus: 'REPLACED',
+            reviewComments: comments,
+            reviewedAt: new Date().toISOString()
+          };
+        }
+        return file;
+      });
+
+      await investigationStorage.updateIncident(incidentId, {
+        evidenceFiles: updatedFiles
+      });
+
+      res.json({
+        success: true,
+        message: "File marked for replacement",
+        fileId,
+        reviewStatus: 'REPLACED'
+      });
+    } catch (error) {
+      console.error('[HUMAN REVIEW] Mark for replacement failed:', error);
+      res.status(500).json({ message: "Failed to mark file for replacement" });
+    }
+  });
+
   // STEP 4B: MANDATORY HUMAN REVIEW PANEL (Per RCA_Stage_4B_Human_Review Instruction)
   // Same universal analysis as Step 3B - no distinction in backend logic
   app.post("/api/incidents/:id/step-4b-human-review", async (req, res) => {

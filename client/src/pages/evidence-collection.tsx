@@ -211,54 +211,41 @@ export default function EvidenceCollection() {
     cat.files.length > 0 || (cat.isUnavailable && cat.unavailableReason?.trim())
   );
 
-  // POST-EVIDENCE ANALYSIS MUTATION (Per Universal RCA Final Instructions)
-  const postEvidenceAnalysisMutation = useMutation({
+  // STAGE 3B: MANDATORY HUMAN REVIEW PANEL (Per RCA_Stage_4B_Human_Review Instruction)
+  // NO MORE DIRECT POST-EVIDENCE ANALYSIS - MUST GO THROUGH HUMAN REVIEW FIRST
+  const humanReviewMutation = useMutation({
     mutationFn: async (incidentId: number) => {
-      console.log(`[POST-EVIDENCE] Triggering post-evidence analysis for incident ${incidentId}`);
+      console.log(`[STAGE 3B] Triggering mandatory human review for incident ${incidentId}`);
       
-      // Gather evidence status from current categories
-      const evidenceStatus = evidenceCategories.map(cat => ({
-        categoryId: cat.id,
-        categoryName: cat.name,
-        filesUploaded: cat.files.length,
-        isUnavailable: cat.isUnavailable || false,
-        unavailableReason: cat.unavailableReason || '',
-        required: cat.required
-      }));
-      
-      const response = await fetch(`/api/incidents/${incidentId}/post-evidence-analysis`, {
+      const response = await fetch(`/api/incidents/${incidentId}/step-3b-human-review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evidenceStatus })
+        body: JSON.stringify({})
       });
       
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(`POST-EVIDENCE analysis failed: ${errorData}`);
+        throw new Error(`Stage 3B human review failed: ${errorData}`);
       }
       
       return await response.json();
     },
     onSuccess: (data) => {
-      console.log('[POST-EVIDENCE] Analysis completed:', data);
-      // Navigate to AI analysis page after successful backend processing
+      console.log('[STAGE 3B] Human review initiated:', data);
+      // Navigate to human review interface instead of RCA analysis
       if (incidentId) {
-        setLocation(`/incidents/${incidentId}/analysis`);
+        setLocation(`/incidents/${incidentId}/human-review`);
       }
     },
     onError: (error) => {
-      console.error('[POST-EVIDENCE] Analysis failed:', error);
-      // Show error but still allow navigation for debugging
-      if (incidentId) {
-        setLocation(`/incidents/${incidentId}/analysis`);
-      }
+      console.error('[STAGE 3B] Human review failed:', error);
     }
   });
 
-  const handleProceedToAnalysis = () => {
+  const handleProceedToHumanReview = () => {
     if (incidentId) {
-      console.log('[EVIDENCE COLLECTION] Proceeding to POST-EVIDENCE analysis flow');
-      postEvidenceAnalysisMutation.mutate(parseInt(incidentId));
+      console.log('[EVIDENCE COLLECTION] Proceeding to MANDATORY Stage 3B Human Review');
+      humanReviewMutation.mutate(parseInt(incidentId));
     }
   };
 
@@ -438,18 +425,18 @@ export default function EvidenceCollection() {
             ← Back to Evidence Checklist
           </Button>
           <Button 
-            onClick={handleProceedToAnalysis}
-            disabled={!canProceed || postEvidenceAnalysisMutation.isPending}
+            onClick={handleProceedToHumanReview}
+            disabled={!canProceed || humanReviewMutation.isPending}
             className="flex items-center gap-2"
           >
-            {postEvidenceAnalysisMutation.isPending ? (
+            {humanReviewMutation.isPending ? (
               <>
                 <Brain className="h-4 w-4 animate-spin" />
-                Processing Evidence...
+                Starting Human Review...
               </>
             ) : (
               <>
-                Proceed to AI Analysis
+                Proceed to Human Review (Stage 3B)
                 <ChevronRight className="h-4 w-4" />
               </>
             )}

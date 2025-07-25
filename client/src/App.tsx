@@ -17,6 +17,7 @@ import EquipmentSelection from "@/pages/equipment-selection";
 import EquipmentSelectionTest from "@/pages/equipment-selection-test";
 import EvidenceChecklist from "@/pages/evidence-checklist";
 import EvidenceCollection from "@/pages/evidence-collection";
+import HumanReview from "@/pages/human-review";
 import AIAnalysis from "@/pages/ai-analysis";
 import { FallbackAnalysisPage } from "@/pages/fallback-analysis";
 import EngineerReview from "@/pages/engineer-review";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/equipment-selection" component={EquipmentSelection} />
       <Route path="/evidence-checklist" component={EvidenceChecklist} />
       <Route path="/evidence-collection" component={EvidenceCollection} />
+      <Route path="/incidents/:id/human-review" component={HumanReview} />
       <Route path="/incidents/:id/analysis" component={AIAnalysis} />
       <Route path="/ai-analysis" component={AIAnalysis} />
       <Route path="/engineer-review" component={EngineerReview} />
