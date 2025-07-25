@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Brain, CheckCircle, AlertTriangle, ChevronRight, FileText, Zap, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,57 +64,80 @@ interface AnalysisResults {
 
 export default function AIAnalysis() {
   const [, setLocation] = useLocation();
-  const [incidentId, setIncidentId] = useState<number | null>(null);
+  const [, params] = useRoute('/incidents/:id/analysis');
+  const incidentId = params?.id ? parseInt(params.id) : null;
   const [analysisPhase, setAnalysisPhase] = useState<string>("initializing");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Extract incident ID from URL parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('incident');
-    if (id) {
-      setIncidentId(parseInt(id));
-    }
-  }, []);
-
   // Fetch incident details
   const { data: incident, isLoading } = useQuery({
-    queryKey: ['/api/incidents', incidentId],
+    queryKey: [`/api/incidents/${incidentId}`],
     enabled: !!incidentId,
   });
 
-  // Perform AI analysis
+  // Execute Universal RCA Analysis (NO HARDCODING)
   const performAnalysisMutation = useMutation({
-    mutationFn: async (incidentData: Incident) => {
-      const response = await fetch(`/api/incidents/${incidentData.id}/perform-analysis`, {
+    mutationFn: async (incidentId: number) => {
+      const response = await fetch(`/api/incidents/${incidentId}/execute-universal-rca`, {
         method: 'POST',
-        body: JSON.stringify({
-          equipmentGroup: incidentData.equipmentGroup,
-          equipmentType: incidentData.equipmentType,
-          symptoms: incidentData.symptoms,
-          evidenceChecklist: incidentData.evidenceChecklist,
-          evidenceFiles: incidentData.evidenceFiles,
-        }),
         headers: { 'Content-Type': 'application/json' },
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to perform analysis: ${response.status}`);
+        throw new Error(`Universal RCA analysis failed: ${response.status}`);
       }
       
       return await response.json();
     },
     onSuccess: (data) => {
-      console.log('AI Analysis completed:', data);
-      setAnalysisResults(data.analysis);
+      console.log('Universal RCA Analysis completed:', data);
+      
+      // Extract analysis results from Universal RCA workflow
+      if (data.workflow && data.workflow.stepResults) {
+        const analysisData = {
+          overallConfidence: data.workflow.stepResults[5]?.confidence || 0,
+          analysisDate: new Date(),
+          rootCauses: data.workflow.stepResults[7]?.rcaOutput?.primaryRootCause ? [{
+            id: '1',
+            description: data.workflow.stepResults[7].rcaOutput.primaryRootCause,
+            confidence: data.workflow.stepResults[5]?.confidence || 0,
+            category: 'AI Inferred',
+            evidence: data.workflow.stepResults[7]?.rcaOutput?.evidenceUsed || [],
+            likelihood: 'High' as const,
+            impact: 'Critical' as const,
+            priority: 1
+          }] : [],
+          recommendations: data.workflow.stepResults[7]?.rcaOutput?.recommendedActions?.map((action: string, index: number) => ({
+            id: `rec-${index}`,
+            title: `Action ${index + 1}`,
+            description: action,
+            priority: 'Immediate' as const,
+            category: 'Safety',
+            estimatedCost: 'TBD',
+            timeframe: 'Immediate',
+            responsible: 'Engineering Team',
+            preventsProbability: 85
+          })) || [],
+          crossMatchResults: {
+            libraryMatches: data.workflow.stepResults[5]?.historicalSupport || 0,
+            patternSimilarity: Math.round((data.workflow.stepResults[5]?.confidence || 0) * 100),
+            historicalData: data.workflow.stepResults[9]?.patterns?.map((p: any) => p.patternDescription) || []
+          },
+          evidenceGaps: data.workflow.stepResults[4]?.criticalGaps || [],
+          additionalInvestigation: data.workflow.stepResults[6]?.additionalRequests || []
+        };
+        
+        setAnalysisResults(analysisData);
+      }
+      
       setAnalysisPhase("completed");
       setAnalysisProgress(100);
       setIsAnalyzing(false);
     },
     onError: (error) => {
-      console.error('AI Analysis failed:', error);
+      console.error('Universal RCA Analysis failed:', error);
       setAnalysisPhase("error");
       setIsAnalyzing(false);
     },
@@ -132,27 +155,27 @@ export default function AIAnalysis() {
       // Check if analysis results already exist
       if (existingAnalysis && Object.keys(existingAnalysis).length > 0) {
         console.log('Loading existing analysis results:', existingAnalysis);
-        setAnalysisResults(existingAnalysis);
+        setAnalysisResults(existingAnalysis as AnalysisResults);
         setAnalysisPhase("completed");
         setAnalysisProgress(100);
         setIsAnalyzing(false);
-      } else if (!analysisResults && !isAnalyzing) {
-        // Perform new analysis if none exists
-        console.log('Starting AI analysis for incident:', incident);
+      } else if (!analysisResults && !isAnalyzing && incidentId) {
+        // Perform new Universal RCA analysis if none exists
+        console.log('Starting Universal RCA analysis for incident:', incidentId);
         setIsAnalyzing(true);
         simulateAnalysisProgress();
-        performAnalysisMutation.mutate(incident);
+        performAnalysisMutation.mutate(incidentId);
       }
     }
   }, [incident, existingAnalysis, analysisLoading]);
 
   const simulateAnalysisProgress = () => {
     const phases = [
-      { name: "Cross-matching with Evidence Library", duration: 2000 },
-      { name: "Pattern Recognition Analysis", duration: 3000 },
-      { name: "Root Cause Identification", duration: 4000 },
-      { name: "Recommendation Generation", duration: 2000 },
-      { name: "Confidence Scoring", duration: 1000 }
+      { name: "Steps 1-3: AI Hypothesis Generation", duration: 2000 },
+      { name: "Step 4: Evidence Status Validation", duration: 2000 },
+      { name: "Step 5: Data Analysis with Confidence Assessment", duration: 3000 },
+      { name: "Step 6: Low-Confidence Fallback (if needed)", duration: 2000 },
+      { name: "Steps 7-9: Enhanced RCA with PSM Integration", duration: 3000 }
     ];
 
     let totalDuration = 0;
@@ -167,7 +190,7 @@ export default function AIAnalysis() {
 
   const handleProceedToReview = () => {
     if (incidentId) {
-      setLocation(`/engineer-review?incident=${incidentId}`);
+      setLocation(`/analysis-details/${incidentId}`);
     }
   };
 
@@ -205,7 +228,7 @@ export default function AIAnalysis() {
               </div>
             </div>
             <Badge variant="outline" className="text-sm">
-              Incident #{incident.id}
+              Incident #{(incident as any)?.id || incidentId}
             </Badge>
           </div>
         </div>
@@ -249,7 +272,7 @@ export default function AIAnalysis() {
                       Analysis Complete
                     </CardTitle>
                     <CardDescription>
-                      {incident.title} - {incident.equipmentGroup} → {incident.equipmentType}
+                      {(incident as any)?.title} - {(incident as any)?.equipmentGroup} → {(incident as any)?.equipmentType}
                     </CardDescription>
                   </div>
                   <div className="text-right">

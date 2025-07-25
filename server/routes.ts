@@ -454,6 +454,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get incident analysis results
+  app.get("/api/incidents/:id/analysis", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(id);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      // Return existing analysis results if available
+      if (incident.aiAnalysis) {
+        res.json(incident.aiAnalysis);
+      } else {
+        // Return empty object if no analysis exists yet
+        res.json({});
+      }
+    } catch (error) {
+      console.error("[RCA] Error fetching incident analysis:", error);
+      res.status(500).json({ message: "Failed to fetch incident analysis" });
+    }
+  });
+
   // Update incident equipment/symptoms (Step 2) - UNIVERSAL RCA INTEGRATION
   app.put("/api/incidents/:id/equipment-symptoms", async (req, res) => {
     try {
