@@ -116,17 +116,20 @@ export default function IncidentReporting() {
   });
 
   // LEVEL 2: Fetch Equipment Types for Selected Group
-  const { data: equipmentTypes = [] } = useQuery({
+  const { data: equipmentTypes = [], isLoading: isLoadingTypes, error: typesError } = useQuery({
     queryKey: ['/api/cascading/equipment-types', selectedEquipmentGroup],
     queryFn: async () => {
       if (!selectedEquipmentGroup) return [];
+      console.log(`[Cascading Dropdown] Fetching equipment types for group: ${selectedEquipmentGroup}`);
       try {
         const response = await fetch(`/api/cascading/equipment-types/${encodeURIComponent(selectedEquipmentGroup)}`);
         if (!response.ok) {
           console.error('Equipment types API failed');
           return [];
         }
-        return response.json();
+        const data = await response.json();
+        console.log(`[Cascading Dropdown] Got ${data.length} equipment types:`, data);
+        return data;
       } catch (error) {
         console.error('Equipment types fetch error:', error);
         return [];
@@ -136,17 +139,20 @@ export default function IncidentReporting() {
   });
 
   // LEVEL 3: Fetch Equipment Subtypes for Selected Group and Type
-  const { data: equipmentSubtypes = [] } = useQuery({
+  const { data: equipmentSubtypes = [], isLoading: isLoadingSubtypes } = useQuery({
     queryKey: ['/api/cascading/equipment-subtypes', selectedEquipmentGroup, selectedEquipmentType],
     queryFn: async () => {
       if (!selectedEquipmentGroup || !selectedEquipmentType) return [];
+      console.log(`[Cascading Dropdown] Fetching subtypes for ${selectedEquipmentGroup}/${selectedEquipmentType}`);
       try {
         const response = await fetch(`/api/cascading/equipment-subtypes/${encodeURIComponent(selectedEquipmentGroup)}/${encodeURIComponent(selectedEquipmentType)}`);
         if (!response.ok) {
           console.error('Equipment subtypes API failed');
           return [];
         }
-        return response.json();
+        const data = await response.json();
+        console.log(`[Cascading Dropdown] Got ${data.length} subtypes:`, data);
+        return data;
       } catch (error) {
         console.error('Equipment subtypes fetch error:', error);
         return [];
@@ -406,8 +412,10 @@ export default function IncidentReporting() {
                               <SelectValue placeholder={
                                 !selectedEquipmentGroup 
                                   ? "Select equipment group first" 
-                                  : equipmentTypes.length === 0 
+                                  : isLoadingTypes 
                                   ? "Loading types..." 
+                                  : equipmentTypes.length === 0
+                                  ? "No types found"
                                   : "Select equipment type"
                               } />
                             </SelectTrigger>
@@ -442,8 +450,10 @@ export default function IncidentReporting() {
                               <SelectValue placeholder={
                                 !selectedEquipmentGroup || !selectedEquipmentType
                                   ? "Select equipment type first" 
-                                  : equipmentSubtypes.length === 0 
+                                  : isLoadingSubtypes
                                   ? "Loading subtypes..." 
+                                  : equipmentSubtypes.length === 0
+                                  ? "No subtypes found"
                                   : "Select equipment subtype"
                               } />
                             </SelectTrigger>
