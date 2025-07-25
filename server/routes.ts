@@ -1250,6 +1250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
+  // System checks adequacy of provided evidence against requirements (from Evidence Library/Schema, NOT hardcoded)
+  // AI/GPT summarizes what is present/missing using user-friendly language and suggests best next action
   app.post("/api/incidents/:id/evidence-adequacy-check", async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
@@ -1322,27 +1324,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .map((req: any) => req.evidenceType);
         
-        // Generate AI summary and user prompt (Per Universal RCA Instruction)
+        // STAGE 4: AI/GPT SUMMARIZES ADEQUACY (MANDATORY per Universal RCA Instruction)
         try {
           const { DynamicAIConfig } = await import("./dynamic-ai-config");
           
           const adequacyPrompt = `
-STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK
-Equipment: ${incident.equipmentGroup} → ${incident.equipmentType} → ${incident.equipmentSubtype}
-Required Evidence: ${requiredEvidence.map((e: any) => e.evidenceType).join(', ')}
-Uploaded Files: ${uploadedFiles.map(f => f.name).join(', ')}
-Adequacy Score: ${overallAdequacyScore}%
-Missing Evidence: ${evidenceGaps.join(', ')}
+STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Universal RCA Instruction)
+
+Equipment Context: ${incident.equipmentGroup} → ${incident.equipmentType} → ${incident.equipmentSubtype}
+Required Evidence Types: ${requiredEvidence.map((e: any) => e.evidenceType).join(', ')}
+Uploaded Files Analysis:
+${uploadedFiles.map(f => `- ${f.name}: ${f.universalAnalysis?.success ? 'SUCCESS' : 'FAILED'} (${f.universalAnalysis?.adequacyScore || 0}% adequacy)`).join('\n')}
+
+Overall Adequacy Score: ${overallAdequacyScore}%
+Evidence Gaps: ${evidenceGaps.join(', ')}
 
 Generate:
-1. Plain-language summary of what evidence is present/missing
-2. User-friendly prompt for next actions if inadequate
+1. Plain-language summary of what evidence is present/missing using user-friendly language
+2. Best next action suggestion if inadequate
 
-Format your response as JSON:
+Examples:
+- "Vibration data successfully analyzed (95% complete), but RPM trends missing. Upload process data for complete analysis."
+- "All critical evidence provided with high quality. Ready for root cause inference with 90% confidence."
+
+Format response as JSON:
 {
-  "summary": "Evidence summary here",
-  "userPrompt": "User prompt here"
-}`;
+  "summary": "User-friendly summary of evidence status",
+  "userPrompt": "Specific next action if needed"
+}
+
+Respond with valid JSON only.`;
 
           const aiResponse = await DynamicAIConfig.performAIAnalysis(
             incidentId.toString(),
@@ -1352,21 +1363,28 @@ Format your response as JSON:
           );
           
           try {
-            const aiResult = JSON.parse(aiResponse || '{}');
-            aiSummary = aiResult.summary || `Evidence adequacy: ${overallAdequacyScore}%`;
+            // Clean up AI response if it contains markdown formatting
+            let cleanResponse = aiResponse || '{}';
+            if (cleanResponse.includes('```json')) {
+              cleanResponse = cleanResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            }
+            
+            const aiResult = JSON.parse(cleanResponse);
+            aiSummary = aiResult.summary || `Evidence adequacy assessment: ${overallAdequacyScore}%`;
             userPrompt = aiResult.userPrompt || 
               (overallAdequacyScore < 100 
                 ? `Additional evidence required: ${evidenceGaps.join(', ')}. Please provide or mark as unavailable.`
-                : "All required evidence provided. Proceeding to root cause inference.");
+                : "All required evidence provided. Ready for root cause inference.");
           } catch (parseError) {
-            aiSummary = `Evidence adequacy: ${overallAdequacyScore}%`;
+            console.error('[STAGE 4] AI response parsing failed:', parseError);
+            aiSummary = `Evidence adequacy assessment: ${overallAdequacyScore}%`;
             userPrompt = overallAdequacyScore < 100 
               ? `Additional evidence needed: ${evidenceGaps.join(', ')}`
               : "All required evidence provided.";
           }
         } catch (aiError) {
           console.error('[STAGE 4] AI adequacy analysis failed:', aiError);
-          aiSummary = `Evidence adequacy: ${overallAdequacyScore}%`;
+          aiSummary = `Evidence adequacy assessment: ${overallAdequacyScore}%`;
           userPrompt = overallAdequacyScore < 100 
             ? `Additional evidence required: ${evidenceGaps.join(', ')}`
             : "All required evidence provided.";
@@ -1404,6 +1422,140 @@ Format your response as JSON:
       res.status(500).json({ 
         message: "Evidence adequacy check failed",
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // STAGE 5-6: AI ROOT CAUSE INFERENCE & RECOMMENDATIONS (Per Universal RCA Instruction)
+  app.post("/api/incidents/:id/ai-root-cause-inference", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const incident = await storage.getIncident(incidentId);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      console.log(`[STAGE 5-6] Starting AI root cause inference for incident ${incidentId}`);
+
+      // Get all uploaded evidence files and their analysis
+      const uploadedFiles = incident.evidenceFiles || [];
+      
+      // Collect all evidence analysis results
+      const evidenceSummaries = uploadedFiles
+        .filter(f => f.universalAnalysis?.success)
+        .map(f => ({
+          fileName: f.name,
+          analysisEngine: f.universalAnalysis.analysisEngine,
+          findings: f.universalAnalysis.parsedData,
+          adequacyScore: f.universalAnalysis.adequacyScore,
+          aiSummary: f.universalAnalysis.aiSummary
+        }));
+
+      // STAGE 5-6: AI ROOT CAUSE INFERENCE (MANDATORY per Universal RCA Instruction)
+      try {
+        const { DynamicAIConfig } = await import("./dynamic-ai-config");
+        
+        const rootCausePrompt = `
+STAGE 5-6: AI ROOT CAUSE INFERENCE & RECOMMENDATIONS (Universal RCA Instruction)
+
+Equipment Context: ${incident.equipmentGroup} → ${incident.equipmentType} → ${incident.equipmentSubtype}
+Incident Description: ${incident.description || incident.title}
+Symptom Details: ${incident.symptomDescription || 'Not provided'}
+
+Evidence Analysis Results:
+${evidenceSummaries.map(e => `
+File: ${e.fileName} (${e.analysisEngine} engine)
+Adequacy: ${e.adequacyScore}%
+Summary: ${e.aiSummary}
+Key Findings: ${JSON.stringify(e.findings, null, 2)}
+`).join('\n')}
+
+AI must perform:
+1. **Root cause inference** (based on patterns, rules, schema)
+2. **Confidence scoring** (if data is weak, state as much)  
+3. **Recommendation generation** (prioritized actions, flagged evidence gaps)
+4. **Human-like narrative explanations**
+
+Examples:
+- "Based on the uploaded vibration and thermal data, likely root cause is misalignment. Confidence is moderate due to missing process trends."
+- "Unable to confirm root cause due to insufficient evidence. Please provide temperature trends and maintenance logs."
+
+Format response as JSON:
+{
+  "rootCause": "Primary root cause identified",
+  "confidence": 0-100,
+  "contributingFactors": ["factor1", "factor2"],
+  "narrative": "Human-like explanation of analysis",
+  "recommendations": ["action1", "action2"],
+  "evidenceGaps": ["missing1", "missing2"],
+  "canProceedToReport": true/false
+}
+
+If evidence is lacking, AI must explicitly state this and request specific additional evidence.`;
+
+        const aiResponse = await DynamicAIConfig.performAIAnalysis(
+          incidentId.toString(),
+          rootCausePrompt,
+          'root-cause-inference',
+          'stage-5-6-analysis'
+        );
+        
+        // Parse AI response
+        let analysisResult;
+        try {
+          let cleanResponse = aiResponse || '{}';
+          if (cleanResponse.includes('```json')) {
+            cleanResponse = cleanResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+          }
+          
+          analysisResult = JSON.parse(cleanResponse);
+        } catch (parseError) {
+          console.error('[STAGE 5-6] AI response parsing failed:', parseError);
+          analysisResult = {
+            rootCause: "Analysis pending - AI response parsing failed",
+            confidence: 0,
+            contributingFactors: [],
+            narrative: "Unable to process AI analysis results. Please try again or contact support.",
+            recommendations: ["Retry analysis", "Check AI configuration"],
+            evidenceGaps: ["Valid AI response"],
+            canProceedToReport: false
+          };
+        }
+
+        // Update incident with root cause analysis
+        await storage.updateIncident(incidentId, {
+          rootCauseAnalysis: analysisResult,
+          workflowStatus: analysisResult.canProceedToReport ? 'analysis_complete' : 'evidence_review'
+        });
+
+        console.log(`[STAGE 5-6] Root cause inference completed - Confidence: ${analysisResult.confidence}%`);
+
+        res.json({
+          success: true,
+          stage: "5-6",
+          analysis: analysisResult,
+          evidenceCount: evidenceSummaries.length,
+          nextStep: analysisResult.canProceedToReport ? "Generate final report" : "Provide additional evidence"
+        });
+
+      } catch (aiError) {
+        console.error('[STAGE 5-6] AI inference failed:', aiError);
+        res.status(500).json({
+          success: false,
+          stage: "5-6",
+          error: "AI root cause inference failed",
+          message: "Unable to complete root cause analysis. Please check AI configuration."
+        });
+      }
+
+    } catch (error) {
+      console.error('[STAGE 5-6] Root cause inference failed:', error);
+      res.status(500).json({
+        success: false,
+        stage: "5-6", 
+        error: "Root cause inference failed",
+        message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });

@@ -459,7 +459,7 @@ Format response as JSON:
   }
   
   /**
-   * Generate plain-language summary (MANDATORY per instruction)
+   * STAGE 3c: Generate plain-language summary (MANDATORY per instruction)
    * E.g., "Vibration data detected with 1000 samples, mean RMS: 2.5 mm/s"
    */
   private static async generateAISummary(
@@ -474,18 +474,22 @@ Format response as JSON:
       const { DynamicAIConfig } = await import("./dynamic-ai-config");
       
       const summaryPrompt = `
-Generate a plain-language summary of evidence analysis results.
+STAGE 3c: EVIDENCE SUMMARY GENERATION (Universal RCA Instruction)
+
+Generate a plain-language summary following this exact format:
+"Evidence file 'filename' parsed. [Key findings]. [Data quality assessment]. [Confidence statement]. [Next steps if applicable]."
 
 File: ${fileName}
 Analysis Engine: ${analysisEngine}
-Equipment: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
-Parsed Data: ${JSON.stringify(parsedData, null, 2)}
+Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
+Parsed Results: ${JSON.stringify(parsedData, null, 2)}
 Adequacy Score: ${adequacyScore}%
 
-Create a user-friendly summary like:
-"Evidence file 'filename' parsed. Key findings include X, Y, Z. Data quality is [high/medium/low] with [details]. Confidence level: X%."
+Examples:
+- "Evidence file 'pump_vibration.csv' parsed. 1500 samples detected with mean RMS: 2.5 mm/s, increasing trend observed. Data quality is high with complete time-series coverage. Confidence level: 95%. Next steps: analyze frequency spectrum for bearing fault signatures."
+- "Evidence file 'maintenance_log.txt' parsed. Temperature rise from 65°C to 85°C over 2 hours, abnormal noise at 14:30. Data quality is good with clear timeline. Confidence level: 80%. Next steps: correlate with vibration data if available."
 
-Keep it professional but readable, around 2-3 sentences.`;
+Respond with ONLY the summary sentence, no additional text.`;
 
       const aiResponse = await DynamicAIConfig.performAIAnalysis(
         'universal-evidence',
@@ -503,7 +507,7 @@ Keep it professional but readable, around 2-3 sentences.`;
   }
   
   /**
-   * Generate precise, actionable prompt if data is missing (MANDATORY per instruction)
+   * STAGE 3c: Generate precise, actionable prompt if data is missing (MANDATORY per instruction)
    * E.g., "RPM column missing in vibration data. Please upload trend with RPM, or indicate not available."
    */
   private static async generateUserPrompt(
@@ -513,26 +517,29 @@ Keep it professional but readable, around 2-3 sentences.`;
     fileName: string
   ): Promise<string> {
     try {
-      if (adequacyScore >= 80) {
-        return "All required evidence provided. Proceeding to root cause inference with high confidence.";
-      }
-      
       // Import AI config dynamically
       const { DynamicAIConfig } = await import("./dynamic-ai-config");
       
       const promptGenerationRequest = `
-Generate a precise, actionable user prompt for insufficient evidence.
+STAGE 3c: ACTIONABLE PROMPT GENERATION (Universal RCA Instruction)
+
+Analyze evidence gaps and generate precise, actionable prompts.
 
 File: ${fileName}
 Parsed Data: ${JSON.stringify(parsedData, null, 2)}
 Adequacy Score: ${adequacyScore}%
 Required Evidence Types: ${requiredEvidenceTypes.join(', ')}
 
-If data is missing or inadequate, generate a specific prompt like:
-"RPM column missing in vibration data. Please upload trend with RPM, or indicate not available."
-"Temperature data contains only 10 samples. More historical data recommended for accurate analysis."
+Generate specific prompts following these examples:
+- "RPM column missing in vibration data. Please upload trend with RPM, or indicate not available."
+- "Temperature data contains only 10 samples. More historical data recommended for accurate analysis."
+- "Uploaded vibration file contains only 1 channel. Multi-channel preferred for advanced diagnosis."
 
-Be specific about what's missing and what action the user should take.`;
+If adequacy >= 80%: "All required evidence provided. Proceeding to root cause inference."
+If adequacy < 80%: Generate specific missing data prompt.
+If adequacy < 50%: "Insufficient evidence for reliable analysis. Please provide [specific requirements]."
+
+Respond with ONLY the prompt text, no additional formatting.`;
 
       const aiResponse = await DynamicAIConfig.performAIAnalysis(
         'universal-evidence',
@@ -541,11 +548,15 @@ Be specific about what's missing and what action the user should take.`;
         'prompt-generation'
       );
       
-      return aiResponse || `Additional evidence recommended for ${fileName}. Current adequacy: ${adequacyScore}%`;
+      return aiResponse || (adequacyScore >= 80 
+        ? "All required evidence provided. Proceeding to root cause inference."
+        : `Additional evidence recommended for ${fileName}. Current adequacy: ${adequacyScore}%`);
       
     } catch (error) {
       console.error('[USER PROMPT] Failed:', error);
-      return `Additional evidence recommended for ${fileName}. Current adequacy: ${adequacyScore}%`;
+      return adequacyScore >= 80 
+        ? "All required evidence provided. Proceeding to root cause inference."
+        : `Additional evidence recommended for ${fileName}. Current adequacy: ${adequacyScore}%`;
     }
   }
 }
