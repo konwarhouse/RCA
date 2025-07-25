@@ -169,7 +169,19 @@ export default function HumanReview() {
     );
   }
 
-  const evidenceFiles = incident.evidenceFiles || [];
+  // Fix: Evidence files are stored in evidenceResponses, not evidenceFiles
+  const evidenceFiles = (incident.evidenceResponses || []).map((response: any, index: number) => ({
+    id: response.id || `file-${index}`,
+    name: response.name || 'unknown',
+    size: response.size || 0,
+    type: response.type || 'text/plain',
+    categoryId: response.categoryId || 'general',
+    description: response.description,
+    uploadedAt: response.uploadedAt || new Date().toISOString(),
+    universalAnalysis: response.universalAnalysis,
+    reviewStatus: response.reviewStatus || 'UNREVIEWED',
+    reviewComments: response.reviewComments
+  }));
   const reviewedFiles = evidenceFiles.filter(f => f.reviewStatus && f.reviewStatus !== 'UNREVIEWED').length;
   const acceptedFiles = evidenceFiles.filter(f => f.reviewStatus === 'ACCEPTED').length;
 
