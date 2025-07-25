@@ -1249,6 +1249,206 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // STEP 3B: MANDATORY HUMAN REVIEW PANEL (Per RCA_Stage_4B_Human_Review Instruction)
+  // ALL uploaded files analyzed through universal Python backend - NO HARDCODING
+  // Human review required before RCA progression
+  app.post("/api/incidents/:id/step-3b-human-review", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(incidentId);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      console.log(`[STEP 3B] Starting mandatory human review for incident ${incidentId}`);
+
+      // Import Universal Human Review Engine
+      const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
+      
+      // Get ALL uploaded files from Step 3 (evidence checklist upload)
+      const uploadedFiles = incident.evidenceFiles || [];
+      
+      if (uploadedFiles.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No evidence files uploaded for review",
+          stage: "STEP_3B"
+        });
+      }
+
+      // Process ALL files through universal Python backend (MANDATORY per instruction)
+      const reviewSession = await UniversalHumanReviewEngine.processStep3Files(incidentId, uploadedFiles);
+      
+      console.log(`[STEP 3B] Human review session created - ${reviewSession.totalFiles} files to review`);
+
+      res.json({
+        success: true,
+        stage: "STEP_3B",
+        reviewSession,
+        message: `${reviewSession.totalFiles} files analyzed and ready for human review. Review all files before proceeding to RCA.`,
+        instruction: "Please review each file analysis and confirm, request more info, or replace files as needed."
+      });
+
+    } catch (error) {
+      console.error('[STEP 3B] Human review setup failed:', error);
+      res.status(500).json({ 
+        success: false,
+        stage: "STEP_3B",
+        message: "Human review setup failed",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // STEP 4B: MANDATORY HUMAN REVIEW PANEL (Per RCA_Stage_4B_Human_Review Instruction)
+  // Same universal analysis as Step 3B - no distinction in backend logic
+  app.post("/api/incidents/:id/step-4b-human-review", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const incident = await investigationStorage.getIncident(incidentId);
+      
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      console.log(`[STEP 4B] Starting mandatory human review for incident ${incidentId}`);
+
+      // Import Universal Human Review Engine
+      const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
+      
+      // Get ALL uploaded files from Step 4 (secondary evidence upload)
+      const uploadedFiles = incident.evidenceFiles || [];
+      
+      // Process ALL files through same universal Python backend (no distinction)
+      const reviewSession = await UniversalHumanReviewEngine.processStep4Files(incidentId, uploadedFiles);
+      
+      console.log(`[STEP 4B] Human review session created - ${reviewSession.totalFiles} files to review`);
+
+      res.json({
+        success: true,
+        stage: "STEP_4B",
+        reviewSession,
+        message: `${reviewSession.totalFiles} files analyzed and ready for human review. Review all files before proceeding to RCA.`,
+        instruction: "Please review each file analysis and confirm, request more info, or replace files as needed."
+      });
+
+    } catch (error) {
+      console.error('[STEP 4B] Human review setup failed:', error);
+      res.status(500).json({ 
+        success: false,
+        stage: "STEP_4B",
+        message: "Human review setup failed",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // HUMAN REVIEW ACTION: Accept File
+  app.post("/api/incidents/:id/human-review/accept/:fileId", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const fileId = req.params.fileId;
+      const { userComments } = req.body;
+
+      const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
+      
+      const success = await UniversalHumanReviewEngine.acceptFile(incidentId, fileId, userComments);
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: `File ${fileId} accepted for RCA analysis`,
+          action: "ACCEPTED"
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to accept file"
+        });
+      }
+
+    } catch (error) {
+      console.error('[HUMAN REVIEW] Accept file failed:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to accept file",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // HUMAN REVIEW ACTION: Request More Info
+  app.post("/api/incidents/:id/human-review/more-info/:fileId", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const fileId = req.params.fileId;
+      const { userComments } = req.body;
+
+      if (!userComments) {
+        return res.status(400).json({
+          success: false,
+          message: "User comments required when requesting more info"
+        });
+      }
+
+      const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
+      
+      const success = await UniversalHumanReviewEngine.requestMoreInfo(incidentId, fileId, userComments);
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: `More information requested for file ${fileId}`,
+          action: "NEEDS_MORE_INFO",
+          userComments
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to request more info"
+        });
+      }
+
+    } catch (error) {
+      console.error('[HUMAN REVIEW] Request more info failed:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to request more info",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // CHECK RCA READINESS (Per instruction: "RCA cannot proceed until every uploaded file is confirmed/reviewed")
+  app.get("/api/incidents/:id/can-proceed-to-rca", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+
+      const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
+      
+      const readinessCheck = await UniversalHumanReviewEngine.canProceedToRCA(incidentId);
+      
+      res.json({
+        success: true,
+        canProceed: readinessCheck.canProceed,
+        reason: readinessCheck.reason,
+        instruction: readinessCheck.canProceed 
+          ? "All files reviewed. Ready to proceed with AI-based RCA analysis."
+          : "Complete human review before proceeding to RCA."
+      });
+
+    } catch (error) {
+      console.error('[RCA READINESS] Check failed:', error);
+      res.status(500).json({
+        success: false,
+        canProceed: false,
+        reason: "Failed to check RCA readiness",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
   // System checks adequacy of provided evidence against requirements (from Evidence Library/Schema, NOT hardcoded)
   // AI/GPT summarizes what is present/missing using user-friendly language and suggests best next action
@@ -1430,7 +1630,7 @@ Respond with valid JSON only.`;
   app.post("/api/incidents/:id/ai-root-cause-inference", async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
-      const incident = await storage.getIncident(incidentId);
+      const incident = await investigationStorage.getIncident(incidentId);
       
       if (!incident) {
         return res.status(404).json({ message: "Incident not found" });
@@ -1524,7 +1724,7 @@ If evidence is lacking, AI must explicitly state this and request specific addit
         }
 
         // Update incident with root cause analysis
-        await storage.updateIncident(incidentId, {
+        await investigationStorage.updateIncident(incidentId, {
           rootCauseAnalysis: analysisResult,
           workflowStatus: analysisResult.canProceedToReport ? 'analysis_complete' : 'evidence_review'
         });
@@ -1573,10 +1773,10 @@ If evidence is lacking, AI must explicitly state this and request specific addit
       console.log(`[AI EVIDENCE CHECKLIST] Generating evidence checklist for incident ${incidentId}`);
       
       // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
-      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      const { UniversalEvidenceAnalyzer } = await import('./universal-evidence-analyzer');
       
       // STEP 3 – Generate evidence checklist per schema (Per Universal RCA Instruction)
-      const evidenceChecklist = await evidenceAnalyzer.generateEvidenceChecklist(
+      const evidenceChecklist = await UniversalEvidenceAnalyzer.generateEvidenceChecklist(
         incident.equipmentGroup || 'Unknown',
         incident.equipmentType || 'Unknown',
         incident.equipmentSubtype || 'Unknown'
@@ -1614,8 +1814,8 @@ If evidence is lacking, AI must explicitly state this and request specific addit
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Initialize Universal AI Evidence Analyzer (NO HARDCODING)
-      const evidenceAnalyzer = new UniversalAIEvidenceAnalyzer();
+      // UNIVERSAL EVIDENCE ANALYZER - AI Evidence Parsing (NO HARDCODING)
+      const { UniversalEvidenceAnalyzer } = await import('./universal-evidence-analyzer');
       
       // Create evidence configuration (SCHEMA-DRIVEN)
       const evidenceConfig = {
@@ -1628,11 +1828,12 @@ If evidence is lacking, AI must explicitly state this and request specific addit
         required: true
       };
       
-      // Parse evidence file with AI (Per Universal RCA Instruction)
-      const parseResult = await evidenceAnalyzer.analyzeEvidenceFile(
+      // Parse evidence file using universal logic
+      const parseResult = await UniversalEvidenceAnalyzer.analyzeEvidence(
         file.buffer,
         file.originalname,
-        evidenceConfig
+        file.originalname,
+        [incident.equipmentGroup, incident.equipmentType, incident.equipmentSubtype]
       );
       
       console.log(`[AI EVIDENCE PARSING] Parse complete: ${parseResult.status}, ${parseResult.diagnosticValue} diagnostic value`);
