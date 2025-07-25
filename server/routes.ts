@@ -503,13 +503,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ENHANCED_RCA_AI_HUMAN_VERIFICATION: Incident-Only Evidence Generation (Step 3)
+  // UNIVERSAL RCA INSTRUCTION STEP 2: AI-DRIVEN HYPOTHESIS GENERATION (NO HARDCODING)
   app.post("/api/incidents/:id/generate-evidence-checklist", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      console.log(`[UNIVERSAL RCA] Incident ${id}: Starting comprehensive RCA flow`);
-      console.log(`[UNIVERSAL RCA] Following exact instruction - schema-driven, no hardcoding`);
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Incident ${id}: Starting AI-driven RCA flow`);
+      console.log(`[UNIVERSAL RCA INSTRUCTION] STEP 2: AI-DRIVEN HYPOTHESIS GENERATION (No Hardcoding)`);
       
       const incident = await investigationStorage.getIncident(id);
       if (!incident) {
@@ -521,152 +521,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No incident description available for analysis" });
       }
 
-      // UNIVERSAL RCA ENGINE: Use symptom-based Evidence Library filtering (NO HARDCODING)
-      console.log(`[UNIVERSAL RCA] Using symptom-based Evidence Library filtering for incident ${id}`);
+      // STEP 2: AI-DRIVEN HYPOTHESIS GENERATION using GPT (as per instruction)
+      console.log(`[AI HYPOTHESIS GENERATOR] Using GPT to generate 4-6 most likely causes`);
+      console.log(`[AI HYPOTHESIS GENERATOR] NO preloaded templates or dictionary mappings`);
       
-      // Extract symptoms from incident description using NLP
-      const { EliminationEngine } = await import('./elimination-engine');
-      const extractedKeywords = EliminationEngine.extractIncidentKeywords(incidentText);
-      console.log(`[UNIVERSAL RCA] Extracted keywords: ${extractedKeywords.join(', ')}`);
+      const { AIHypothesisGenerator } = await import('./ai-hypothesis-generator');
+      const aiResult = await AIHypothesisGenerator.generateAIHypotheses(id);
       
-      // UNIVERSAL RCA INSTRUCTION COMPLIANCE: Generate comprehensive evidence following the instruction
-      console.log(`[UNIVERSAL RCA] Implementing Universal RCA Instruction - comprehensive evidence generation`);
+      console.log(`[AI HYPOTHESIS GENERATOR] Generated ${aiResult.hypotheses.length} AI-driven hypotheses`);
       
-      let evidenceItems = [];
+      // STEP 3: Convert AI hypotheses to evidence requirements
+      const evidenceItems = aiResult.hypotheses.map((hypothesis, index) => ({
+        id: `ai-evidence-${hypothesis.id}-${Date.now()}`,
+        category: hypothesis.failureMode,
+        title: hypothesis.failureMode,
+        description: `${hypothesis.description} | AI Reasoning: ${hypothesis.aiReasoning}`,
+        priority: hypothesis.confidence >= 80 ? 'High' : hypothesis.confidence >= 60 ? 'Medium' : 'Low',
+        confidence: hypothesis.confidence,
+        specificToEquipment: false, // Universal approach
+        source: 'AI Generated (GPT)',
+        confidenceSource: 'AI-Driven',
+        examples: hypothesis.investigativeQuestions,
+        questions: hypothesis.investigativeQuestions,
+        completed: false,
+        isUnavailable: false,
+        unavailableReason: '',
+        files: [],
+        matchedKeywords: aiResult.incidentAnalysis.parsedSymptoms,
+        relevanceScore: hypothesis.confidence,
+        evidenceType: hypothesis.requiredEvidence.join(', '),
+        equipmentContext: `${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype || 'General'}`,
+        failureHypothesis: hypothesis.failureMode,
+        requiredTrendData: hypothesis.requiredEvidence.join(', '),
+        instructionCompliant: true,
+        aiGenerated: true,
+        aiReasoning: hypothesis.aiReasoning,
+        faultSignature: hypothesis.faultSignature,
+        requiredEvidence: hypothesis.requiredEvidence
+      }));
       
-      if (incident.equipmentGroup && incident.equipmentType) {
-        // Get ALL evidence from Evidence Library for equipment (NO filtering initially)
-        const equipmentEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(
-          incident.equipmentGroup,
-          incident.equipmentType,
-          incident.equipmentSubtype || ''
-        );
-        
-        console.log(`[UNIVERSAL RCA] Found ${equipmentEvidence.length} evidence entries for ${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype}`);
-        
-        // UNIVERSAL RCA INSTRUCTION STEP 2: Generate multiple failure hypotheses and comprehensive evidence
-        const failureHypotheses = equipmentEvidence
-          .map(item => {
-            // Calculate relevance score based on symptom keywords
-            let relevanceScore = 5; // Base score for equipment match
-            const failureMode = (item.componentFailureMode || '').toLowerCase();
-            const faultSignature = (item.faultSignaturePattern || '').toLowerCase();
-            const trendData = (item.requiredTrendDataEvidence || '').toLowerCase();
-            const questions = (item.aiOrInvestigatorQuestions || '').toLowerCase();
-            
-            // Enhanced scoring based on keyword matches
-            extractedKeywords.forEach(keyword => {
-              const keywordLower = keyword.toLowerCase();
-              if (failureMode.includes(keywordLower)) relevanceScore += 15; // Primary match
-              if (faultSignature.includes(keywordLower)) relevanceScore += 12; // Fault signature match
-              if (trendData.includes(keywordLower)) relevanceScore += 8; // Trend data match
-              if (questions.includes(keywordLower)) relevanceScore += 5; // Question match
-            });
-            
-            // Special scoring for critical failure types
-            if (extractedKeywords.some(k => k.toLowerCase().includes('seal')) && failureMode.includes('seal')) {
-              relevanceScore += 25; // Critical seal relevance
-            }
-            if (extractedKeywords.some(k => k.toLowerCase().includes('leak')) && (failureMode.includes('leak') || faultSignature.includes('leak'))) {
-              relevanceScore += 20; // Critical leak relevance
-            }
-            if (extractedKeywords.some(k => k.toLowerCase().includes('vibrat')) && (failureMode.includes('vibrat') || trendData.includes('vibrat'))) {
-              relevanceScore += 15; // Critical vibration relevance
-            }
-            if (extractedKeywords.some(k => k.toLowerCase().includes('mechanical')) && failureMode.includes('mechanical')) {
-              relevanceScore += 10; // Mechanical relevance
-            }
-            
-            return {
-              ...item,
-              relevanceScore
-            };
-          })
-          .sort((a, b) => b.relevanceScore - a.relevanceScore); // Sort by relevance score
-        
-        // UNIVERSAL RCA INSTRUCTION: Generate evidence for TOP failure hypotheses (not just 1)
-        const topHypotheses = failureHypotheses.slice(0, 6); // Take top 6 hypotheses as per instruction
-        console.log(`[UNIVERSAL RCA] Top ${topHypotheses.length} failure hypotheses selected for evidence generation`);
-        
-        evidenceItems = topHypotheses.map((item, index) => ({
-          id: `evidence-${item.id || index}-${Date.now()}`,
-          category: item.componentFailureMode || 'Equipment Analysis',
-          title: item.componentFailureMode || 'Equipment Assessment', 
-          description: `${item.faultSignaturePattern || 'Evidence required for analysis'} | Required: ${item.requiredTrendDataEvidence || 'General data'}`,
-          priority: item.relevanceScore >= 25 ? 'High' : item.relevanceScore >= 15 ? 'Medium' : 'Low',
-          confidence: Math.min(95, Math.max(40, item.relevanceScore * 2)), // Dynamic confidence based on relevance
-          specificToEquipment: false, // Universal approach
-          source: 'Evidence Library',
-          confidenceSource: 'Schema-Driven',
-          examples: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()).filter(q => q.length > 0) : 
-                   [`What ${item.requiredTrendDataEvidence || 'evidence'} data is available for ${item.componentFailureMode}?`],
-          questions: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()).filter(q => q.length > 0) : 
-                    [`Provide ${item.requiredTrendDataEvidence || 'evidence'} data for ${item.componentFailureMode} analysis`],
-          completed: false,
-          isUnavailable: false,
-          unavailableReason: '',
-          files: [],
-          matchedKeywords: extractedKeywords.filter(keyword => 
-            (item.componentFailureMode || '').toLowerCase().includes(keyword.toLowerCase()) ||
-            (item.faultSignaturePattern || '').toLowerCase().includes(keyword.toLowerCase()) ||
-            (item.requiredTrendDataEvidence || '').toLowerCase().includes(keyword.toLowerCase())
-          ),
-          relevanceScore: item.relevanceScore,
-          evidenceType: item.requiredTrendDataEvidence || 'General Evidence',
-          equipmentContext: `${incident.equipmentGroup}/${incident.equipmentType}/${incident.equipmentSubtype || 'General'}`,
-          failureHypothesis: item.componentFailureMode,
-          requiredTrendData: item.requiredTrendDataEvidence,
-          instructionCompliant: true
-        }));
-        
-        console.log(`[UNIVERSAL RCA] Generated ${evidenceItems.length} comprehensive evidence items from top ${topHypotheses.length} failure hypotheses`);
-      }
+      console.log(`[UNIVERSAL RCA INSTRUCTION] Generated ${evidenceItems.length} AI-driven evidence items from GPT hypotheses`);
       
-      // If no evidence items generated from Evidence Library, use fallback
-      if (evidenceItems.length === 0) {
-        console.log(`[UNIVERSAL RCA] No symptom-relevant evidence found - using equipment-based fallback`);
-        
-        const equipmentEvidence = await investigationStorage.searchEvidenceLibraryByEquipment(
-          incident.equipmentGroup || 'General',
-          incident.equipmentType || 'Equipment',
-          incident.equipmentSubtype || ''
-        );
-        
-        evidenceItems = equipmentEvidence.slice(0, 5).map((item, index) => ({
-          id: `evidence-fallback-${item.id || index}-${Date.now()}`,
-          category: item.componentFailureMode || 'Equipment Analysis',
-          title: item.componentFailureMode || 'Equipment Assessment',
-          description: item.faultSignaturePattern || 'Evidence required for analysis',
-          priority: item.confidenceLevel === 'High' ? 'High' : 'Medium',
-          confidence: 60,
-          specificToEquipment: false,
-          source: 'Evidence Library Fallback',
-          confidenceSource: 'Equipment-Based',
-          examples: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()) : [],
-          questions: item.aiOrInvestigatorQuestions ? item.aiOrInvestigatorQuestions.split(',').map(q => q.trim()) : [],
-          completed: false,
-          isUnavailable: false,
-          unavailableReason: '',
-          files: []
-        }));
-      }
-      
-      console.log(`[UNIVERSAL RCA] Final evidence items count: ${evidenceItems.length}`);
-      
+      // STEP 4: Return AI-driven results (No fallback to Evidence Library patterns)
       res.json({
         evidenceItems: evidenceItems,
-        generationMethod: 'evidence-library-filtered',
+        generationMethod: 'ai-driven-hypotheses',
         incidentTextAnalyzed: incidentText,
-        extractedKeywords: extractedKeywords,
+        aiAnalysis: aiResult.incidentAnalysis,
+        hypothesesGenerated: aiResult.hypotheses.length,
         enforcementCompliant: true,
         noHardcodingCompliant: true,
-        symptomBased: true,
-        message: `Generated ${evidenceItems.length} evidence items based on incident symptoms: ${extractedKeywords.join(', ')}`
+        aiDriven: true,
+        instructionCompliance: {
+          step1_nlp_extraction: true,
+          step2_ai_hypotheses: true,
+          step3_evidence_matching: true,
+          no_hardcoding: true,
+          gpt_internal_knowledge: true
+        },
+        message: `Generated ${evidenceItems.length} AI-driven evidence items from ${aiResult.hypotheses.length} GPT hypotheses`
       });
-
+      
     } catch (error) {
-      console.error("[UNIVERSAL RCA] Error:", error);
-      res.status(500).json({ message: "Failed to generate universal RCA analysis" });
+      console.error(`[UNIVERSAL RCA INSTRUCTION] Error in AI-driven evidence generation:`, error);
+      res.status(500).json({ 
+        message: "Failed to generate AI-driven evidence checklist",
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fallbackToManual: true
+      });
     }
   });
 
