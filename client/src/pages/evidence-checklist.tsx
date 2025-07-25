@@ -381,12 +381,32 @@ export default function EvidenceChecklist() {
   const lowItems = evidenceItems?.filter(item => item.priority === "Low") || [];
 
   // Updated logic: Allow progression if evidence completed OR marked unavailable with reason
-  const canProceed = criticalItems.every(item => 
+  const completedCritical = criticalItems.filter(item => 
     item.completed || (item.isUnavailable && item.unavailableReason?.trim())
-  ) && 
-  highItems.filter(item => 
+  );
+  const completedHigh = highItems.filter(item => 
     item.completed || (item.isUnavailable && item.unavailableReason?.trim())
-  ).length >= Math.ceil(highItems.length * 0.8);
+  );
+  const requiredHigh = Math.ceil(highItems.length * 0.8);
+  
+  const canProceed = completedCritical.length === criticalItems.length && 
+                    completedHigh.length >= requiredHigh;
+
+  // Debug logging to help user understand requirements
+  console.log(`[EVIDENCE PROGRESS] Critical: ${completedCritical.length}/${criticalItems.length}, High: ${completedHigh.length}/${highItems.length} (need ${requiredHigh}), Can Proceed: ${canProceed}`);
+  
+  if (!canProceed && evidenceItems.length > 0) {
+    console.log('[EVIDENCE PROGRESS] Blocking items:');
+    criticalItems.forEach(item => {
+      if (!item.completed && !(item.isUnavailable && item.unavailableReason?.trim())) {
+        console.log(`- Critical item "${item.title}" not completed`);
+      }
+    });
+    const missingHigh = requiredHigh - completedHigh.length;
+    if (missingHigh > 0) {
+      console.log(`- Need ${missingHigh} more high priority items completed`);
+    }
+  }
 
   if (isLoading || !incident) {
     return (
@@ -954,7 +974,10 @@ export default function EvidenceChecklist() {
           <Alert className="mt-4 border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Requirements:</strong> Complete all Critical items and at least 80% of High priority items to proceed. Evidence can be completed by uploading files OR marking as unavailable with explanation.
+              <strong>Requirements to Proceed:</strong><br/>
+              • Critical Items: {completedCritical.length}/{criticalItems.length} completed {criticalItems.length > 0 && completedCritical.length < criticalItems.length ? '(Missing items need to be completed or marked unavailable)' : '✓'}<br/>
+              • High Priority Items: {completedHigh.length}/{highItems.length} completed (need {requiredHigh}) {completedHigh.length >= requiredHigh ? '✓' : `(Need ${requiredHigh - completedHigh.length} more)`}<br/>
+              <em>Tip: After uploading files, make sure to check the completion checkbox for each evidence item.</em>
             </AlertDescription>
           </Alert>
         )}
