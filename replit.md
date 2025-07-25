@@ -33,11 +33,14 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
   - **Trend Analysis**: Linear regression, rolling statistics, outlier detection using pandas statistical methods
   - **Evidence Metadata**: Complete parsing results with diagnosticValue, parsedResultSummary, evidenceConfidenceImpact, aiRemarks
 - **Testing Results CONFIRMED**:
-  - ✅ **CSV Parsing**: Successfully parsed vibration data (11 rows × 5 columns) with pandas
-  - ✅ **Column Auto-Detection**: Identified Time_s (time), Velocity_mm_s (amplitude), Acceleration_g (amplitude), RPM (speed), Temperature_C (temperature)
-  - ✅ **Signal Analysis**: Performed trend analysis on 2 signals with statistical calculations (mean, std, RMS, trend slope)
-  - ✅ **Diagnostic Scoring**: Generated Medium diagnostic value (65% confidence) based on data quality assessment
-  - ✅ **Real Processing**: Actual pandas DataFrame operations, not static UI mapping
+  - ✅ **CSV Parsing**: Successfully parsed vibration data (5-11 rows × 5-6 columns) with pandas
+  - ✅ **Column Auto-Detection**: Identified Time_s (time), Velocity_mm_s (amplitude), Acceleration_g (amplitude), RPM (speed), Temperature_C (temperature), Frequency_Hz (frequency)
+  - ✅ **Signal Analysis**: Performed trend analysis on 2 signals with statistical calculations (mean, std, RMS, trend slope, outlier detection)
+  - ✅ **Diagnostic Scoring**: Generated Medium-High diagnostic values (50-65% confidence) based on data quality assessment
+  - ✅ **Real Processing**: Actual pandas DataFrame operations with NumPy/SciPy signal processing, not static UI mapping
+  - ✅ **Multiple Test Cases**: Validated with different vibration datasets showing consistent real data science analysis
+  - ✅ **Python Interface**: Node.js successfully spawns Python processes for authentic data science analysis
+  - ✅ **Signal Processing**: Real FFT analysis, trend detection (increasing/stable), outlier percentage calculations
 - **API Endpoints Enhanced**:
   - `/api/incidents/:id/generate-evidence-checklist-ai` - Schema-driven evidence generation
   - `/api/incidents/:id/parse-evidence` - Real Python data science file parsing

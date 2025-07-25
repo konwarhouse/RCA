@@ -205,8 +205,9 @@ export class UniversalAIEvidenceAnalyzer {
       
       try {
         // Spawn Python process with real data science analysis
+        const pythonScript = path.join(process.cwd(), 'server', 'python-evidence-analyzer.py');
         const pythonProcess = spawn('python3', [
-          path.join(__dirname, 'python-evidence-analyzer.py'),
+          pythonScript,
           fileContent,
           filename,
           JSON.stringify(evidenceConfig)
@@ -228,12 +229,31 @@ export class UniversalAIEvidenceAnalyzer {
         pythonProcess.on('close', (code) => {
           if (code === 0) {
             try {
-              // Parse the last JSON output from Python
-              const lines = stdout.trim().split('\n');
-              const lastLine = lines[lines.length - 1];
-              const result = JSON.parse(lastLine);
+              console.log(`[Python Debug] Raw stdout: ${stdout}`);
+              console.log(`[Python Debug] Raw stderr: ${stderr}`);
               
-              console.log(`[Python Interface] Python analysis completed successfully`);
+              // Parse the JSON output from Python - try simple approach first
+              const lines = stdout.trim().split('\n');
+              let result = null;
+              
+              // Look for complete JSON block
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('{') && line.includes('"filename"')) {
+                  try {
+                    result = JSON.parse(line);
+                    break;
+                  } catch (parseError) {
+                    console.log(`[Python Debug] Failed to parse line ${i}: ${line.substring(0, 50)}...`);
+                    continue;
+                  }
+                }
+              }
+              
+              if (!result) {
+                throw new Error('No valid JSON result found in Python output');
+              }
+              console.log(`[Python Interface] Python analysis completed successfully: ${result.diagnosticValue} diagnostic value`);
               resolve(result);
               
             } catch (parseError) {
@@ -257,8 +277,7 @@ export class UniversalAIEvidenceAnalyzer {
               parsedResultSummary: 'Python data science analysis failed',
               evidenceConfidenceImpact: 5,
               aiRemarks: `Python process error (code ${code}): ${stderr}`,
-              status: 'error',
-              error: stderr
+              status: 'Incomplete'
             });
           }
         });
@@ -272,8 +291,7 @@ export class UniversalAIEvidenceAnalyzer {
             parsedResultSummary: 'Failed to start Python data science analysis',
             evidenceConfidenceImpact: 5,
             aiRemarks: `Python spawn error: ${error.message}`,
-            status: 'error',
-            error: error.message
+            status: 'Incomplete'
           });
         });
         
@@ -286,8 +304,7 @@ export class UniversalAIEvidenceAnalyzer {
           parsedResultSummary: 'Python interface failed',
           evidenceConfidenceImpact: 5,
           aiRemarks: `Interface error: ${error instanceof Error ? error.message : String(error)}`,
-          status: 'error',
-          error: error instanceof Error ? error.message : String(error)
+          status: 'Incomplete'
         });
       }
     });
