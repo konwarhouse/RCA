@@ -212,40 +212,12 @@ export default function EvidenceCollection() {
   );
 
   // STAGE 3B: MANDATORY HUMAN REVIEW PANEL (Per RCA_Stage_4B_Human_Review Instruction)
-  // NO MORE DIRECT POST-EVIDENCE ANALYSIS - MUST GO THROUGH HUMAN REVIEW FIRST
-  const humanReviewMutation = useMutation({
-    mutationFn: async (incidentId: number) => {
-      console.log(`[STAGE 3B] Triggering mandatory human review for incident ${incidentId}`);
-      
-      const response = await fetch(`/api/incidents/${incidentId}/step-3b-human-review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Stage 3B human review failed: ${errorData}`);
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      console.log('[STAGE 3B] Human review initiated:', data);
-      // Navigate to human review interface instead of RCA analysis
-      if (incidentId) {
-        setLocation(`/incidents/${incidentId}/human-review`);
-      }
-    },
-    onError: (error) => {
-      console.error('[STAGE 3B] Human review failed:', error);
-    }
-  });
-
+  // SIMPLIFIED APPROACH: Direct navigation to human review without complex backend processing
   const handleProceedToHumanReview = () => {
     if (incidentId) {
       console.log('[EVIDENCE COLLECTION] Proceeding to MANDATORY Stage 3B Human Review');
-      humanReviewMutation.mutate(parseInt(incidentId));
+      // Direct navigation - no backend call needed as files already uploaded
+      setLocation(`/incidents/${incidentId}/human-review`);
     }
   };
 
@@ -426,20 +398,13 @@ export default function EvidenceCollection() {
           </Button>
           <Button 
             onClick={handleProceedToHumanReview}
-            disabled={!canProceed || humanReviewMutation.isPending}
+            disabled={!canProceed}
             className="flex items-center gap-2"
           >
-            {humanReviewMutation.isPending ? (
-              <>
-                <Brain className="h-4 w-4 animate-spin" />
-                Starting Human Review...
-              </>
-            ) : (
-              <>
-                Proceed to Human Review (Stage 3B)
-                <ChevronRight className="h-4 w-4" />
-              </>
-            )}
+            <>
+              Proceed to Human Review (Stage 3B)
+              <ChevronRight className="h-4 w-4" />
+            </>
           </Button>
         </div>
 

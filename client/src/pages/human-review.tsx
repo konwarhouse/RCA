@@ -54,11 +54,14 @@ export default function HumanReview() {
     if (id) {
       setIncidentId(parseInt(id));
     } else {
-      // Try to extract from path
+      // Extract from path: /incidents/:id/human-review
       const pathParts = window.location.pathname.split('/');
       const incidentIndex = pathParts.indexOf('incidents');
       if (incidentIndex >= 0 && pathParts[incidentIndex + 1]) {
-        setIncidentId(parseInt(pathParts[incidentIndex + 1]));
+        const extractedId = parseInt(pathParts[incidentIndex + 1]);
+        if (!isNaN(extractedId)) {
+          setIncidentId(extractedId);
+        }
       }
     }
   }, []);
