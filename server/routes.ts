@@ -1735,27 +1735,20 @@ INSTRUCTIONS:
 
 Provide concise root cause inference (1-2 sentences):`;
 
-    // Use OpenAI directly with environment API key as fallback
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are an expert industrial engineer performing root cause analysis.' },
-        { role: 'user', content: analysisPrompt }
-      ],
-      max_tokens: 300,
-      temperature: 0.3
-    });
-
-    const aiResponse = response.choices[0]?.message?.content?.trim();
-    return aiResponse || 'Root cause analysis requires additional evidence for conclusive determination';
+    // Use ADMIN-MANAGED AI configuration ONLY (NO HARDCODED API KEYS)
+    const { DynamicAIConfig } = await import("./dynamic-ai-config");
+    
+    const aiResponse = await DynamicAIConfig.performAIAnalysis(
+      'system', // incidentId
+      analysisPrompt,
+      'root-cause-inference',
+      'rca-analysis'
+    );
+    
+    return aiResponse || 'Root cause analysis requires AI configuration in admin settings';
   } catch (error) {
     console.error('[AI Root Cause Inference] Error:', error);
-    return 'Unable to determine root cause - evidence patterns suggest multiple failure mechanisms require further investigation';
+    return 'AI root cause analysis unavailable - Please configure AI provider in admin settings to enable analysis';
   }
 }
 
@@ -1771,27 +1764,20 @@ EVIDENCE: ${evidence.map(e => `${e.type}: ${e.summary}`).join('; ')}
 
 Provide technical fault pattern description (1 sentence):`;
 
-    // Use OpenAI directly with environment API key
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are an expert failure analysis engineer.' },
-        { role: 'user', content: patternPrompt }
-      ],
-      max_tokens: 150,
-      temperature: 0.3
-    });
-
-    const aiResponse = response.choices[0]?.message?.content?.trim();
-    return aiResponse || 'Fault pattern requires additional data for pattern recognition';
+    // Use ADMIN-MANAGED AI configuration ONLY (NO HARDCODED API KEYS)
+    const { DynamicAIConfig } = await import("./dynamic-ai-config");
+    
+    const aiResponse = await DynamicAIConfig.performAIAnalysis(
+      'system', // incidentId
+      patternPrompt,
+      'fault-pattern-analysis',
+      'rca-analysis'
+    );
+    
+    return aiResponse || 'Fault pattern analysis requires AI configuration in admin settings';
   } catch (error) {
     console.error('[AI Fault Pattern] Error:', error);
-    return 'Progressive failure pattern detected - requires systematic investigation';
+    return 'AI fault pattern analysis unavailable - Please configure AI provider in admin settings';
   }
 }
 
@@ -1809,27 +1795,20 @@ INSTRUCTION: "Unable to confirm root cause due to insufficient evidence. Please 
 
 Generate evidence-limited analysis statement:`;
 
-    // Use OpenAI directly with environment API key
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are an expert industrial engineer performing evidence-limited analysis.' },
-        { role: 'user', content: limitedPrompt }
-      ],
-      max_tokens: 200,
-      temperature: 0.3
-    });
-
-    const aiResponse = response.choices[0]?.message?.content?.trim();
-    return aiResponse || `Unable to confirm root cause due to insufficient evidence. Additional technical data required for conclusive analysis.`;
+    // Use ADMIN-MANAGED AI configuration ONLY (NO HARDCODED API KEYS)
+    const { DynamicAIConfig } = await import("./dynamic-ai-config");
+    
+    const aiResponse = await DynamicAIConfig.performAIAnalysis(
+      'system', // incidentId
+      limitedPrompt,
+      'evidence-limited-analysis',
+      'rca-analysis'
+    );
+    
+    return aiResponse || 'Evidence-limited analysis requires AI configuration in admin settings';
   } catch (error) {
     console.error('[Evidence Limited Analysis] Error:', error);
-    return 'Unable to confirm root cause due to insufficient evidence. Please provide operational parameters, maintenance records, and failure timeline data for conclusive analysis.';
+    return 'Evidence analysis unavailable - Please configure AI provider in admin settings to enable analysis';
   }
 }
 
@@ -1849,32 +1828,24 @@ Example: ["Inadequate lubrication", "Excessive loading", "Environmental stress"]
 
 JSON array only:`;
 
-    // Use OpenAI directly with environment API key
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are an expert failure analysis engineer. Return only a JSON array of contributing factors.' },
-        { role: 'user', content: factorsPrompt }
-      ],
-      max_tokens: 200,
-      temperature: 0.3
-    });
-
-    const aiResponse = response.choices[0]?.message?.content?.trim();
+    // Use ADMIN-MANAGED AI configuration ONLY (NO HARDCODED API KEYS)
+    const { DynamicAIConfig } = await import("./dynamic-ai-config");
+    
+    const aiResponse = await DynamicAIConfig.performAIAnalysis(
+      'system', // incidentId
+      factorsPrompt,
+      'contributing-factors',
+      'rca-analysis'
+    );
     
     try {
       const factors = JSON.parse(aiResponse || '[]');
-      return Array.isArray(factors) ? factors : ['Process degradation', 'Maintenance timing', 'Operating conditions'];
+      return Array.isArray(factors) ? factors : ['Contributing factors require AI configuration in admin settings'];
     } catch {
-      return ['Equipment stress factors', 'Operational degradation', 'Maintenance gaps'];
+      return ['AI configuration required for contributing factors analysis'];
     }
   } catch (error) {
     console.error('[AI Contributing Factors] Error:', error);
-    return ['Material degradation', 'Operating stress', 'Maintenance inadequacy'];
+    return ['AI configuration required - Please configure AI provider in admin settings'];
   }
 }

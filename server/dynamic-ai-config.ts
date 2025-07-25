@@ -148,8 +148,12 @@ export class DynamicAIConfig {
     // Step 1: Get active AI provider from database
     const aiProvider = await this.getActiveAIProvider();
     
-    if (!aiProvider || !this.validateAIProvider(aiProvider)) {
-      throw new Error('AI provider not configured. Contact admin to configure AI settings.');
+    if (!aiProvider) {
+      throw new Error('AI provider not configured. Please configure an AI provider in admin settings to enable analysis.');
+    }
+    
+    if (!this.validateAIProvider(aiProvider)) {
+      throw new Error('AI provider configuration invalid. Please verify API key and provider settings in admin section.');
     }
     
     // Step 2: Create AI client dynamically
@@ -193,9 +197,21 @@ export class DynamicAIConfig {
       
       return analysisResult;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[Dynamic AI Config] ${analysisType} failed:`, error);
-      throw error;
+      
+      // Provide specific error messages for admin configuration
+      if (error.code === 'invalid_api_key') {
+        throw new Error(`AI ${analysisType} failed - Invalid API key. Please update the API key in admin settings.`);
+      } else if (error.code === 'insufficient_quota') {
+        throw new Error(`AI ${analysisType} failed - API quota exceeded. Please check API limits in admin settings.`);
+      } else if (error.code === 'rate_limit_exceeded') {
+        throw new Error(`AI ${analysisType} temporarily unavailable - Rate limit exceeded. Please try again later.`);
+      } else if (error.message && error.message.includes('AI provider not configured')) {
+        throw error; // Pass through configuration errors
+      } else {
+        throw new Error(`AI ${analysisType} temporarily unavailable - Please verify AI provider configuration in admin settings.`);
+      }
     }
   }
   
