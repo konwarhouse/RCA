@@ -54,24 +54,15 @@ export class UniversalEvidenceAnalyzer {
       let adequacyScore = 0;
       
       // STAGE 3a: AUTOMATIC FILE TYPE ROUTING (Per Universal RCA Instruction)
-      if (this.isTabularFile(mimeType, fileName)) {
-        // For tabular/time-series: route to Python engine (pandas/Numpy/Scipy)
+      // FIXED: ALL FILES MUST GO THROUGH PYTHON BACKEND FIRST (Per RCA_Stage_4B_Human_Review)
+      if (this.isParsableByPython(mimeType, fileName)) {
+        // ALL CSV, TXT, XLSX, JSON files go to Python engine first
         analysisEngine = 'python';
-        console.log(`[UNIVERSAL EVIDENCE] Routing to Python engine for tabular analysis`);
+        console.log(`[UNIVERSAL EVIDENCE] Routing to Python engine for analysis`);
         
         const pythonResult = await this.analyzeTabularWithPython(filePath, fileName);
         parsedData = pythonResult.data;
         adequacyScore = pythonResult.confidence;
-        
-      } else if (this.isTextFile(mimeType, fileName)) {
-        // For text/unstructured: send to AI/GPT for summary and content extraction
-        analysisEngine = 'ai-text';
-        console.log(`[UNIVERSAL EVIDENCE] Routing to AI/GPT engine for text analysis`);
-        
-        const textContent = fs.readFileSync(filePath, 'utf-8');
-        const aiResult = await this.analyzeTextWithAI(textContent, fileName, equipmentContext);
-        parsedData = aiResult.data;
-        adequacyScore = aiResult.confidence;
         
       } else if (this.isVisualFile(mimeType, fileName)) {
         // For images/PDF: use OCR+Vision+GPT to extract/interpret contents
@@ -139,15 +130,23 @@ export class UniversalEvidenceAnalyzer {
   }
   
   /**
-   * Auto-detect tabular files (CSV, XLSX, TSV, etc.) - NO HARDCODING
+   * FIXED: Check if file can be parsed by Python backend (Per RCA_Stage_4B_Human_Review)
+   * ALL files should go through Python first before AI
    */
-  private static isTabularFile(mimeType: string, fileName: string): boolean {
-    return mimeType.includes('csv') || 
+  private static isParsableByPython(mimeType: string, fileName: string): boolean {
+    const ext = fileName.toLowerCase();
+    return ext.endsWith('.csv') || 
+           ext.endsWith('.txt') || 
+           ext.endsWith('.xlsx') || 
+           ext.endsWith('.xls') ||
+           ext.endsWith('.json') ||
+           ext.endsWith('.tsv') ||
+           mimeType.includes('csv') || 
            mimeType.includes('excel') || 
            mimeType.includes('spreadsheet') ||
-           mimeType.includes('tab-separated') ||
-           fileName.toLowerCase().endsWith('.csv') ||
-           fileName.toLowerCase().endsWith('.xlsx') ||
+           mimeType.includes('text/plain') ||
+           mimeType.includes('application/json') ||
+           mimeType.includes('tab-separated');
            fileName.toLowerCase().endsWith('.xls') ||
            fileName.toLowerCase().endsWith('.tsv');
   }
@@ -183,38 +182,79 @@ export class UniversalEvidenceAnalyzer {
    */
   private static async analyzeTabularWithPython(filePath: string, fileName: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      const pythonScript = `
-import pandas as pd
-import numpy as np
-import json
-import sys
-from scipy import signal
-from pathlib import Path
-
-def analyze_tabular_universal(file_path):
-    """
-    Universal tabular analysis - auto-detect columns/patterns, NO HARDCODING
-    """
-    try:
-        # Auto-detect file format and read
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        elif file_path.endswith('.xlsx') or file_path.endswith('.xls'):
-            df = pd.read_excel(file_path)
-        elif file_path.endswith('.tsv'):
-            df = pd.read_csv(file_path, sep='\\t')
-        else:
-            # Try CSV as default
-            df = pd.read_csv(file_path)
+      console.log(`[PYTHON ENGINE] Analyzing ${fileName} with real Python backend`);
+      
+      // Use the existing python-evidence-analyzer.py script
+      // Python script expects: <file_path_or_content> <filename> <evidence_config_json>
+      const evidenceConfig = JSON.stringify({ evidenceCategory: 'Universal Analysis' });
+      const pythonArgs = [
+        'server/python-evidence-analyzer.py',
+        filePath,  // file path
+        fileName,  // filename
+        evidenceConfig  // evidence config JSON
+      ];
+      
+      const pythonProcess = spawn('python3', pythonArgs, {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let output = '';
+      let errorOutput = '';
+      
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+        console.log(`[PYTHON DEBUG] ${data.toString()}`);
+      });
+      
+      pythonProcess.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`[PYTHON ENGINE] Analysis failed with code ${code}: ${errorOutput}`);
+          resolve({
+            data: {
+              error: `Python analysis failed: ${errorOutput}`,
+              filename: fileName,
+              status: 'failed'
+            },
+            confidence: 0
+          });
+          return;
+        }
         
-        result = {
-            'rows': len(df),
-            'columns': len(df.columns),
-            'column_names': list(df.columns),
-            'technical_parameters': [],
-            'trends': {},
-            'statistics': {},
-            'confidence': 0
+        try {
+          const result = JSON.parse(output.trim());
+          console.log(`[PYTHON ENGINE] Analysis complete for ${fileName}`);
+          resolve({
+            data: result,
+            confidence: result.evidenceConfidenceImpact || 0
+          });
+        } catch (parseError) {
+          console.error(`[PYTHON ENGINE] JSON parse error: ${parseError}`);
+          resolve({
+            data: {
+              error: `JSON parse failed: ${parseError}`,
+              raw_output: output,
+              filename: fileName
+            },
+            confidence: 0
+          });
+        }
+      });
+      
+      pythonProcess.on('error', (error) => {
+        console.error(`[PYTHON ENGINE] Process error: ${error}`);
+        resolve({
+          data: {
+            error: `Python process failed: ${error.message}`,
+            filename: fileName
+          },
+          confidence: 0
+        });
+      });
+    });
         }
         
         # Auto-detect column patterns (NO HARDCODING)
