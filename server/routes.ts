@@ -522,8 +522,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // STEP 2: AI-DRIVEN HYPOTHESIS GENERATION using GPT (as per instruction)
-      console.log(`[AI HYPOTHESIS GENERATOR] Using GPT to generate 4-6 most likely causes`);
-      console.log(`[AI HYPOTHESIS GENERATOR] NO preloaded templates or dictionary mappings`);
+      console.log(`[AI HYPOTHESIS GENERATOR] Using GPT to generate most likely POTENTIAL causes`);
+      console.log(`[AI HYPOTHESIS GENERATOR] STRICT RULE: NO HARD CODING - No preloaded templates or dictionary mappings`);
       
       const { AIHypothesisGenerator } = await import('./ai-hypothesis-generator');
       const aiResult = await AIHypothesisGenerator.generateAIHypotheses(id);

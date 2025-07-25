@@ -2,11 +2,11 @@
  * AI-Driven Hypothesis Generator - Universal RCA Instruction Step 2
  * 
  * Implements true AI-driven hypothesis generation using GPT as specified:
- * - Generate 4-6 most likely causes using GPT
+ * - Generate most likely POTENTIAL causes using GPT
  * - Use internal engineering knowledge (no preloaded templates)
  * - NO hardcoded mappings or dictionary-based logic
  * 
- * ZERO HARDCODING COMPLIANCE
+ * STRICT RULE: NO HARD CODING ANYWHERE - ZERO HARDCODING COMPLIANCE
  */
 
 import { investigationStorage } from "./storage";
@@ -44,7 +44,7 @@ export class AIHypothesisGenerator {
   /**
    * STEP 2: AI-DRIVEN HYPOTHESIS GENERATION (No Hardcoding)
    * 
-   * AI generates 4-6 most likely causes using GPT internal engineering knowledge
+   * AI generates most likely POTENTIAL causes using GPT internal engineering knowledge
    */
   static async generateAIHypotheses(incidentId: number): Promise<AIHypothesisGenerationResult> {
     console.log(`[AI HYPOTHESIS GENERATOR] Starting AI-driven hypothesis generation for incident ${incidentId}`);
@@ -113,7 +113,7 @@ INCIDENT INFORMATION:
 - Location: ${incident.location || 'Not specified'}
 - Immediate Actions Taken: ${incident.immediateActions || 'None specified'}
 
-TASK: Generate 4-6 most likely root cause hypotheses for this incident using your engineering knowledge.
+TASK: Generate most likely POTENTIAL causes for this incident using your engineering knowledge.
 
 For each hypothesis, provide:
 1. Failure Mode Name (concise, technical)
