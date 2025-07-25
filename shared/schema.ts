@@ -161,12 +161,13 @@ export const investigations = pgTable("investigations", {
 export const aiSettings = pgTable("ai_settings", {
   id: serial("id").primaryKey(),
   provider: varchar("provider").notNull(), // openai, gemini, anthropic
+  model: varchar("model").notNull(), // gpt-4o, gpt-4, gemini-pro, etc.
   encryptedApiKey: text("encrypted_api_key").notNull(), // encrypted API key
   isActive: boolean("is_active").default(false),
   createdBy: integer("created_by"), // user who created this setting
   createdAt: timestamp("created_at").defaultNow(),
   lastTestedAt: timestamp("last_tested_at"), // when API key was last tested
-  testStatus: varchar("test_status"), // 'tested', 'failed', 'not_tested'
+  testStatus: varchar("test_status"), // 'success', 'failed', 'not_tested'
 });
 
 export const insertInvestigationSchema = createInsertSchema(investigations);

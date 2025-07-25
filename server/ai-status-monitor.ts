@@ -51,25 +51,40 @@ export class AIStatusMonitor {
       // NO ENVIRONMENT VARIABLE CHECKS - ADMIN DATABASE ONLY
       // System is compliant when active provider exists from admin database
       
-      // STEP 3: Determine system health - FIXED LOGIC
+      // STEP 3: Determine system health - CORRECTED LOGIC
       let systemHealth: 'working' | 'configuration-required' | 'error' = 'configuration-required';
       
       if (activeProvider) {
-        // If we have an active provider with valid API key and recent successful test
-        if (activeProvider.isTestSuccessful && activeProvider.lastTestedAt) {
-          const lastTestTime = new Date(activeProvider.lastTestedAt).getTime();
-          const now = new Date().getTime();
-          const timeSinceTest = now - lastTestTime;
-          const maxTestAge = 24 * 60 * 60 * 1000; // 24 hours
-          
-          if (timeSinceTest < maxTestAge) {
-            systemHealth = 'working';
+        console.log(`[AI STATUS MONITOR] Active provider found - testStatus: ${activeProvider.testStatus}, lastTestedAt: ${activeProvider.lastTestedAt}`);
+        
+        // Check if we have a successful test within reasonable time  
+        if (activeProvider.testStatus === 'success') {
+          if (activeProvider.lastTestedAt) {
+            const lastTestTime = new Date(activeProvider.lastTestedAt).getTime();
+            const now = new Date().getTime();
+            const timeSinceTest = now - lastTestTime;
+            const maxTestAge = 24 * 60 * 60 * 1000; // 24 hours
+            
+            console.log(`[AI STATUS MONITOR] Time since last test: ${Math.round(timeSinceTest / 1000)}s (max: ${Math.round(maxTestAge / 1000)}s)`);
+            
+            if (timeSinceTest < maxTestAge) {
+              systemHealth = 'working';
+              console.log(`[AI STATUS MONITOR] Setting status to WORKING - test successful and recent`);
+            } else {
+              systemHealth = 'configuration-required'; // Test too old
+              console.log(`[AI STATUS MONITOR] Test too old - setting status to CONFIGURATION-REQUIRED`);
+            }
           } else {
-            systemHealth = 'configuration-required'; // Test too old
+            // Test successful but no timestamp - assume recent
+            systemHealth = 'working';
+            console.log(`[AI STATUS MONITOR] Test successful but no timestamp - assuming WORKING`);
           }
         } else {
-          systemHealth = 'configuration-required'; // Never tested or failed
+          systemHealth = 'configuration-required'; // Test failed
+          console.log(`[AI STATUS MONITOR] Test failed - setting status to CONFIGURATION-REQUIRED`);
         }
+      } else {
+        console.log(`[AI STATUS MONITOR] No active provider - setting status to CONFIGURATION-REQUIRED`);
       }
       
       // STEP 4: Build comprehensive status report
@@ -81,7 +96,7 @@ export class AIStatusMonitor {
           provider: activeProvider.provider,
           model: activeProvider.model,
           isActive: activeProvider.isActive,
-          isTestSuccessful: activeProvider.isTestSuccessful,
+          isTestSuccessful: activeProvider.testStatus === 'success',
           apiKeyStatus: 'encrypted-stored'
         } : null,
         systemHealth,
