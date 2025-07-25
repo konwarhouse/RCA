@@ -344,13 +344,31 @@ export default function AIAnalysis() {
                           </div>
                         </div>
 
-                        <div>
-                          <span className="text-xs font-medium text-muted-foreground">Supporting Evidence</span>
-                          <ul className="mt-1 text-sm text-muted-foreground">
-                            {cause.evidence.map((item, idx) => (
-                              <li key={idx} className="list-disc list-inside">• {item}</li>
-                            ))}
-                          </ul>
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-medium text-muted-foreground">Supporting Evidence</span>
+                            <ul className="mt-1 text-sm text-muted-foreground">
+                              {cause.evidence && cause.evidence.length > 0 ? (
+                                cause.evidence.map((item, idx) => (
+                                  <li key={idx} className="list-disc list-inside">• {item}</li>
+                                ))
+                              ) : (
+                                <li className="text-amber-600">• No direct evidence available - analysis based on symptoms and patterns</li>
+                              )}
+                            </ul>
+                          </div>
+                          
+                          {(cause as any).aiRemarks && (
+                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <div className="flex items-start gap-2">
+                                <Brain className="h-4 w-4 text-amber-600 mt-0.5" />
+                                <div>
+                                  <span className="text-xs font-medium text-amber-800">AI Analysis Note</span>
+                                  <p className="text-sm text-amber-700 mt-1">{(cause as any).aiRemarks}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -367,45 +385,56 @@ export default function AIAnalysis() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {analysisResults.recommendations.map((rec, index) => (
-                      <div key={rec.id} className="p-4 border rounded-lg bg-card">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={
-                                rec.priority === "Immediate" ? "destructive" :
-                                rec.priority === "Short-term" ? "default" : "secondary"
-                              }>
-                                {rec.priority}
-                              </Badge>
-                              <h4 className="font-semibold">{rec.title}</h4>
+                    {analysisResults.recommendations && analysisResults.recommendations.length > 0 ? (
+                      analysisResults.recommendations.map((rec, index) => (
+                        <div key={rec.id} className="p-4 border rounded-lg bg-card">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant={
+                                  rec.priority === "Immediate" ? "destructive" :
+                                  rec.priority === "Short-term" ? "default" : "secondary"
+                                }>
+                                  {rec.priority}
+                                </Badge>
+                                <h4 className="font-semibold">{rec.title}</h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
+                            <div className="text-right text-sm">
+                              <div className="font-medium">{rec.estimatedCost}</div>
+                              <div className="text-muted-foreground">{rec.timeframe}</div>
+                            </div>
                           </div>
-                          <div className="text-right text-sm">
-                            <div className="font-medium">{rec.estimatedCost}</div>
-                            <div className="text-muted-foreground">{rec.timeframe}</div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Category:</span> {rec.category}
+                            </div>
+                            <div>
+                              <span className="font-medium">Responsible:</span> {rec.responsible}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium">Prevention Effectiveness:</span>
+                              <Progress value={rec.preventsProbability} className="flex-1 h-2" />
+                              <span className="text-xs text-muted-foreground">{rec.preventsProbability}%</span>
+                            </div>
                           </div>
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Category:</span> {rec.category}
-                          </div>
-                          <div>
-                            <span className="font-medium">Responsible:</span> {rec.responsible}
-                          </div>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium">Prevention Effectiveness:</span>
-                            <Progress value={rec.preventsProbability} className="flex-1 h-2" />
-                            <span className="text-xs text-muted-foreground">{rec.preventsProbability}%</span>
-                          </div>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                        <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                        <h3 className="font-medium text-muted-foreground mb-2">No Specific Recommendations Generated</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Due to limited evidence, AI could not generate specific corrective actions. 
+                          Consider uploading additional technical data for more detailed recommendations.
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -466,7 +495,30 @@ export default function AIAnalysis() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {(analysisResults.evidenceGaps?.length || 0) > 0 && (
+                    {/* Always show evidence analysis summary per Universal RCA Instructions */}
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Brain className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-blue-800 mb-2">AI Evidence Analysis Summary</h4>
+                          <p className="text-sm text-blue-700">
+                            {analysisResults.overallConfidence >= 80 ? 
+                              "Analysis completed with adequate evidence. High confidence in root cause identification." :
+                              analysisResults.overallConfidence >= 50 ?
+                              "Analysis completed with moderate evidence. Some assumptions required for root cause analysis." :
+                              "Analysis based primarily on hypothesis due to limited evidence. Results should be validated with additional data."
+                            }
+                          </p>
+                          <div className="mt-2 text-xs text-blue-600">
+                            Evidence Adequacy: {analysisResults.overallConfidence}% | 
+                            Files Analyzed: {analysisResults.crossMatchResults?.libraryMatches || 0} | 
+                            Confidence Level: {analysisResults.overallConfidence >= 80 ? 'High' : analysisResults.overallConfidence >= 50 ? 'Medium' : 'Low'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(analysisResults.evidenceGaps?.length || 0) > 0 ? (
                       <div>
                         <h4 className="font-medium mb-3 text-orange-700">Evidence Gaps Identified</h4>
                         <ul className="space-y-2">
@@ -478,9 +530,17 @@ export default function AIAnalysis() {
                           ))}
                         </ul>
                       </div>
+                    ) : (
+                      <div>
+                        <h4 className="font-medium mb-3 text-green-700">Evidence Status</h4>
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          No critical evidence gaps identified based on available data
+                        </div>
+                      </div>
                     )}
                     
-                    {(analysisResults.additionalInvestigation?.length || 0) > 0 && (
+                    {(analysisResults.additionalInvestigation?.length || 0) > 0 ? (
                       <div>
                         <h4 className="font-medium mb-3 text-blue-700">Additional Investigation Recommended</h4>
                         <ul className="space-y-2">
@@ -491,6 +551,14 @@ export default function AIAnalysis() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className="font-medium mb-3 text-blue-700">Investigation Status</h4>
+                        <div className="flex items-center gap-2 text-sm text-blue-600">
+                          <CheckCircle className="h-4 w-4" />
+                          Current analysis appears complete based on available evidence
+                        </div>
                       </div>
                     )}
                   </CardContent>

@@ -136,8 +136,8 @@ export const investigations = pgTable("investigations", {
   evidenceCompleteness: decimal("evidence_completeness", { precision: 5, scale: 2 }).default("0.00"),
   evidenceValidated: boolean("evidence_validated").default(false),
   
-  // Analysis Results
-  analysisResults: jsonb("analysis_results"), // Fault tree diagram or ECFA chart
+  // Analysis Results - Contains complete RCA analysis output
+  analysisResults: jsonb("analysis_results"), // Complete RCA analysis including root causes, recommendations, evidence gaps
   rootCauses: jsonb("root_causes"),
   contributingFactors: jsonb("contributing_factors"),
   recommendations: jsonb("recommendations"),

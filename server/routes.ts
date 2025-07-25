@@ -1124,9 +1124,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // STEP 4: Generate Root Cause Analysis (Schema-driven, NO HARDCODING)
       const rcaResults = await generateSchemaBasedRCA(incident, evidenceAdequacy, analysisStrategy);
       
-      // STEP 5: Add Required Annotations per Instructions
+      // STEP 5: Format Results for Frontend Display (Per Universal RCA AI Evidence Instructions)
       const finalResults = {
-        ...rcaResults,
+        overallConfidence: evidenceScore,
+        analysisDate: new Date(),
+        rootCauses: [{
+          id: '1',
+          description: rcaResults.primaryRootCause,
+          confidence: evidenceScore,
+          category: 'AI Analysis',
+          evidence: evidenceAdequacy.criticalFound || [],
+          likelihood: evidenceScore >= 80 ? 'High' : evidenceScore >= 50 ? 'Medium' : 'Low',
+          impact: 'Critical',
+          priority: 1,
+          aiRemarks: evidenceScore < 80 ? 
+            "Analysis based on hypothesis due to insufficient evidence" : 
+            "Analysis based on adequate evidence collection"
+        }],
+        recommendations: (rcaResults.contributingFactors || []).map((factor: string, index: number) => ({
+          id: `rec-${index}`,
+          title: `Address ${factor}`,
+          description: `Investigate and resolve ${factor} to prevent recurrence`,
+          priority: 'Immediate',
+          category: 'Corrective Action',
+          estimatedCost: 'TBD',
+          timeframe: 'Short-term',
+          responsible: 'Engineering Team',
+          preventsProbability: evidenceScore >= 80 ? 80 : 60
+        })),
+        crossMatchResults: {
+          libraryMatches: evidenceAdequacy.criticalFound?.length || 0,
+          patternSimilarity: evidenceScore,
+          historicalData: [`Evidence adequacy: ${evidenceScore}%`, evidenceAdequacy.commentary]
+        },
+        evidenceGaps: evidenceAdequacy.missingCritical || [],
+        additionalInvestigation: evidenceScore < 80 ? [
+          "Upload additional technical evidence",
+          "Provide more detailed failure description",
+          "Include operational parameters during failure"
+        ] : [],
+        // Backend analysis details
         evidenceAdequacy: {
           score: evidenceScore,
           adequacyLevel: evidenceScore >= 80 ? 'ADEQUATE' : evidenceScore >= 50 ? 'MODERATE' : 'INADEQUATE',
@@ -1147,10 +1184,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // STEP 6: Save Results to Database
+      // STEP 6: Save Results to Database (INCLUDING ANALYSIS RESULTS)
       await investigationStorage.updateIncident(incidentId, {
         workflowStatus: 'analysis_complete',
-        currentStep: 7
+        currentStep: 7,
+        analysisResults: finalResults // Save the analysis results for frontend display
       });
       
       console.log(`[POST-EVIDENCE] Analysis completed with ${confidenceLevel} confidence (${evidenceScore}% evidence adequacy)`);
