@@ -71,7 +71,7 @@ class UniversalEvidenceAnalyzer:
         Real parsing with pandas/NumPy/Signal Processing
         """
         try:
-            print(f"[PYTHON ANALYZER] Starting real data science analysis for {filename}")
+            print(f"[PYTHON ANALYZER] Starting real data science analysis for {filename}", file=sys.stderr)
             
             # Detect file type and parse accordingly
             if filename.lower().endswith(('.csv', '.txt')):
@@ -101,7 +101,7 @@ class UniversalEvidenceAnalyzer:
         Real CSV/TXT parsing with pandas and signal processing
         Auto-detects columns, performs FFT, trend analysis
         """
-        print(f"[PYTHON ANALYZER] Parsing CSV/TXT file with pandas")
+        print(f"[PYTHON ANALYZER] Parsing CSV/TXT file with pandas", file=sys.stderr)
         
         try:
             # Try different delimiters
@@ -124,7 +124,7 @@ class UniversalEvidenceAnalyzer:
             if df is None or df.empty:
                 return self._handle_parsing_error(filename, evidence_config, "Cannot parse file as CSV/TXT")
             
-            print(f"[PYTHON ANALYZER] Successfully parsed {df.shape[0]} rows, {df.shape[1]} columns")
+            print(f"[PYTHON ANALYZER] Successfully parsed {df.shape[0]} rows, {df.shape[1]} columns", file=sys.stderr)
             
             # Auto-detect column types using real pattern matching
             column_analysis = self._analyze_columns(df)
@@ -363,7 +363,7 @@ class UniversalEvidenceAnalyzer:
                 confidence_impact = max(score, 20)
             
             # Generate summary
-            summary = f"Dataset: {df.shape[0]} rows × {df.shape[1]} columns. " + " ".join(remarks[:3])
+            summary = f"Dataset: {df.shape[0]} rows x {df.shape[1]} columns. " + " ".join(remarks[:3])
             
             return {
                 'diagnostic_value': diagnostic_value,
@@ -395,7 +395,7 @@ class UniversalEvidenceAnalyzer:
             excel_data = base64.b64decode(file_content)
             df = pd.read_excel(io.BytesIO(excel_data), sheet_name=0)
             
-            print(f"[PYTHON ANALYZER] Parsed Excel: {df.shape[0]} rows × {df.shape[1]} columns")
+            print(f"[PYTHON ANALYZER] Parsed Excel: {df.shape[0]} rows x {df.shape[1]} columns", file=sys.stderr)
             
             # Use same analysis as CSV
             column_analysis = self._analyze_columns(df)
@@ -439,7 +439,7 @@ class UniversalEvidenceAnalyzer:
             else:
                 return self._handle_parsing_error(filename, evidence_config, "JSON structure not suitable for analysis")
             
-            print(f"[PYTHON ANALYZER] Parsed JSON: {df.shape[0]} records × {df.shape[1]} fields")
+            print(f"[PYTHON ANALYZER] Parsed JSON: {df.shape[0]} records x {df.shape[1]} fields", file=sys.stderr)
             
             column_analysis = self._analyze_columns(df)
             diagnostic_assessment = self._assess_diagnostic_value(df, column_analysis, {})
@@ -502,17 +502,29 @@ def main():
     Command-line interface for evidence analysis
     """
     if len(sys.argv) != 4:
-        print("Usage: python python-evidence-analyzer.py <file_content> <filename> <evidence_config_json>")
+        print("Usage: python python-evidence-analyzer.py <file_path_or_content> <filename> <evidence_config_json>")
         sys.exit(1)
     
-    file_content = sys.argv[1]
+    file_path_or_content = sys.argv[1]
     filename = sys.argv[2]
     evidence_config = json.loads(sys.argv[3])
+    
+    # Check if first argument is a file path (for large files to avoid E2BIG error)
+    import os
+    if os.path.exists(file_path_or_content):
+        # Use sys.stderr for debug messages to avoid JSON parsing conflicts
+        print(f"[PYTHON ANALYZER] Reading file from path: {file_path_or_content}", file=sys.stderr)
+        with open(file_path_or_content, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+    else:
+        # Fallback to direct content (for backward compatibility)
+        file_content = file_path_or_content
     
     analyzer = UniversalEvidenceAnalyzer()
     result = analyzer.analyze_evidence_file(file_content, filename, evidence_config)
     
-    print(json.dumps(result, indent=2))
+    # Output ONLY the JSON result to stdout for clean parsing
+    print(json.dumps(result, indent=2, ensure_ascii=True))
 
 if __name__ == "__main__":
     main()

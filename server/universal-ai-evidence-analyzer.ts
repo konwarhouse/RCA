@@ -204,11 +204,24 @@ export class UniversalAIEvidenceAnalyzer {
       console.log(`[Python Interface] Calling Python data science analyzer for ${filename}`);
       
       try {
-        // Spawn Python process with real data science analysis
+        // Write content to temporary file to avoid E2BIG error with large files
+        const tempFilePath = path.join(process.cwd(), 'tmp', `temp_${Date.now()}_${filename}`);
+        
+        // Ensure tmp directory exists
+        const tmpDir = path.join(process.cwd(), 'tmp');
+        if (!fs.existsSync(tmpDir)) {
+          fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        
+        // Write file content to temporary file
+        fs.writeFileSync(tempFilePath, fileContent, 'utf8');
+        console.log(`[Python Interface] Created temporary file: ${tempFilePath} (${fileContent.length} chars)`);
+        
+        // Spawn Python process with file path instead of content
         const pythonScript = path.join(process.cwd(), 'server', 'python-evidence-analyzer.py');
         const pythonProcess = spawn('python3', [
           pythonScript,
-          fileContent,
+          tempFilePath,
           filename,
           JSON.stringify(evidenceConfig)
         ], {
@@ -232,21 +245,52 @@ export class UniversalAIEvidenceAnalyzer {
               console.log(`[Python Debug] Raw stdout: ${stdout}`);
               console.log(`[Python Debug] Raw stderr: ${stderr}`);
               
-              // Parse the JSON output from Python - try simple approach first
-              const lines = stdout.trim().split('\n');
+              // Extract JSON from Python output using brace counting
+              const output = stdout.trim();
               let result = null;
               
-              // Look for complete JSON block
-              for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('{') && line.includes('"filename"')) {
-                  try {
-                    result = JSON.parse(line);
-                    break;
-                  } catch (parseError) {
-                    console.log(`[Python Debug] Failed to parse line ${i}: ${line.substring(0, 50)}...`);
-                    continue;
-                  }
+              // Find the start of JSON block
+              const startIndex = output.indexOf('{');
+              if (startIndex === -1) {
+                throw new Error('No JSON start marker found in Python output');
+              }
+              
+              // Count braces to find complete JSON block
+              let braceCount = 0;
+              let endIndex = startIndex;
+              
+              for (let i = startIndex; i < output.length; i++) {
+                if (output[i] === '{') braceCount++;
+                if (output[i] === '}') braceCount--;
+                
+                if (braceCount === 0) {
+                  endIndex = i;
+                  break;
+                }
+              }
+              
+              const jsonString = output.substring(startIndex, endIndex + 1);
+              console.log(`[Python Debug] Extracted JSON block (${jsonString.length} chars)`);
+              
+              try {
+                result = JSON.parse(jsonString);
+                console.log(`[Python Debug] ✅ Successfully parsed Python analysis result!`);
+              } catch (parseError) {
+                console.log(`[Python Debug] JSON parse error: ${parseError}`);
+                console.log(`[Python Debug] Trying to fix JSON formatting...`);
+                
+                // Try to fix common JSON issues
+                let fixedJson = jsonString
+                  .replace(/\n/g, ' ')     // Remove newlines
+                  .replace(/\s+/g, ' ')    // Normalize whitespace
+                  .replace(/,\s*}/g, '}')  // Remove trailing commas
+                  .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+                
+                try {
+                  result = JSON.parse(fixedJson);
+                  console.log(`[Python Debug] ✅ Successfully parsed fixed JSON!`);
+                } catch (fixError) {
+                  console.log(`[Python Debug] Fixed JSON also failed: ${fixError}`);
                 }
               }
               
@@ -254,6 +298,17 @@ export class UniversalAIEvidenceAnalyzer {
                 throw new Error('No valid JSON result found in Python output');
               }
               console.log(`[Python Interface] Python analysis completed successfully: ${result.diagnosticValue} diagnostic value`);
+              
+              // Clean up temporary file
+              try {
+                if (fs.existsSync(tempFilePath)) {
+                  fs.unlinkSync(tempFilePath);
+                  console.log(`[Python Interface] Cleaned up temporary file: ${tempFilePath}`);
+                }
+              } catch (cleanupError) {
+                console.warn(`[Python Interface] Failed to cleanup temp file: ${cleanupError}`);
+              }
+              
               resolve(result);
               
             } catch (parseError) {
