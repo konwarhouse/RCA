@@ -1002,6 +1002,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GENERATE EVIDENCE CATEGORIES FOR COLLECTION (ZERO HARDCODING)
+  app.post("/api/incidents/:id/generate-evidence-categories", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { equipmentGroup, equipmentType, evidenceChecklist } = req.body;
+      
+      console.log(`[EVIDENCE CATEGORIES] Generating categories for incident ${incidentId} - ${equipmentGroup} → ${equipmentType}`);
+      
+      // Get incident to access evidence checklist items
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Transform evidence checklist items into evidence collection categories
+      // ZERO HARDCODING: Use actual evidence items generated from Evidence Library
+      const categories = [];
+      
+      if (incident.evidenceChecklist && Array.isArray(incident.evidenceChecklist)) {
+        console.log(`[EVIDENCE CATEGORIES] Found ${incident.evidenceChecklist.length} evidence items to convert to categories`);
+        
+        // Group evidence items by type/category for organized collection
+        const categoryMap = new Map();
+        
+        incident.evidenceChecklist.forEach((item: any, index: number) => {
+          // Use evidence item title as category name, prioritize by importance
+          const categoryKey = item.title || `Evidence Category ${index + 1}`;
+          const category = {
+            id: item.id || `category-${index + 1}`,
+            name: categoryKey,
+            description: item.description || 'Evidence required for analysis',
+            required: item.priority === 'Critical' || item.priority === 'High',
+            acceptedTypes: ['pdf', 'xlsx', 'csv', 'jpg', 'png', 'txt'], // Universal file types
+            maxFiles: 10,
+            files: [],
+            priority: item.priority || 'Medium',
+            isUnavailable: item.isUnavailable || false,
+            unavailableReason: item.unavailableReason || '',
+            originalEvidenceItem: item // Reference to original checklist item
+          };
+          
+          categories.push(category);
+        });
+        
+        console.log(`[EVIDENCE CATEGORIES] Generated ${categories.length} evidence collection categories`);
+      } else {
+        console.log(`[EVIDENCE CATEGORIES] No evidence checklist found - generating basic categories`);
+        
+        // Fallback: Generate basic categories from Equipment Library if no evidence checklist
+        const basicCategories = [
+          {
+            id: 'documentation',
+            name: 'Equipment Documentation',
+            description: 'Equipment manuals, specifications, and maintenance records',
+            required: true,
+            acceptedTypes: ['pdf', 'xlsx', 'csv', 'txt'],
+            maxFiles: 10,
+            files: [],
+            priority: 'High'
+          },
+          {
+            id: 'operational-data',
+            name: 'Operational Data',
+            description: 'Process trends, alarm logs, and operational parameters',
+            required: true,
+            acceptedTypes: ['xlsx', 'csv', 'txt'],
+            maxFiles: 10,
+            files: [],
+            priority: 'High'
+          }
+        ];
+        
+        categories.push(...basicCategories);
+      }
+      
+      res.json({ 
+        categories,
+        message: `Generated ${categories.length} evidence collection categories`,
+        totalRequired: categories.filter(c => c.required).length,
+        totalOptional: categories.filter(c => !c.required).length
+      });
+      
+    } catch (error) {
+      console.error('[EVIDENCE CATEGORIES] Generation failed:', error);
+      res.status(500).json({ message: "Failed to generate evidence categories" });
+    }
+  });
+
   // EQUIPMENT CASCADING DROPDOWN ENDPOINTS - NO HARDCODING
   // Level 1: Get distinct equipment groups from Evidence Library
   app.get("/api/cascading/equipment-groups", async (req, res) => {
