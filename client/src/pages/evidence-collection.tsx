@@ -244,8 +244,8 @@ export default function EvidenceCollection() {
   const handleProceedToHumanReview = () => {
     if (incidentId) {
       console.log('[EVIDENCE COLLECTION] Proceeding to MANDATORY Stage 3B Human Review');
-      // Direct navigation - no backend call needed as files already uploaded
-      setLocation(`/human-review?incident=${incidentId}`);
+      // Direct navigation using window.location to avoid wouter encoding issues
+      window.location.href = `/human-review?incident=${incidentId}`;
     }
   };
 

@@ -29,7 +29,8 @@ import DebugRoutes from "@/pages/debug-routes";
 
 
 function Router() {
-  console.log('Current route:', window.location.pathname);
+  console.log('Current route:', window.location.pathname + window.location.search);
+  console.log('Full URL:', window.location.href);
   return (
     <Switch>
       <Route path="/" component={Home} />

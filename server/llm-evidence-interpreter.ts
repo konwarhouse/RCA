@@ -38,6 +38,12 @@ interface ParsedEvidenceSummary {
 }
 
 interface LLMDiagnosticInterpretation {
+  mostLikelyRootCause: string;
+  confidenceScore: number;
+  supportingFeatures: string[];
+  recommendations: string[];
+  missingEvidenceOrUncertainty: string[];
+  // Legacy compatibility fields
   mostLikelyRootCauses: string[];
   pinnpointedRecommendations: string[];
   confidence: number;
@@ -85,36 +91,63 @@ export class LLMEvidenceInterpreter {
   }
   
   /**
-   * Create structured diagnostic prompt for LLM analysis
+   * UNIVERSAL RCA DETERMINISTIC AI ADDENDUM - STRICT PROMPT TEMPLATE
+   * Creates deterministic diagnostic prompt with mandatory JSON output structure
+   * NO HARDCODING - Equipment-agnostic evidence-driven analysis only
    */
   private static createDiagnosticPrompt(
     parsedSummary: ParsedEvidenceSummary,
     equipmentContext: any
   ): string {
     
-    return `EVIDENCE DIAGNOSTIC INTERPRETATION REQUEST
+    return `UNIVERSAL LLM (AI) RCA DIAGNOSTIC PROMPT TEMPLATE – STRICTLY NO HARDCODING
 
-EQUIPMENT CONTEXT:
-- Group: ${equipmentContext.group}
-- Type: ${equipmentContext.type}  
-- Subtype: ${equipmentContext.subtype}
+You are an expert reliability and root cause analysis (RCA) AI assistant.
 
-PYTHON PARSED SUMMARY:
+You will receive as input:
+- A structured summary of parsed features from an evidence file (e.g., vibration data, IR scan, process log, maintenance record, etc.).
+- Equipment information if available (but never assume equipment type or fault signatures unless provided).
+- A list of any missing fields or data limitations.
+
+Your response MUST:
+1. Identify the most probable failure mode(s) or explicitly state "No abnormality detected" if the data appears normal.
+2. Report a numeric confidence score (0–100%) for your inference.
+3. Provide 2–4 concise, actionable recommendations (short, practical steps for the investigator).
+4. Explicitly mention any missing/uncertain data, and list the specific evidence needed to improve the confidence.
+5. NEVER assume equipment type, failure mode, or fault signature unless present in the summary—no static templates or rules allowed.
+6. Always cite the parsed feature(s) that support your inference or recommendations (e.g., "RMS = 5.8 mm/s").
+7. Use a strict JSON output structure as below—NO free-form narrative, no equipment-specific logic or hardcoding:
+
+{
+  "mostLikelyRootCause": "[Short phrase, or 'No anomaly detected']",
+  "confidenceScore": [number, 0–100],
+  "supportingFeatures": [
+    "[E.g., 'RMS = 5.8 mm/s']", 
+    "[E.g., 'FFT peak at 2.3x']"
+  ],
+  "recommendations": [
+    "[Action 1]",
+    "[Action 2]",
+    "[Action 3]"
+  ],
+  "missingEvidenceOrUncertainty": [
+    "[E.g., 'No bearing temp data']", 
+    "[E.g., 'Short time window']"
+  ]
+}
+
+You must use this output format for every file and every case, regardless of input or asset type.
+
+If the summary is incomplete or no clear root cause is present, say "No anomaly detected" and provide a recommendation for further data or review.
+
+Input follows:
+---
 File: ${parsedSummary.fileName}
-Analysis: ${parsedSummary.parsedSummary}
+Parsed Summary: ${parsedSummary.parsedSummary}
 Adequacy Score: ${parsedSummary.adequacyScore}%
 Extracted Features: ${JSON.stringify(parsedSummary.extractedFeatures)}
-
-REQUIRED LLM ANALYSIS:
-1. Most Likely Root Cause(s): Based on parsed evidence, identify 2-3 most probable specific root causes with technical reasoning
-2. Pinpointed Recommendations: Provide 3-5 specific, actionable recommendations with technical justification
-3. Confidence Assessment: Rate your confidence in analysis (0-100%) based on evidence quality and completeness
-4. Library/Fault Pattern Match: Identify any known fault patterns or library matches from technical analysis
-5. Missing Evidence: Specify what additional evidence is needed for higher confidence
-6. Next Steps: Recommend specific next investigative steps
-
-RESPONSE FORMAT:
-Provide structured technical diagnostic interpretation focusing on root cause analysis and actionable recommendations.`;
+Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
+---`;
   }
   
   /**
@@ -145,26 +178,159 @@ Provide structured technical diagnostic interpretation focusing on root cause an
   }
   
   /**
-   * Parse LLM response into structured diagnostic interpretation
+   * UNIVERSAL RCA DETERMINISTIC AI ADDENDUM - STRICT JSON PARSER
+   * Parse and structure LLM response into deterministic format
+   * Enforces JSON structure compliance for consistent diagnostic output
    */
   private static parseLLMResponse(
     llmResponse: string,
     parsedSummary: ParsedEvidenceSummary
   ): LLMDiagnosticInterpretation {
     
-    // Extract structured information from LLM response
-    const interpretation: LLMDiagnosticInterpretation = {
-      mostLikelyRootCauses: this.extractRootCauses(llmResponse),
-      pinnpointedRecommendations: this.extractRecommendations(llmResponse),
-      confidence: this.extractConfidence(llmResponse),
-      libraryFaultPatternMatch: this.extractPatternMatches(llmResponse),
-      missingEvidence: this.extractMissingEvidence(llmResponse),
-      nextStepsNeeded: this.extractNextSteps(llmResponse),
-      diagnosticSummary: this.extractDiagnosticSummary(llmResponse),
-      technicalAnalysis: llmResponse
-    };
+    try {
+      console.log(`[LLM INTERPRETER] Parsing deterministic JSON response for ${parsedSummary.fileName}`);
+      
+      // Extract JSON from LLM response (handle potential markdown formatting)
+      let jsonContent = llmResponse.trim();
+      if (jsonContent.includes('```json')) {
+        const jsonMatch = jsonContent.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+        if (jsonMatch) {
+          jsonContent = jsonMatch[1];
+        }
+      } else if (jsonContent.includes('```')) {
+        const jsonMatch = jsonContent.match(/```\s*(\{[\s\S]*?\})\s*```/);
+        if (jsonMatch) {
+          jsonContent = jsonMatch[1];
+        }
+      }
+      
+      // Find first complete JSON object in response
+      const jsonStart = jsonContent.indexOf('{');
+      const jsonEnd = jsonContent.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      // Parse deterministic JSON structure
+      const deterministic = JSON.parse(jsonContent);
+      
+      // Validate required fields per Universal RCA Deterministic AI Addendum
+      if (!deterministic.mostLikelyRootCause) {
+        throw new Error('Missing mostLikelyRootCause field');
+      }
+      if (typeof deterministic.confidenceScore !== 'number') {
+        throw new Error('Missing or invalid confidenceScore field');
+      }
+      if (!Array.isArray(deterministic.supportingFeatures)) {
+        throw new Error('Missing or invalid supportingFeatures array');
+      }
+      if (!Array.isArray(deterministic.recommendations)) {
+        throw new Error('Missing or invalid recommendations array');
+      }
+      if (!Array.isArray(deterministic.missingEvidenceOrUncertainty)) {
+        throw new Error('Missing or invalid missingEvidenceOrUncertainty array');
+      }
+      
+      console.log(`[LLM INTERPRETER] Successfully parsed deterministic JSON with ${deterministic.confidenceScore}% confidence`);
+      
+      // Return structured interpretation with both new deterministic and legacy fields
+      return {
+        // NEW: Universal RCA Deterministic AI Addendum fields
+        mostLikelyRootCause: deterministic.mostLikelyRootCause,
+        confidenceScore: deterministic.confidenceScore,
+        supportingFeatures: deterministic.supportingFeatures,
+        recommendations: deterministic.recommendations,
+        missingEvidenceOrUncertainty: deterministic.missingEvidenceOrUncertainty,
+        
+        // Legacy compatibility fields for existing UI
+        mostLikelyRootCauses: [deterministic.mostLikelyRootCause],
+        pinnpointedRecommendations: deterministic.recommendations,
+        confidence: deterministic.confidenceScore,
+        libraryFaultPatternMatch: {
+          matchedPatterns: deterministic.supportingFeatures,
+          patternConfidence: deterministic.confidenceScore,
+          libraryReference: 'Deterministic AI Analysis'
+        },
+        missingEvidence: deterministic.missingEvidenceOrUncertainty,
+        nextStepsNeeded: deterministic.recommendations,
+        diagnosticSummary: `${deterministic.mostLikelyRootCause} (${deterministic.confidenceScore}% confidence)`,
+        technicalAnalysis: `Deterministic Analysis: ${deterministic.mostLikelyRootCause}. Supporting Features: ${deterministic.supportingFeatures.join(', ')}. Confidence: ${deterministic.confidenceScore}%.`
+      };
+      
+    } catch (error) {
+      console.error('[LLM INTERPRETER] Deterministic JSON parsing failed:', error);
+      console.error('[LLM INTERPRETER] Raw LLM response:', llmResponse);
+      
+      // Fallback to text parsing for non-JSON responses
+      return this.parseLegacyTextResponse(llmResponse, parsedSummary);
+    }
+  }
+  
+  /**
+   * Fallback parser for non-JSON LLM responses (legacy compatibility)
+   */
+  private static parseLegacyTextResponse(
+    llmResponse: string,
+    parsedSummary: ParsedEvidenceSummary
+  ): LLMDiagnosticInterpretation {
     
-    return interpretation;
+    console.log(`[LLM INTERPRETER] Using legacy text parsing for ${parsedSummary.fileName}`);
+    
+    try {
+      const rootCauses = this.extractRootCauses(llmResponse);
+      const recommendations = this.extractRecommendations(llmResponse);
+      const missingEvidence = this.extractMissingEvidence(llmResponse);
+      const confidence = this.extractConfidence(llmResponse);
+      
+      // Ensure minimum content
+      const finalRootCause = rootCauses.length > 0 ? rootCauses[0] : 'Further investigation required';
+      const finalRecommendations = recommendations.length > 0 ? recommendations : ['Review evidence completeness'];
+      const finalMissingEvidence = missingEvidence.length > 0 ? missingEvidence : ['Complete analysis pending'];
+      
+      return {
+        // NEW: Universal RCA Deterministic AI Addendum fields
+        mostLikelyRootCause: finalRootCause,
+        confidenceScore: confidence,
+        supportingFeatures: ['Legacy text analysis'],
+        recommendations: finalRecommendations,
+        missingEvidenceOrUncertainty: finalMissingEvidence,
+        
+        // Legacy compatibility fields
+        mostLikelyRootCauses: rootCauses.length > 0 ? rootCauses : [finalRootCause],
+        pinnpointedRecommendations: finalRecommendations,
+        confidence: confidence,
+        libraryFaultPatternMatch: this.extractPatternMatches(llmResponse),
+        missingEvidence: finalMissingEvidence,
+        nextStepsNeeded: this.extractNextSteps(llmResponse),
+        diagnosticSummary: `Legacy analysis for ${parsedSummary.fileName}: ${finalRootCause} (${confidence}% confidence)`,
+        technicalAnalysis: llmResponse
+      };
+      
+    } catch (error) {
+      console.error('[LLM INTERPRETER] Legacy text parsing also failed:', error);
+      
+      // Ultimate fallback
+      return {
+        mostLikelyRootCause: 'Analysis failed - invalid LLM response',
+        confidenceScore: 0,
+        supportingFeatures: ['Analysis incomplete'],
+        recommendations: ['Retry diagnostic interpretation with valid LLM configuration'],
+        missingEvidenceOrUncertainty: ['LLM response parsing failed'],
+        
+        mostLikelyRootCauses: ['Analysis failed'],
+        pinnpointedRecommendations: ['Retry analysis'],
+        confidence: 0,
+        libraryFaultPatternMatch: {
+          matchedPatterns: [],
+          patternConfidence: 0,
+          libraryReference: 'Failed'
+        },
+        missingEvidence: ['LLM analysis failed'],
+        nextStepsNeeded: ['Fix LLM configuration'],
+        diagnosticSummary: `Diagnostic interpretation completely failed for ${parsedSummary.fileName}`,
+        technicalAnalysis: 'LLM response parsing failed'
+      };
+    }
   }
   
   /**
