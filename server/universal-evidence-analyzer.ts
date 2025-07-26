@@ -1,4 +1,20 @@
 /**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * EVIDENCE ANALYSIS: Universal evidence parsing with NO hardcoded file type assumptions
+ * NO HARDCODING: Auto-detect file types, dynamic routing, schema-driven analysis
+ * STATE PERSISTENCE: Analysis results associated with incident ID across all stages
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL ANALYSIS COMPLIANCE:
+ * - NO hardcoded file type mappings or analysis logic
+ * - Auto-routing based on MIME type detection
+ * - All analysis results stored with incident association
+ * - Universal Python/AI routing without equipment assumptions
+ * 
  * UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING
  * STAGE 2/3 IMPLEMENTATION - EXACT INSTRUCTION COMPLIANCE
  * RULE: NO HARDCODING - AUTO-DETECT FILE TYPES AND ROUTE CORRECTLY

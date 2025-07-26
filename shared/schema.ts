@@ -1,3 +1,22 @@
+/**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * DATABASE SCHEMA: Schema-driven operations only, NO hardcoded field names
+ * NO HARDCODING: All table/field references must be dynamic from schema
+ * STATE PERSISTENCE: evidenceResponses field stores evidence files (NOT evidenceFiles)
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL SCHEMA COMPLIANCE:
+ * - Table names: singular, lowercase, underscores
+ * - Primary keys: id (UUID or serial integer)
+ * - Foreign keys: <referenced_table>_id format
+ * - NO nullable fields unless absolutely necessary
+ * - Evidence files stored in evidenceResponses (jsonb field)
+ */
+
 import {
   pgTable,
   text,

@@ -1,3 +1,22 @@
+/**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * DATABASE OPERATIONS: Schema-driven storage operations only, NO hardcoded field names
+ * NO HARDCODING: All database operations dynamic from schema definitions
+ * STATE PERSISTENCE: Evidence files stored in evidenceResponses field (NOT evidenceFiles)
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL STORAGE COMPLIANCE:
+ * - ALL database field access must be schema-driven
+ * - Evidence files stored in evidenceResponses (jsonb) field
+ * - NO deprecated evidenceFiles field references
+ * - Foreign key relationships properly maintained
+ * - State persistence across ALL workflow stages
+ */
+
 import { 
   investigations, 
   type Investigation, 

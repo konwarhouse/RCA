@@ -1,3 +1,22 @@
+/**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * FRONTEND ROUTING: Uses query parameters (?incident=ID) for incident identification
+ * NO HARDCODING: All incident IDs dynamic from URL parameters, no static values
+ * STATE PERSISTENCE: Evidence upload state maintained across workflow stages
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL FRONTEND COMPLIANCE:
+ * - Incident ID extracted from URL query parameters only
+ * - NO hardcoded incident IDs or route fragments
+ * - Evidence file state persists through navigation
+ * - File uploads associated with correct incident ID
+ * - Error handling provides clear, actionable guidance
+ */
+
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Upload, FileText, Camera, Download, CheckCircle, AlertTriangle, ChevronRight, Brain, X, AlertCircle } from "lucide-react";

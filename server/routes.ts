@@ -1,3 +1,21 @@
+/**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * ROUTING: Path parameter style (/api/incidents/:id/endpoint)
+ * NO HARDCODING: All values dynamic, config-driven from database/schema
+ * STATE PERSISTENCE: Evidence files associated with incident ID across all stages
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL COMPLIANCE REQUIREMENTS:
+ * - ALL routes use path parameters: /api/incidents/:id/endpoint
+ * - Evidence stored in evidenceResponses field (NOT evidenceFiles)
+ * - NO hardcoding of IDs, paths, or magic numbers
+ * - State persists through ALL workflow stages
+ */
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import * as fs from "fs";

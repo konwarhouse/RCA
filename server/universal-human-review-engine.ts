@@ -1,4 +1,20 @@
 /**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * HUMAN REVIEW WORKFLOW: Universal evidence file review with NO hardcoded analysis logic
+ * NO HARDCODING: All file analysis dynamic, schema-driven from Evidence Library
+ * STATE PERSISTENCE: Review sessions associated with incident ID across all stages
+ * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
+ * DATE: January 26, 2025
+ * LAST REVIEWED: January 26, 2025
+ * EXCEPTIONS: None
+ * 
+ * CRITICAL REVIEW COMPLIANCE:
+ * - ALL evidence files processed through universal Python backend
+ * - NO hardcoded file type assumptions or analysis logic
+ * - Review status persistence across workflow stages
+ * - Incident ID association maintained throughout review process
+ * 
  * UNIVERSAL RCA EVIDENCE FILE ANALYSIS & HUMAN REVIEW WORKFLOW
  * STRICT RULE: ABSOLUTELY NO HARD CODING ALLOWED
  * 
