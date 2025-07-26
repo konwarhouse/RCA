@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, CheckCircle, Clock, FileText, Upload, MessageSquare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,6 +42,7 @@ export default function HumanReview() {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [reviewComments, setReviewComments] = useState<{ [key: string]: string }>({});
+  const [fileReviewStates, setFileReviewStates] = useState<{ [key: string]: string }>({});
   
   // Get incident ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -77,6 +80,12 @@ export default function HumanReview() {
         title: "Review Submitted",
         description: "Evidence file review status updated successfully",
       });
+      
+      // Update local state to reflect the change immediately
+      const { fileId, action } = result.data || {};
+      if (fileId && action) {
+        setFileReviewStates(prev => ({ ...prev, [fileId]: action }));
+      }
     },
     onError: (error: any) => {
       console.error('[REVIEW ACTION] Error:', error);
@@ -89,41 +98,48 @@ export default function HumanReview() {
   });
 
   // Check if all files are reviewed (Universal RCA Evidence Flow v2 compliance)
-  const allFilesReviewed = Array.isArray(evidenceFiles) && evidenceFiles.length > 0 && evidenceFiles.every((file: EvidenceFile) => 
-    file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
-  );
+  const allFilesReviewed = Array.isArray(evidenceFiles) && evidenceFiles.length > 0 && evidenceFiles.every((file: EvidenceFile) => {
+    const currentStatus = fileReviewStates[file.id] || file.reviewStatus;
+    return currentStatus === 'ACCEPTED' || currentStatus === 'REPLACED';
+  });
   
   // Count reviewed files for progress display
-  const reviewedCount = Array.isArray(evidenceFiles) ? evidenceFiles.filter((file: EvidenceFile) => 
-    file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
-  ).length : 0;
+  const reviewedCount = Array.isArray(evidenceFiles) ? evidenceFiles.filter((file: EvidenceFile) => {
+    const currentStatus = fileReviewStates[file.id] || file.reviewStatus;
+    return currentStatus === 'ACCEPTED' || currentStatus === 'REPLACED';
+  }).length : 0;
 
-  // Handle review action with enhanced logging and user feedback (UNIVERSAL PROTOCOL STANDARD)
-  const handleReviewAction = (fileId: string, action: string) => {
-    console.log('[REVIEW ACTION] Button clicked:', { fileId, action });
+  // Handle checkbox review action with enhanced logging and user feedback (UNIVERSAL PROTOCOL STANDARD)
+  const handleCheckboxReview = (fileId: string, action: string, checked: boolean) => {
+    console.log('[CHECKBOX REVIEW] Checkbox changed:', { fileId, action, checked });
     
-    // Prevent multiple submissions
-    if (reviewActionMutation.isPending) {
-      console.log('[REVIEW ACTION] Already pending, ignoring click');
-      toast({
-        title: "Please Wait",
-        description: "Review submission in progress...",
-        variant: "default",
+    if (checked) {
+      // Prevent multiple submissions
+      if (reviewActionMutation.isPending) {
+        console.log('[CHECKBOX REVIEW] Already pending, ignoring click');
+        toast({
+          title: "Please Wait",
+          description: "Review submission in progress...",
+          variant: "default",
+        });
+        return;
+      }
+
+      // Update local state immediately for UI feedback
+      setFileReviewStates(prev => ({ ...prev, [fileId]: action }));
+
+      const comments = reviewComments[fileId] || '';
+      console.log('[CHECKBOX REVIEW] Submitting with comments:', comments);
+      
+      reviewActionMutation.mutate({ 
+        fileId, 
+        action, 
+        comments 
       });
-      return;
+    } else {
+      // If unchecked, clear the review state
+      setFileReviewStates(prev => ({ ...prev, [fileId]: 'UNREVIEWED' }));
     }
-
-    const comments = reviewComments[fileId] || '';
-    console.log('[REVIEW ACTION] Submitting with comments:', comments);
-    
-    reviewActionMutation.mutate({ 
-      fileId, 
-      action, 
-      comments 
-    });
-    
-    // Clear comments after submission
-    setReviewComments(prev => ({ ...prev, [fileId]: '' }));
   };
 
   const proceedToAnalysis = () => {
@@ -327,61 +343,80 @@ export default function HumanReview() {
                   </div>
                 )}
 
-                {/* Review Actions */}
-                {file.reviewStatus === 'UNREVIEWED' ? (
-                  <div className="space-y-3 pt-3 border-t">
-                    <Textarea
-                      placeholder="Add review comments (optional)..."
-                      value={reviewComments[file.id] || ''}
-                      onChange={(e) => setReviewComments(prev => ({ ...prev, [file.id]: e.target.value }))}
-                      rows={2}
-                      className="text-sm"
-                    />
+                {/* Review Actions - CHECKBOX INTERFACE (User Requested) */}
+                <div className="space-y-3 pt-3 border-t">
+                  <Textarea
+                    placeholder="Add review comments (optional)..."
+                    value={reviewComments[file.id] || ''}
+                    onChange={(e) => setReviewComments(prev => ({ ...prev, [file.id]: e.target.value }))}
+                    rows={2}
+                    className="text-sm"
+                  />
+                  
+                  {/* CHECKBOX REVIEW OPTIONS (Universal Protocol Standard) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`accept-${file.id}`}
+                        checked={fileReviewStates[file.id] === 'ACCEPTED' || file.reviewStatus === 'ACCEPTED'}
+                        onCheckedChange={(checked) => handleCheckboxReview(file.id, 'ACCEPTED', !!checked)}
+                        disabled={reviewActionMutation.isPending}
+                        className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                      />
+                      <Label 
+                        htmlFor={`accept-${file.id}`} 
+                        className="text-sm font-medium text-green-700 cursor-pointer"
+                      >
+                        ✓ Accept Evidence File - Ready for AI Analysis
+                      </Label>
+                    </div>
                     
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleReviewAction(file.id, 'ACCEPTED')}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`need-info-${file.id}`}
+                        checked={fileReviewStates[file.id] === 'NEEDS_MORE_INFO' || file.reviewStatus === 'NEEDS_MORE_INFO'}
+                        onCheckedChange={(checked) => handleCheckboxReview(file.id, 'NEEDS_MORE_INFO', !!checked)}
                         disabled={reviewActionMutation.isPending}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        className="data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <Label 
+                        htmlFor={`need-info-${file.id}`} 
+                        className="text-sm font-medium text-amber-700 cursor-pointer"
                       >
-                        {reviewActionMutation.isPending ? '...' : '✓ Accept'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReviewAction(file.id, 'NEEDS_MORE_INFO')}
+                        ? Needs More Information - Additional Data Required
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`replace-${file.id}`}
+                        checked={fileReviewStates[file.id] === 'REPLACED' || file.reviewStatus === 'REPLACED'}
+                        onCheckedChange={(checked) => handleCheckboxReview(file.id, 'REPLACED', !!checked)}
                         disabled={reviewActionMutation.isPending}
-                        className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-50"
+                        className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                      />
+                      <Label 
+                        htmlFor={`replace-${file.id}`} 
+                        className="text-sm font-medium text-red-700 cursor-pointer"
                       >
-                        {reviewActionMutation.isPending ? '...' : '? Needs More Info'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleReviewAction(file.id, 'REPLACED')}
-                        disabled={reviewActionMutation.isPending}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        {reviewActionMutation.isPending ? '...' : '↻ Replace'}
-                      </Button>
+                        ↻ Replace File - Upload Different Evidence
+                      </Label>
                     </div>
                   </div>
-                ) : (
-                  <div className="pt-3 border-t">
+
+                  {/* Status Display */}
+                  {(fileReviewStates[file.id] || file.reviewStatus !== 'UNREVIEWED') && (
                     <div className={`p-3 rounded text-sm font-medium ${
-                      file.reviewStatus === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
-                      file.reviewStatus === 'REPLACED' ? 'bg-blue-100 text-blue-800' :
-                      file.reviewStatus === 'NEEDS_MORE_INFO' ? 'bg-amber-100 text-amber-800' :
+                      (fileReviewStates[file.id] || file.reviewStatus) === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                      (fileReviewStates[file.id] || file.reviewStatus) === 'REPLACED' ? 'bg-red-100 text-red-800' :
+                      (fileReviewStates[file.id] || file.reviewStatus) === 'NEEDS_MORE_INFO' ? 'bg-amber-100 text-amber-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      ✅ Review Status: {file.reviewStatus}
-                      {file.reviewStatus === 'ACCEPTED' && ' - Ready for AI Analysis'}
-                      {file.reviewStatus === 'REPLACED' && ' - Replacement Required'}
-                      {file.reviewStatus === 'NEEDS_MORE_INFO' && ' - Additional Information Needed'}
+                      Status: {fileReviewStates[file.id] || file.reviewStatus}
+                      {reviewActionMutation.isPending && ' (Updating...)'}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Show comments if reviewed */}
                 {file.userComments && (
