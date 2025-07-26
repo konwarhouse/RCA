@@ -30,6 +30,9 @@ const incidentSchema = z.object({
   priority: z.enum(["Low", "Medium", "High", "Critical"]),
   immediateActions: z.string().optional(),
   safetyImplications: z.string().optional(),
+  // Sequence of Events fields (NO HARDCODING)
+  sequenceOfEvents: z.string().optional(),
+  sequenceOfEventsFiles: z.array(z.string()).optional(),
   // Structured Timeline Data (NEW)
   timelineData: z.record(z.string()).optional(),
 });
@@ -57,6 +60,8 @@ export default function IncidentReporting() {
       priority: "Medium",
       immediateActions: "",
       safetyImplications: "",
+      sequenceOfEvents: "",
+      sequenceOfEventsFiles: [],
       timelineData: {},
     },
   });
@@ -587,6 +592,117 @@ export default function IncidentReporting() {
                     )}
                   />
                 </div>
+
+                <Separator className="my-6" />
+
+                {/* SEQUENCE OF EVENTS SECTION (NO HARDCODING) */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <Clock4 className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-slate-900">Sequence of Events</h3>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Please provide a chronological summary of key actions and observations related to the incident, including times if available.
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="sequenceOfEvents"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sequence of Events (Narrative)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder={`Enter the main steps as they happened, including approximate times if possible.
+Example:
+08:05 – Alarm activated
+08:10 – Operator responded to pump room
+08:12 – Leak observed at pump discharge
+08:14 – Pump stopped by operator
+
+You can include as much detail as available.`}
+                            rows={6}
+                            className="resize-y"
+                          />
+                        </FormControl>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Optional, but recommended for better analysis
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* File Upload Section for Sequence of Events */}
+                  <div className="space-y-3">
+                    <FormLabel className="text-sm font-medium">Attach Sequence of Events (optional)</FormLabel>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <input
+                            type="file"
+                            multiple
+                            accept=".pdf,.docx,.xlsx,.txt,.csv,.jpg,.png,.gif"
+                            className="hidden"
+                            id="sequence-files"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              const fileNames = files.map(f => f.name);
+                              form.setValue("sequenceOfEventsFiles", fileNames);
+                            }}
+                          />
+                          <label htmlFor="sequence-files" className="cursor-pointer">
+                            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                          </label>
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          <label htmlFor="sequence-files" className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium">
+                            Upload files
+                          </label>
+                          <span className="text-slate-500"> or drag and drop</span>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Operator logs, DCS/SCADA exports, annotated timelines, photos, sketches
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          Accepts: PDF, DOCX, XLSX, TXT, CSV, JPG, PNG, GIF
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Display uploaded files */}
+                    {form.watch("sequenceOfEventsFiles")?.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-slate-700">Uploaded Files:</div>
+                        <div className="space-y-1">
+                          {form.watch("sequenceOfEventsFiles").map((fileName, index) => (
+                            <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded text-sm">
+                              <span className="text-slate-700">{fileName}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const currentFiles = form.getValues("sequenceOfEventsFiles") || [];
+                                  const updatedFiles = currentFiles.filter((_, i) => i !== index);
+                                  form.setValue("sequenceOfEventsFiles", updatedFiles);
+                                }}
+                                className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
 
                 {/* STRUCTURED TIMELINE SECTION (NEW) */}
                 {showTimeline && timelineQuestions.length > 0 && (

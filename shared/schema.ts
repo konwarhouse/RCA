@@ -269,6 +269,10 @@ export const incidents = pgTable("incidents", {
   immediateActions: text("immediate_actions"),
   safetyImplications: text("safety_implications"),
   
+  // Sequence of Events fields (NO HARDCODING - Universal RCA Instruction compliance)
+  sequenceOfEvents: text("sequence_of_events"), // Chronological narrative of incident
+  sequenceOfEventsFiles: jsonb("sequence_of_events_files"), // Uploaded supporting files (logs, DCS exports, timelines)
+  
   // Equipment selection & symptoms (Step 2)
   specificPart: varchar("specific_part"),
   symptomDescription: text("symptom_description"),
