@@ -259,12 +259,20 @@ export class EnhancedAITestService {
   }
   
   /**
-   * Update test result in database
+   * Update test result in database - UNIVERSAL PROTOCOL STANDARD compliant
    */
   private static async updateTestResult(providerId: number, success: boolean, errorMessage: string | null): Promise<void> {
     try {
-      await investigationStorage.updateAiTestResult(providerId, success, errorMessage);
-      console.log(`[Enhanced AI Test] Updated database - Provider ${providerId}: ${success ? 'SUCCESS' : 'FAILED'}`);
+      // Universal Protocol Standard - use existing AI settings update method
+      const aiSettings = await investigationStorage.getAllAiSettings();
+      const provider = aiSettings.find((setting: any) => setting.id === providerId);
+      
+      if (provider) {
+        provider.testStatus = success ? 'success' : 'failed';
+        provider.lastTestedAt = new Date();
+        await investigationStorage.saveAiSettings(provider);
+        console.log(`[Enhanced AI Test] Updated database - Provider ${providerId}: ${success ? 'SUCCESS' : 'FAILED'}`);
+      }
     } catch (error) {
       console.error('[Enhanced AI Test] Failed to update database:', error);
     }
@@ -283,6 +291,9 @@ export class EnhancedAITestService {
       if (!provider) {
         return { success: false, latency: 0, error: 'Provider not found' };
       }
+      
+      // 🚨 MANDATORY LLM API KEY SECURITY CHECK
+      validateLLMSecurity(provider.apiKey, provider.provider, 'enhanced-ai-test-service.ts');
       
       const openai = new OpenAI({ 
         apiKey: provider.apiKey,
