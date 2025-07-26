@@ -16,7 +16,41 @@ Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault t
 
 ## Recent Changes (January 2025)
 
-### SEQUENCE OF EVENTS FIELDS SPECIFICATION COMPLETE IMPLEMENTATION - NO HARDCODING (LATEST)
+### REGULATORY/COMPLIANCE IMPACT FIELDS COMPLETE IMPLEMENTATION - NO HARDCODING (LATEST)
+- **Date**: January 26, 2025 (Regulatory/Compliance Impact Field Complete Implementation)
+- **User Requirements Fulfilled**: Complete implementation of Regulatory/Compliance Impact section with conditional logic based on reportable status following EXACT specification with absolute NO HARDCODING policy
+- **SPECIFICATION COMPLIANCE ACHIEVED**: Platform now provides regulatory compliance capture exactly as specified with conditional field logic
+- **Field Implementation Complete**:
+  - **Reportable Incident Dropdown**: Three mutually exclusive options ("No – Not a reportable incident", "Yes – Reported", "Yes – Not yet reported")
+  - **Conditional Logic**: Different field sets appear based on dropdown selection
+  - **"Yes – Reported" Fields**: Regulatory Authority Name, Date Reported, Report Reference ID, Summary of Compliance Impact
+  - **"Yes – Not yet reported" Fields**: Planned Date of Reporting, Reason for Delay, Intended Regulatory Authority
+  - **"No" Option**: Shows confirmation message with no additional fields
+- **Technical Implementation**:
+  - **Database Schema**: Added all regulatory compliance columns (reportable_status, regulatory_authority_name, date_reported, report_reference_id, compliance_impact_summary, planned_date_of_reporting, delay_reason, intended_regulatory_authority)
+  - **Conditional Form Validation**: Zod schema with refine() validation for conditional required fields
+  - **Color-Coded UI**: Green for reported, amber for not yet reported, gray for not reportable
+  - **Universal Logic**: No hardcoded regulatory authorities - placeholder examples only
+- **Conditional Validation Logic**:
+  - ✅ **Only one logic path activated** based on selection
+  - ✅ **Conditionally required fields enforce input** when their section is triggered
+  - ✅ **Universal regulatory authority support** - no hardcoded specific regulators
+  - ✅ **Helper text compliance** - exact placeholder examples as specified
+- **Specification Verification**:
+  - ✅ **Field Labels**: Exactly "Reportable Incident?", "Regulatory Authority Name", etc.
+  - ✅ **Field Types**: Dropdown, text inputs, date pickers, multiline text as specified
+  - ✅ **Required Status**: Conditional required fields based on reportable status
+  - ✅ **Helper Text**: Exact match including placeholder examples "e.g., WorkSafe QLD, EPA NSW, DMIRS WA"
+  - ✅ **UI Logic**: Only one path activated, conditional field enforcement
+- **Zero Hardcoding Achievement**:
+  - ✅ **NO hardcoded regulatory authorities** anywhere in system
+  - ✅ **Universal compliance approach** works for any jurisdiction
+  - ✅ **Schema-driven validation** with dynamic conditional logic
+  - ✅ **Database-driven field management** with universal storage approach
+- **Database Migration Success**: All regulatory compliance columns successfully added to incidents table
+- **Impact**: **REGULATORY/COMPLIANCE IMPACT SPECIFICATION FULLY IMPLEMENTED** - Platform now captures regulatory compliance status with conditional field logic exactly as specified with no hardcoding. Universal implementation works for any regulatory jurisdiction maintaining absolute zero hardcoding policy.
+
+### Previous: SEQUENCE OF EVENTS FIELDS SPECIFICATION COMPLETE IMPLEMENTATION - NO HARDCODING
 - **Date**: January 26, 2025 (Sequence of Events Field Specification Complete Implementation) 
 - **User Requirements Fulfilled**: Complete implementation of Sequence of Events fields on incident reporting form following EXACT instruction specification with absolute NO HARDCODING policy
 - **SPECIFICATION COMPLIANCE ACHIEVED**: Platform now provides sequence of events capture exactly as specified in Universal_RCA_No_Hardcoding_Event Sequence instruction document
