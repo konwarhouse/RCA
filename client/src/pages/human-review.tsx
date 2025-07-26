@@ -59,12 +59,14 @@ export default function HumanReview() {
   // Review action mutation
   const reviewActionMutation = useMutation({
     mutationFn: async (data: { fileId: string; action: string; comments?: string }) => {
+      console.log('[REVIEW ACTION] Submitting:', data);
       return await apiRequest(`/api/incidents/${incidentId}/review-evidence`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('[REVIEW ACTION] Success:', result);
       refetchFiles();
       toast({
         title: "Review Submitted",
@@ -72,6 +74,7 @@ export default function HumanReview() {
       });
     },
     onError: (error: any) => {
+      console.error('[REVIEW ACTION] Error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to submit review",
@@ -90,9 +93,31 @@ export default function HumanReview() {
     file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
   ).length : 0;
 
+  // Handle review action with enhanced logging and user feedback (UNIVERSAL PROTOCOL STANDARD)
   const handleReviewAction = (fileId: string, action: string) => {
+    console.log('[REVIEW ACTION] Button clicked:', { fileId, action });
+    
+    // Prevent multiple submissions
+    if (reviewActionMutation.isPending) {
+      console.log('[REVIEW ACTION] Already pending, ignoring click');
+      toast({
+        title: "Please Wait",
+        description: "Review submission in progress...",
+        variant: "default",
+      });
+      return;
+    }
+
     const comments = reviewComments[fileId] || '';
-    reviewActionMutation.mutate({ fileId, action, comments });
+    console.log('[REVIEW ACTION] Submitting with comments:', comments);
+    
+    reviewActionMutation.mutate({ 
+      fileId, 
+      action, 
+      comments 
+    });
+    
+    // Clear comments after submission
     setReviewComments(prev => ({ ...prev, [fileId]: '' }));
   };
 
@@ -307,25 +332,28 @@ export default function HumanReview() {
                       <Button
                         size="sm"
                         onClick={() => handleReviewAction(file.id, 'ACCEPTED')}
-                        className="flex-1"
+                        disabled={reviewActionMutation.isPending}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       >
-                        ✓ Accept
+                        {reviewActionMutation.isPending ? '...' : '✓ Accept'}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleReviewAction(file.id, 'NEEDS_MORE_INFO')}
-                        className="flex-1"
+                        disabled={reviewActionMutation.isPending}
+                        className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-50"
                       >
-                        ? Needs More Info
+                        {reviewActionMutation.isPending ? '...' : '? Needs More Info'}
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => handleReviewAction(file.id, 'REPLACED')}
-                        className="flex-1"
+                        disabled={reviewActionMutation.isPending}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                       >
-                        ↻ Replace
+                        {reviewActionMutation.isPending ? '...' : '↻ Replace'}
                       </Button>
                     </div>
                   </div>
