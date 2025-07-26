@@ -1589,7 +1589,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DUPLICATE ENDPOINT REMOVED - FIXED EVIDENCE DETECTION ISSUE
+  // CRITICAL MISSING ENDPOINT: Get Evidence Files for Human Review
+  app.get("/api/incidents/:id/evidence-files", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      console.log(`[EVIDENCE FILES] Getting evidence files for incident ${incidentId}`);
+      
+      // Get evidence files using the existing storage method
+      const evidenceFiles = await investigationStorage.getEvidenceFiles(incidentId);
+      
+      console.log(`[EVIDENCE FILES] Found ${evidenceFiles.length} evidence files for incident ${incidentId}`);
+      
+      res.json(evidenceFiles);
+      
+    } catch (error) {
+      console.error('[EVIDENCE FILES] Failed to get evidence files:', error);
+      res.status(500).json({ 
+        message: "Failed to get evidence files",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
   // System checks adequacy of provided evidence against requirements (from Evidence Library/Schema, NOT hardcoded)

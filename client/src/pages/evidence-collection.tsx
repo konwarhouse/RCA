@@ -50,6 +50,14 @@ interface Incident {
   evidenceChecklist?: any[];
 }
 
+/**
+ * ROUTING & ID PASSING PROTOCOL:
+ * - This application uses QUERY PARAMS (?incident=ID) for incident IDs throughout all workflow stages
+ * - All navigation, route definitions, and ID access must follow this convention
+ * - Evidence files must persist and be accessible via API throughout the workflow
+ * - No hardcoding under any circumstances - all logic must be schema/database driven
+ */
+
 export default function EvidenceCollection() {
   const [, setLocation] = useLocation();
   const [incidentId, setIncidentId] = useState<number | null>(null);
@@ -148,8 +156,9 @@ export default function EvidenceCollection() {
 
   // Generate categories when incident loads
   useEffect(() => {
-    if (incident && Array.isArray(evidenceCategories) && evidenceCategories.length === 0) {
-      generateCategoriesMutation.mutate(incident);
+    if (incident && Array.isArray(evidenceCategories) && evidenceCategories.length === 0 && 
+        incident.id && incident.title && incident.equipmentGroup && incident.equipmentType) {
+      generateCategoriesMutation.mutate(incident as Incident);
     }
   }, [incident]);
 
@@ -257,7 +266,7 @@ export default function EvidenceCollection() {
               </div>
             </div>
             <Badge variant="outline" className="text-sm">
-              Incident #{incident.id}
+              Incident #{incident?.id || 'Loading...'}
             </Badge>
           </div>
         </div>
@@ -271,10 +280,10 @@ export default function EvidenceCollection() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  {incident.title}
+                  {incident?.title || 'Loading...'}
                 </CardTitle>
                 <CardDescription>
-                  Equipment: {incident.equipmentGroup} → {incident.equipmentType} ({incident.equipmentId})
+                  Equipment: {incident?.equipmentGroup || 'Unknown'} → {incident?.equipmentType || 'Unknown'} ({incident?.equipmentId || 'Unknown'})
                 </CardDescription>
               </div>
               <div className="text-right">
@@ -445,10 +454,28 @@ function EvidenceUploadZone({
         setFileDescription("");
       }
     },
-    accept: category.acceptedTypes.reduce((acc, type) => ({
-      ...acc,
-      [type]: []
-    }), {}),
+    accept: category.acceptedTypes.reduce((acc, type) => {
+      // Convert file extensions to proper MIME types
+      const mimeTypeMap: { [key: string]: string[] } = {
+        'pdf': ['application/pdf'],
+        'xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        'csv': ['text/csv'],
+        'txt': ['text/plain'],
+        'jpg': ['image/jpeg'],
+        'png': ['image/png'],
+        'gif': ['image/gif'],
+        'docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      };
+      
+      const mimeTypes = mimeTypeMap[type] || [type];
+      return {
+        ...acc,
+        ...mimeTypes.reduce((mimeAcc, mimeType) => ({
+          ...mimeAcc,
+          [mimeType]: []
+        }), {})
+      };
+    }, {}),
     maxFiles: category.maxFiles - category.files.length,
     disabled: category.files.length >= category.maxFiles || isUploading,
   });

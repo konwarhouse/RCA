@@ -23,6 +23,14 @@ interface EvidenceFile {
   adequacyScore?: number;
 }
 
+/**
+ * ROUTING & ID PASSING PROTOCOL:
+ * - This application uses QUERY PARAMS (?incident=ID) for incident IDs throughout all workflow stages
+ * - Evidence files are accessed via /api/incidents/:id/evidence-files endpoint
+ * - All components must expect incident ID from URL query parameters consistently
+ * - No hardcoding under any circumstances - all logic must be schema/database driven
+ */
+
 export default function HumanReview() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -69,7 +77,7 @@ export default function HumanReview() {
   });
 
   // Check if all files are reviewed
-  const allFilesReviewed = evidenceFiles.every((file: EvidenceFile) => 
+  const allFilesReviewed = Array.isArray(evidenceFiles) && evidenceFiles.every((file: EvidenceFile) => 
     file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
   );
 
@@ -146,8 +154,8 @@ export default function HumanReview() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-2xl font-bold text-slate-900">
-                  {evidenceFiles.filter((f: EvidenceFile) => f.reviewStatus === 'ACCEPTED' || f.reviewStatus === 'REPLACED').length}
-                  <span className="text-slate-500">/{evidenceFiles.length}</span>
+                  {Array.isArray(evidenceFiles) ? evidenceFiles.filter((f: EvidenceFile) => f.reviewStatus === 'ACCEPTED' || f.reviewStatus === 'REPLACED').length : 0}
+                  <span className="text-slate-500">/{Array.isArray(evidenceFiles) ? evidenceFiles.length : 0}</span>
                 </div>
                 <div className="text-sm text-slate-600">Files Reviewed</div>
               </div>
@@ -172,7 +180,7 @@ export default function HumanReview() {
 
         {/* Evidence Files Review Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {evidenceFiles.map((file: EvidenceFile) => (
+          {Array.isArray(evidenceFiles) && evidenceFiles.map((file: EvidenceFile) => (
             <Card key={file.id} className={`transition-all ${
               file.reviewStatus === 'ACCEPTED' ? 'border-green-300 bg-green-50' :
               file.reviewStatus === 'REPLACED' ? 'border-blue-300 bg-blue-50' :
@@ -277,7 +285,7 @@ export default function HumanReview() {
         </div>
 
         {/* No files message */}
-        {evidenceFiles.length === 0 && (
+        {(!Array.isArray(evidenceFiles) || evidenceFiles.length === 0) && (
           <Card>
             <CardContent className="text-center py-12">
               <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
