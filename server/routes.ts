@@ -1767,20 +1767,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CRITICAL MISSING ENDPOINT: Get Evidence Files for Human Review
+  // UNIVERSAL PROTOCOL STANDARD: Get Evidence Files for Human Review (DEDUPLICATION FIX)
   app.get("/api/incidents/:id/evidence-files", async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
-      
       console.log(`[EVIDENCE FILES] Getting evidence files for incident ${incidentId}`);
       
-      // Get evidence files using the existing storage method
-      const evidenceFiles = await investigationStorage.getEvidenceFiles(incidentId);
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
       
-      console.log(`[EVIDENCE FILES] Found ${evidenceFiles.length} evidence files for incident ${incidentId}`);
+      // Extract evidence files from incident.evidenceResponses (SCHEMA-DRIVEN)
+      const evidenceResponses = incident.evidenceResponses || [];
+      console.log(`[Evidence Files] Found ${evidenceResponses.length} evidence files in incident.evidenceResponses`);
       
-      res.json(evidenceFiles);
+      // UNIVERSAL PROTOCOL STANDARD: Deduplicate files by name and timestamp
+      const uniqueEvidenceMap = new Map();
       
+      // Process evidence responses with deduplication (NO HARDCODING)
+      evidenceResponses.forEach((evidence: any, index: number) => {
+        const fileName = evidence.fileName || evidence.name || `Evidence_${index + 1}`;
+        const uploadedAt = evidence.uploadedAt || evidence.timestamp || new Date().toISOString();
+        
+        // Create unique key for deduplication using filename and upload time
+        const uniqueKey = `${fileName}_${uploadedAt.substring(0, 19)}`; // Remove milliseconds for grouping
+        
+        if (!uniqueEvidenceMap.has(uniqueKey)) {
+          const uniqueId = `file_${incidentId}_${evidence.uploadedAt || Date.now()}_${index}`;
+          
+          uniqueEvidenceMap.set(uniqueKey, {
+            id: uniqueId,
+            name: fileName,
+            size: evidence.fileSize || evidence.size || 0,
+            type: evidence.fileType || evidence.type || 'unknown',
+            categoryId: evidence.categoryId || evidence.category || 'general',
+            description: evidence.description || '',
+            uploadedAt: uploadedAt,
+            
+            // Universal RCA analysis results (SCHEMA-DRIVEN)
+            pythonAnalysis: evidence.parsedSummary || null,
+            llmInterpretation: evidence.llmInterpretation || null,
+            adequacyScore: evidence.adequacyScore || 0,
+            confidence: evidence.confidence || 0,
+            analysisEngine: evidence.analysisEngine || 'unknown',
+            
+            // Review status (UNIVERSAL PROTOCOL STANDARD)
+            reviewStatus: evidence.reviewStatus || 'UNREVIEWED',
+            reviewedBy: evidence.reviewedBy || null,
+            reviewedAt: evidence.reviewedAt || null
+          });
+        }
+      });
+      
+      // Convert Map to Array (DEDUPLICATION COMPLETE)
+      const allEvidenceFiles = Array.from(uniqueEvidenceMap.values());
+      console.log(`[Evidence Files] Deduplicated: ${evidenceResponses.length} entries → ${allEvidenceFiles.length} unique files`);
+      console.log(`[EVIDENCE FILES] Found ${allEvidenceFiles.length} unique evidence files for incident ${incidentId}`);
+      
+      res.json(allEvidenceFiles);
     } catch (error) {
       console.error('[EVIDENCE FILES] Failed to get evidence files:', error);
       res.status(500).json({ 
