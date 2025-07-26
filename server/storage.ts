@@ -1039,17 +1039,13 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         return [];
       }
       
-      // CRITICAL FIX: Check both evidenceFiles AND evidenceResponses (where files are actually stored)
-      const evidenceFiles = incident.evidenceFiles || [];
-      const evidenceResponses = incident.evidenceResponses || [];
-      const evidenceCategories = incident.evidenceCategories || {};
+      // CRITICAL FIX: Files are stored in evidenceResponses field (schema-driven)
+      const evidenceResponses = (incident.evidenceResponses as any[]) || [];
       
-      console.log(`[Evidence Files] Found ${evidenceFiles.length} evidence files in incident.evidenceFiles`);
       console.log(`[Evidence Files] Found ${evidenceResponses.length} evidence files in incident.evidenceResponses`);
-      console.log(`[Evidence Files] Evidence categories available: ${Object.keys(evidenceCategories).length}`);
       
       // Convert stored evidence files to expected format with null safety
-      const formattedFiles = evidenceFiles.map((file: any) => {
+      const formattedFiles = evidenceResponses.map((file: any) => {
         if (!file || typeof file !== 'object') {
           console.log(`[Evidence Files] Invalid file object:`, file);
           return null;

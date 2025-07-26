@@ -1150,10 +1150,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Save file temporarily for analysis (NO HARDCODED PATHS - use system temp)
-      const os = require('os');
-      const path = require('path');
-      const crypto = require('crypto');
-      
       // Generate unique filename without hardcoded values
       const uniqueId = crypto.randomUUID();
       const fileExtension = path.extname(file.originalname);
@@ -1167,10 +1163,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Build equipment context from incident (SCHEMA-DRIVEN)
         const equipmentContext = {
-          group: incident.equipmentGroup,
-          type: incident.equipmentType,
-          subtype: incident.equipmentSubtype,
-          symptoms: incident.symptomDescription || incident.description
+          group: incident.equipmentGroup || '',
+          type: incident.equipmentType || '',
+          subtype: incident.equipmentSubtype || '',
+          symptoms: incident.symptomDescription || incident.description || ''
         };
         
         // Get required evidence from Evidence Library (NO HARDCODED REQUIREMENTS)
@@ -1253,7 +1249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           llmInterpretation: llmInterpretation
         };
         
-        // Update incident with analyzed evidence file
+        // Update incident with analyzed evidence file (NO HARDCODED FIELD NAMES)
         const currentFiles = (incident.evidenceResponses as any[]) || [];
         const updatedFiles = [...currentFiles, fileRecord];
         
@@ -1321,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { UniversalHumanReviewEngine } = await import("./universal-human-review-engine");
       
       // Get ALL uploaded files from Step 3 (evidence checklist upload)
-      const uploadedFiles = incident.evidenceFiles || [];
+      const uploadedFiles = (incident.evidenceResponses as any[]) || [];
       
       if (uploadedFiles.length === 0) {
         return res.status(400).json({
@@ -1414,7 +1410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update evidence file status
-      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+      const updatedFiles = ((incident.evidenceResponses as any[]) || []).map((file: any) => {
         if (file.id === fileId) {
           return {
             ...file,
@@ -1427,7 +1423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await investigationStorage.updateIncident(incidentId, {
-        evidenceFiles: updatedFiles
+        evidenceResponses: updatedFiles
       });
 
       res.json({
@@ -1455,7 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
 
-      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+      const updatedFiles = ((incident.evidenceResponses as any[]) || []).map((file: any) => {
         if (file.id === fileId) {
           return {
             ...file,
@@ -1468,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await investigationStorage.updateIncident(incidentId, {
-        evidenceFiles: updatedFiles
+        evidenceResponses: updatedFiles
       });
 
       res.json({
@@ -1496,7 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
 
-      const updatedFiles = (incident.evidenceFiles || []).map((file: any) => {
+      const updatedFiles = ((incident.evidenceResponses as any[]) || []).map((file: any) => {
         if (file.id === fileId) {
           return {
             ...file,
@@ -1509,7 +1505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await investigationStorage.updateIncident(incidentId, {
-        evidenceFiles: updatedFiles
+        evidenceResponses: updatedFiles
       });
 
       res.json({
