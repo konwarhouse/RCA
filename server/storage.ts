@@ -1039,11 +1039,13 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         return [];
       }
       
-      // Check if incident has evidence data stored
+      // CRITICAL FIX: Check both evidenceFiles AND evidenceResponses (where files are actually stored)
       const evidenceFiles = incident.evidenceFiles || [];
+      const evidenceResponses = incident.evidenceResponses || [];
       const evidenceCategories = incident.evidenceCategories || {};
       
-      console.log(`[Evidence Files] Found ${evidenceFiles.length} evidence files in incident data`);
+      console.log(`[Evidence Files] Found ${evidenceFiles.length} evidence files in incident.evidenceFiles`);
+      console.log(`[Evidence Files] Found ${evidenceResponses.length} evidence files in incident.evidenceResponses`);
       console.log(`[Evidence Files] Evidence categories available: ${Object.keys(evidenceCategories).length}`);
       
       // Convert stored evidence files to expected format with null safety
@@ -1060,7 +1062,32 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           mimeType: file.type || file.mimeType || file.mimetype || 'application/octet-stream',
           uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
           category: file.category,
-          description: file.description
+          description: file.description,
+          reviewStatus: file.reviewStatus || 'UNREVIEWED',
+          parsedSummary: file.parsedSummary,
+          adequacyScore: file.adequacyScore
+        };
+      }).filter(Boolean); // Remove null entries
+      
+      // CRITICAL FIX: Also process evidenceResponses (where files are actually stored from uploads)
+      const formattedEvidenceResponses = evidenceResponses.map((file: any) => {
+        if (!file || typeof file !== 'object') {
+          console.log(`[Evidence Files] Invalid evidence response object:`, file);
+          return null;
+        }
+        
+        return {
+          id: file.id || file.fileId || `response_${Date.now()}`,
+          fileName: file.name || file.fileName || file.originalname || 'Evidence File',
+          fileSize: file.size || file.fileSize || 0,
+          mimeType: file.type || file.mimeType || file.mimetype || 'application/octet-stream',
+          uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+          category: file.category || file.evidenceCategory || 'General Evidence',
+          description: file.description,
+          reviewStatus: file.reviewStatus || 'UNREVIEWED',
+          parsedSummary: file.parsedSummary || file.universalAnalysis?.aiSummary,
+          adequacyScore: file.adequacyScore || file.universalAnalysis?.adequacyScore,
+          analysisFeatures: file.universalAnalysis?.parsedData
         };
       }).filter(Boolean); // Remove null entries
       
@@ -1090,7 +1117,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         }
       }
       
-      const allFiles = [...formattedFiles, ...categoryFiles];
+      const allFiles = [...formattedFiles, ...formattedEvidenceResponses, ...categoryFiles];
       
       console.log(`[Evidence Files] Total evidence files found: ${allFiles.length}`);
       return allFiles;
