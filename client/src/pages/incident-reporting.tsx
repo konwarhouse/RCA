@@ -665,7 +665,11 @@ You can include as much detail as available.`}
                           <span className="text-slate-500"> or drag and drop</span>
                         </div>
                         <div className="text-xs text-slate-500">
-                          Operator logs, DCS/SCADA exports, annotated timelines, photos, sketches
+                          Upload any files that detail the sequence of events. Examples include:
+                          <br />- Operator logs or shift handover reports
+                          <br />- Control room/DCS/SCADA exports
+                          <br />- Annotated event timelines (Word, PDF, Excel, image)
+                          <br />- Photos, sketches, or scanned documents
                         </div>
                         <div className="text-xs text-slate-400">
                           Accepts: PDF, DOCX, XLSX, TXT, CSV, JPG, PNG, GIF
