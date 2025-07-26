@@ -170,7 +170,7 @@ export default function RCADiagramEngine({
       evidence: [],
       parent: parentNode.id,
       position: { 
-        x: parentNode.position!.x + Math.random() * 100, 
+        x: parentNode.position!.x + ((Date.now() % 100) + 50), 
         y: parentNode.position!.y + 150 
       }
     };

@@ -1071,7 +1071,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         }
         
         return {
-          id: file.id || file.fileId || Date.now().toString(),
+          id: file.id || file.fileId || nanoid(),
           fileName: file.name || file.fileName || file.originalname || 'Unknown File',
           fileSize: file.size || file.fileSize || 0,
           mimeType: file.type || file.mimeType || file.mimetype || 'application/octet-stream',
@@ -1092,7 +1092,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         }
         
         return {
-          id: file.id || file.fileId || `response_${Date.now()}`,
+          id: file.id || file.fileId || `response_${nanoid()}`,
           fileName: file.name || file.fileName || file.originalname || 'Evidence File',
           fileSize: file.size || file.fileSize || 0,
           mimeType: file.type || file.mimeType || file.mimetype || 'application/octet-stream',
@@ -1118,7 +1118,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             }
             
             categoryFiles.push({
-              id: file.id || file.fileId || Date.now().toString(),
+              id: file.id || file.fileId || nanoid(),
               fileName: file.fileName || file.name || file.originalname || 'Category File',
               fileSize: file.fileSize || file.size || 0,
               mimeType: file.mimeType || file.type || file.mimetype || 'application/octet-stream',
@@ -1145,7 +1145,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   async createLibraryUpdateProposal(data: any): Promise<any> {
     console.log('[Library Update] Creating new library update proposal');
     // For now, return a simple implementation that would store to database
-    return { id: Date.now(), ...data, status: 'pending' };
+    return { id: parseInt(nanoid(10)), ...data, status: 'pending' };
   }
 
   async getLibraryUpdateProposal(id: number): Promise<any> {
@@ -1165,7 +1165,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
 
   async createEvidenceLibraryEntry(data: any): Promise<any> {
     console.log('[Library Update] Creating new evidence library entry');
-    return { id: Date.now(), ...data };
+    return { id: parseInt(nanoid(10)), ...data };
   }
 
   async updateEvidenceLibraryEntry(id: number, data: any): Promise<any> {
@@ -1175,13 +1175,13 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
 
   async storePromptStylePattern(data: any): Promise<any> {
     console.log('[Library Update] Storing prompt style pattern');
-    return { id: Date.now(), ...data };
+    return { id: parseInt(nanoid(10)), ...data };
   }
 
   // NEW: Historical Learning operations (Step 9)
   async createHistoricalPattern(data: any): Promise<any> {
     console.log('[Historical Learning] Creating new historical pattern');
-    return { id: Date.now(), ...data };
+    return { id: parseInt(nanoid(10)), ...data };
   }
 
   async findHistoricalPatterns(criteria: any): Promise<any[]> {
