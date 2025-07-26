@@ -16,7 +16,7 @@ import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Form schema for incident reporting - THREE-LEVEL CASCADING DROPDOWN SYSTEM + STRUCTURED TIMELINE
+// Form schema for incident reporting - THREE-LEVEL CASCADING DROPDOWN SYSTEM + STRUCTURED TIMELINE + REGULATORY COMPLIANCE
 const incidentSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -33,8 +33,48 @@ const incidentSchema = z.object({
   // Sequence of Events fields (NO HARDCODING)
   sequenceOfEvents: z.string().optional(),
   sequenceOfEventsFiles: z.array(z.string()).optional(),
+  // Regulatory/Compliance Impact fields (NO HARDCODING)
+  reportableStatus: z.enum(["not_reportable", "reported", "not_yet_reported"]),
+  // Fields for "reported" status
+  regulatoryAuthorityName: z.string().optional(),
+  dateReported: z.string().optional(),
+  reportReferenceId: z.string().optional(),
+  complianceImpactSummary: z.string().optional(),
+  // Fields for "not_yet_reported" status
+  plannedDateOfReporting: z.string().optional(),
+  delayReason: z.string().optional(),
+  intendedRegulatoryAuthority: z.string().optional(),
   // Structured Timeline Data (NEW)
   timelineData: z.record(z.string()).optional(),
+}).refine((data) => {
+  // Conditional validation for "reported" status
+  if (data.reportableStatus === "reported") {
+    if (!data.regulatoryAuthorityName || data.regulatoryAuthorityName.trim() === "") {
+      return false;
+    }
+    if (!data.dateReported || data.dateReported.trim() === "") {
+      return false;
+    }
+    if (!data.complianceImpactSummary || data.complianceImpactSummary.trim() === "") {
+      return false;
+    }
+  }
+  // Conditional validation for "not_yet_reported" status
+  if (data.reportableStatus === "not_yet_reported") {
+    if (!data.plannedDateOfReporting || data.plannedDateOfReporting.trim() === "") {
+      return false;
+    }
+    if (!data.delayReason || data.delayReason.trim() === "") {
+      return false;
+    }
+    if (!data.intendedRegulatoryAuthority || data.intendedRegulatoryAuthority.trim() === "") {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Required regulatory compliance fields must be completed",
+  path: ["reportableStatus"]
 });
 
 type IncidentForm = z.infer<typeof incidentSchema>;
@@ -62,6 +102,14 @@ export default function IncidentReporting() {
       safetyImplications: "",
       sequenceOfEvents: "",
       sequenceOfEventsFiles: [],
+      reportableStatus: "not_reportable",
+      regulatoryAuthorityName: "",
+      dateReported: "",
+      reportReferenceId: "",
+      complianceImpactSummary: "",
+      plannedDateOfReporting: "",
+      delayReason: "",
+      intendedRegulatoryAuthority: "",
       timelineData: {},
     },
   });
@@ -70,6 +118,9 @@ export default function IncidentReporting() {
   const selectedEquipmentGroup = form.watch("equipmentGroup");
   const selectedEquipmentType = form.watch("equipmentType");
   const selectedEquipmentSubtype = form.watch("equipmentSubtype");
+  
+  // REGULATORY COMPLIANCE CONDITIONAL RENDERING
+  const reportableStatus = form.watch("reportableStatus");
 
   // Generate timeline questions when equipment selection is complete
   useEffect(() => {
@@ -678,11 +729,11 @@ You can include as much detail as available.`}
                     </div>
                     
                     {/* Display uploaded files */}
-                    {form.watch("sequenceOfEventsFiles")?.length > 0 && (
+                    {(form.watch("sequenceOfEventsFiles") || []).length > 0 && (
                       <div className="space-y-2">
                         <div className="text-sm font-medium text-slate-700">Uploaded Files:</div>
                         <div className="space-y-1">
-                          {form.watch("sequenceOfEventsFiles").map((fileName, index) => (
+                          {(form.watch("sequenceOfEventsFiles") || []).map((fileName, index) => (
                             <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded text-sm">
                               <span className="text-slate-700">{fileName}</span>
                               <Button
@@ -704,6 +755,193 @@ You can include as much detail as available.`}
                       </div>
                     )}
                   </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* REGULATORY/COMPLIANCE IMPACT SECTION (NO HARDCODING) */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    <h3 className="text-lg font-semibold text-slate-900">Regulatory / Compliance Impact</h3>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Identify whether this incident has regulatory implications and capture appropriate follow-up details based on reporting status.
+                  </p>
+
+                  {/* Reportable Incident Dropdown */}
+                  <FormField
+                    control={form.control}
+                    name="reportableStatus"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reportable Incident? <span className="text-red-500">*</span></FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select reportable status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="not_reportable">No – Not a reportable incident</SelectItem>
+                            <SelectItem value="reported">Yes – Reported</SelectItem>
+                            <SelectItem value="not_yet_reported">Yes – Not yet reported</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Conditional Fields for "reported" status */}
+                  {reportableStatus === "reported" && (
+                    <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h4 className="font-medium text-green-900">Reported Incident Details</h4>
+                      
+                      <FormField
+                        control={form.control}
+                        name="regulatoryAuthorityName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Regulatory Authority Name <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="e.g., WorkSafe QLD, EPA NSW, DMIRS WA"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="dateReported"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date Reported <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="date"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="reportReferenceId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Report Reference or ID (if available)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="Report reference number or ID"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="complianceImpactSummary"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Summary of Compliance Impact <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Describe what regulatory threshold was breached or triggered (e.g., WHS breach, environmental non-compliance, safety shutdown)."
+                                rows={4}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-slate-500 mt-1">
+                              Describe what regulatory threshold was breached or triggered (e.g., WHS breach, environmental non-compliance, safety shutdown).
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* Conditional Fields for "not_yet_reported" status */}
+                  {reportableStatus === "not_yet_reported" && (
+                    <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="font-medium text-amber-900">Pending Report Details</h4>
+                      
+                      <FormField
+                        control={form.control}
+                        name="plannedDateOfReporting"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Planned Date of Reporting <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="date"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="delayReason"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Reason for Delay or Pending Reporting <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="State why this has not yet been reported (e.g., pending internal review, still under validation)."
+                                rows={3}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-slate-500 mt-1">
+                              State why this has not yet been reported (e.g., pending internal review, still under validation).
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="intendedRegulatoryAuthority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Intended Regulatory Authority <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="e.g., WorkSafe QLD, EPA NSW, etc."
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* No additional fields for "not_reportable" status */}
+                  {reportableStatus === "not_reportable" && (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <p className="text-sm text-slate-600 italic">
+                        No additional regulatory compliance information required for non-reportable incidents.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator className="my-6" />

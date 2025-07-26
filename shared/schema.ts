@@ -273,6 +273,16 @@ export const incidents = pgTable("incidents", {
   sequenceOfEvents: text("sequence_of_events"), // Chronological narrative of incident
   sequenceOfEventsFiles: jsonb("sequence_of_events_files"), // Uploaded supporting files (logs, DCS exports, timelines)
   
+  // Regulatory/Compliance Impact fields (NO HARDCODING - Universal compliance approach)
+  reportableStatus: varchar("reportable_status"), // "not_reportable" | "reported" | "not_yet_reported"
+  regulatoryAuthorityName: varchar("regulatory_authority_name"), // If reported
+  dateReported: timestamp("date_reported"), // If reported
+  reportReferenceId: varchar("report_reference_id"), // If reported (optional)
+  complianceImpactSummary: text("compliance_impact_summary"), // If reported
+  plannedDateOfReporting: timestamp("planned_date_of_reporting"), // If not yet reported
+  delayReason: text("delay_reason"), // If not yet reported
+  intendedRegulatoryAuthority: varchar("intended_regulatory_authority"), // If not yet reported
+  
   // Equipment selection & symptoms (Step 2)
   specificPart: varchar("specific_part"),
   symptomDescription: text("symptom_description"),
