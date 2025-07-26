@@ -22,6 +22,8 @@ import { UniversalRCAEngine } from "./universal-rca-engine";
 import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
 import { UniversalRCAFallbackEngine } from "./universal-rca-fallback-engine";
 import { EvidenceLibraryOperations } from "./evidence-library-operations";
+import * as os from "os";
+import * as crypto from "crypto";
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -598,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // STEP 5: Convert confirmed hypotheses to evidence requirements (NO HARDCODING)
       const evidenceItems = confirmedHypotheses.map((hypothesis: any, index: number) => ({
-        id: `ai-evidence-${hypothesis.id}-${Date.now()}-${index}`,
+        id: `ai_evidence_${hypothesis.id}_${crypto.randomUUID()}`,
         category: hypothesis.failureMode,
         title: hypothesis.failureMode,
         description: `${hypothesis.description} | AI Reasoning: ${hypothesis.aiReasoning}`,
@@ -628,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add custom hypotheses to evidence items if provided
       const customEvidenceItems = customHypotheses.map((customHypothesis: any, index: number) => ({
-        id: `custom-evidence-${Date.now()}-${index}`,
+        id: `custom_evidence_${crypto.randomUUID()}`,
         category: 'Custom Investigation',
         title: customHypothesis,
         description: `Human-added hypothesis: ${customHypothesis}`,
@@ -727,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add custom failure modes
       for (const customMode of customFailureModes || []) {
         confirmedHypotheses.push({
-          id: `custom-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
+          id: `custom_${crypto.randomUUID()}`,
           rootCauseTitle: customMode,
           humanDecision: 'accept',
           userReasoning: 'User-defined failure mode'
@@ -798,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert to evidence checklist format
       const evidenceItems = evidenceResults.map((item: any, index: number) => ({
-        id: `legacy-${id}-${Date.now()}-${index}`,
+        id: `legacy_${id}_${crypto.randomUUID()}`,
         category: item.category || 'Equipment Analysis',
         title: item.componentFailureMode,
         description: `${item.faultSignaturePattern || item.componentFailureMode}`,
@@ -1116,6 +1118,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+   * 
+   * ROUTING: Path parameter style (/api/incidents/:id/upload-evidence)
+   * NO HARDCODING: All values dynamic, config-driven, schema-based
+   * STATE PERSISTENCE: Evidence files associated with incident ID across all stages
+   * PROTOCOL: Universal Protocol Standard (attached_assets/Universal Protocol -Standard_1753517446388.txt)
+   * DATE: January 26, 2025
+   * EXCEPTIONS: None
+   */
+  
   // UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC - STEPS 3-4 IMPLEMENTATION
   app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
     try {
@@ -1136,8 +1149,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Save file temporarily for analysis
-      const tempFilePath = `/tmp/temp_${Date.now()}_${file.originalname}`;
+      // Save file temporarily for analysis (NO HARDCODED PATHS - use system temp)
+      const os = require('os');
+      const path = require('path');
+      const crypto = require('crypto');
+      
+      // Generate unique filename without hardcoded values
+      const uniqueId = crypto.randomUUID();
+      const fileExtension = path.extname(file.originalname);
+      const tempFilePath = path.join(os.tmpdir(), `evidence_${incidentId}_${uniqueId}${fileExtension}`);
+      
       fs.writeFileSync(tempFilePath, file.buffer);
       
       try {
@@ -1198,9 +1219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[MANDATORY LLM] Completed LLM interpretation with ${llmInterpretation.confidence}% confidence`);
 
-        // Create file record with BOTH Python analysis AND LLM interpretation
+        // Create file record with BOTH Python analysis AND LLM interpretation (NO HARDCODED IDs)
         const fileRecord = {
-          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `file_${incidentId}_${crypto.randomUUID()}`,
           fileName: file.originalname, // Standardized field name
           name: file.originalname,
           fileSize: file.size, // Standardized field name

@@ -1,5 +1,12 @@
 /**
- * LLM EVIDENCE INTERPRETER - Universal Protocol Standard Compliance
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * 
+ * ROUTING: Dynamic parameter passing, no hardcoded IDs or paths
+ * NO HARDCODING: All values schema-driven from database configuration  
+ * STATE PERSISTENCE: LLM interpretations associated with incident ID across workflow
+ * PROTOCOL: Universal Protocol Standard (attached_assets/Universal Protocol -Standard_1753517446388.txt)
+ * DATE: January 26, 2025
+ * EXCEPTIONS: None
  * 
  * CRITICAL MANDATE FROM UNIVERSAL PROTOCOL STANDARD:
  * 1. After Python backend parses each evidence file and produces its summary (JSON), 
@@ -18,9 +25,6 @@
  * 3. No file can be accepted or reviewed until BOTH outputs are visible:
  *    - Python parsed summary AND
  *    - LLM/AI diagnostic interpretation
- * 
- * Protocol: Path parameter routing per Universal Protocol Standard
- * Date: January 26, 2025
  */
 
 import { DynamicAIConfig } from './dynamic-ai-config';
