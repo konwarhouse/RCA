@@ -27,7 +27,7 @@
  *    - LLM/AI diagnostic interpretation
  */
 
-import { DynamicAIConfig } from './dynamic-ai-config';
+import { UniversalAIConfig } from './universal-ai-config';
 
 interface ParsedEvidenceSummary {
   fileName: string;

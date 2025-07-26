@@ -183,7 +183,7 @@ Return your response as a JSON array with this structure:
       
       // Convert to AIHypothesis format
       return aiHypotheses.map((hypothesis: any, index: number) => ({
-        id: `ai-hypothesis-${index + 1}-${Date.now()}`,
+        id: `ai-hypothesis-${index + 1}-${crypto.randomUUID()}`,
         failureMode: hypothesis.failureMode,
         description: hypothesis.description,
         confidence: hypothesis.confidence,

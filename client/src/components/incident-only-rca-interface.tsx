@@ -118,7 +118,7 @@ export function IncidentOnlyRCAInterface({
     if (!customHypothesis.trim()) return;
     
     const newHypothesis: UserVerifiedHypothesis = {
-      id: `custom_${Date.now()}`,
+      id: `custom_${crypto.randomUUID()}`,
       hypothesis: customHypothesis,
       userStatus: 'accepted'
     };
