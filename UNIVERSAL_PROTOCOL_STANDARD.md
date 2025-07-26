@@ -1,129 +1,122 @@
-# UNIVERSAL PROTOCOL STANDARD - MANDATORY COMPLIANCE
+# UNIVERSAL PROTOCOL STANDARD - PERMANENTLY EMBEDDED
 
-**CRITICAL REQUIREMENT**: This protocol MUST be strictly followed for all current and future development on this application (including by AI agents and human developers).
+**CRITICAL**: This protocol MUST be strictly followed for all current and future development on this application (including by AI agents and human developers).
 
-**If you do not understand or spot ambiguity, STOP and ask for clarification before proceeding.**
+**STATUS**: PERMANENTLY EMBEDDED - January 26, 2025
+**ENFORCEMENT**: MANDATORY - NO EXCEPTIONS ALLOWED
+**VIOLATION IMPACT**: Costs user time and money - ZERO TOLERANCE POLICY
 
-## 0. NO HARD CODING UNDER ANY CIRCUMSTANCES
+If you do not understand or spot ambiguity, STOP and ask for clarification before proceeding.
 
-❌ **ABSOLUTELY FORBIDDEN**:
-- `Math.random()`, `Date.now()`, hardcoded timestamps
-- Static file paths like `/tmp/`, `/uploads/`, hardcoded directories
-- Magic numbers, hardcoded IDs, fallback values
-- Hardcoded API keys, database connections, configuration values
-- Static strings for equipment types, failure modes, categories
+==========================================================================================
+0. NO HARD CODING UNDER ANY CIRCUMSTANCES
+==========================================================================================
+**ABSOLUTE RULE**: NO hardcoding allowed anywhere in the system
+- NO Math.random(), Date.now(), static paths, hardcoded IDs
+- ALL values must be dynamic, config-driven, or parameterized
+- NO magic numbers, static keys, or fallback values
+- ANY hardcoding is a CRITICAL ERROR requiring immediate fix
 
-✅ **MANDATORY ALTERNATIVES**:
-- Use `crypto.randomUUID()` for unique identifiers
-- Use `os.tmpdir()` and `path.join()` for dynamic paths
-- Use schema-driven configuration from database
-- Use environment variables and config files
-- Use dynamic imports and parameterized functions
+==========================================================================================
+1. ROUTING & ID PASSING
+==========================================================================================
+**MANDATORY STANDARD**: Path parameter routing ONLY
+- ALL routes MUST use: `/api/incidents/:id/endpoint` format
+- NO query parameters for incident IDs
+- NO hardcoded route fragments or fallback values
+- ALL navigation, API endpoints, and ID access MUST use path parameters
+- Legacy patterns MUST be refactored immediately
 
-## 1. ROUTING & ID PASSING
-
-**CHOSEN STANDARD**: Path parameters (`/api/incidents/:id/evidence`)
-
-❌ **FORBIDDEN**:
-- Mixing path and query parameters
-- Hardcoded route fragments or IDs
-- Fallback values in routing logic
-
-✅ **MANDATORY**:
-- All routes use `/api/incidents/:id/` pattern
-- All ID access via `req.params.id`
-- Every routing file MUST have protocol header comment
-
-## 2. STATE & DATA FLOW
-
-✅ **MANDATORY**:
-- Evidence files MUST remain associated with incident ID across ALL stages
-- Database persistence required - never rely on browser state alone
-- Backend endpoints MUST match frontend ID protocol
-- NO workflow step may drop state or evidence associations
-
-## 3. COMPONENT & UI CONSISTENCY
-
-✅ **MANDATORY**:
-- Use DataGrid component from @mui/x-data-grid (version 6+)
-- Table columns MUST match backend field names
-- Evidence tables MUST include: file_name, file_type, status, date_uploaded, uploaded_by
-- All forms use common form component with validation
-- Clear, actionable error messages
-
-## 4. DATABASE & API SCHEMA PROTOCOL
-
-✅ **MANDATORY**:
-- Table names: singular, lowercase, underscores (e.g., evidence_file)
-- Primary key column: `id` (UUID or serial)
-- Foreign keys: `<referenced_table>_id`
-- All tables: `created_at`, `updated_at` (timestamp with timezone)
-- API returns: `{ data: ..., error: null }` or `{ data: null, error: <message> }`
-
-## 5. ERROR HANDLING
-
-✅ **MANDATORY**:
-- Clear error messages with resolution steps
-- Proper HTTP status codes (400, 404, 422, 500)
-- NO silent failures or generic messages
-
-## 6. DOCUMENTATION
-
-✅ **MANDATORY HEADER FOR ALL FILES**:
-```typescript
+**PROTOCOL HEADERS REQUIRED**: Every file handling routing MUST include:
+```
 /**
  * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
  * 
  * ROUTING: Path parameter style (/api/incidents/:id/endpoint)
- * NO HARDCODING: All values dynamic, config-driven, schema-based
+ * NO HARDCODING: All values dynamic, config-driven
  * STATE PERSISTENCE: Data associated with incident ID across all stages
  * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
  * DATE: [Current Date]
- * EXCEPTIONS: [None or specific exceptions with justification]
+ * EXCEPTIONS: None
  */
 ```
 
-## 7. GENERAL REQUIREMENTS
+==========================================================================================
+2. STATE & DATA FLOW
+==========================================================================================
+**MANDATORY PERSISTENCE**: All evidence files MUST remain associated with correct incident ID
+- State MUST persist through ALL workflow stages (frontend and backend)
+- Backend MUST expose endpoints matching frontend protocol: `/api/incidents/:id/evidence-files`
+- Data parsing MUST always associate evidence to correct incident
+- NO workflow step may "drop" state - evidence persists at ALL times
+- ALL workflow steps MUST display evidence based on current incident context
 
-✅ **MANDATORY**:
-- All code TypeScript-typed with interfaces
-- Protocol compliance check before any merge/release
-- Ask for clarification on edge cases
-- Propose changes for protocol updates
+==========================================================================================
+3. COMPONENT & UI CONSISTENCY  
+==========================================================================================
+**MANDATORY STANDARDS**:
+- ALL tabular data MUST use DataGrid component from @mui/x-data-grid (version 6+)
+- Table columns MUST match backend field names
+- Column order: id, entity fields, timestamps, status, actions
+- Every evidence grid MUST include: file_name, file_type, status, date_uploaded, uploaded_by
+- ALL tables MUST support sorting, filtering, pagination for >50 records
+- ALL forms MUST use common form component with field-level validation
+- Error messages MUST be clear, user-facing, actionable
 
-## AUTOMATIC COMPLIANCE ENFORCEMENT
+==========================================================================================
+4. DATABASE & API SCHEMA PROTOCOL
+==========================================================================================
+**MANDATORY SCHEMA STANDARDS**:
+- Table names: singular, lowercase, underscores (e.g., evidence_file)
+- Primary key: id (UUID or serial integer)
+- Foreign keys: `<referenced_table>_id` with proper constraints
+- Timestamps: created_at, updated_at (auto-managed)
+- NO nullable fields unless absolutely necessary
+- API endpoints: REST conventions `/api/<resource>`
+- API responses: `{ data: ..., error: null }` or `{ data: null, error: <message> }`
+- **CRITICAL**: ALL deprecated schema fields (evidenceFiles) MUST be removed completely
 
-This system includes automatic compliance checking:
+==========================================================================================
+5. ERROR HANDLING
+==========================================================================================
+**MANDATORY ERROR PROTOCOLS**:
+- Frontend: Clear error messages with obvious resolution paths
+- Backend: Specific, user-friendly errors with proper HTTP status codes
+- NO silent failures or generic error messages
+- ALL errors must provide actionable guidance
 
-### Pre-Development Checklist:
-- [ ] Read UNIVERSAL_PROTOCOL_STANDARD.md
-- [ ] Check for hardcoding violations
-- [ ] Verify routing consistency
-- [ ] Ensure state persistence
-- [ ] Add protocol headers
+==========================================================================================
+6. DOCUMENTATION
+==========================================================================================
+**MANDATORY DOCUMENTATION**:
+- Comment block at top of EVERY file handling routing/data/schema
+- Must describe: protocol in use, exceptions and why, date of last review
+- Maintain UNIVERSAL_PROTOCOL_STANDARD.md in project root
+- ALWAYS refer to protocol before starting new work
 
-### Code Review Checklist:
-- [ ] No `Math.random()`, `Date.now()`, hardcoded paths
-- [ ] All routes follow path parameter pattern
-- [ ] Database schema follows naming conventions
-- [ ] All files have protocol headers
-- [ ] Error handling is clear and actionable
+==========================================================================================
+7. GENERAL REQUIREMENTS
+==========================================================================================
+**MANDATORY COMPLIANCE**:
+- NO HARD CODING of any values - all dynamic/config-driven
+- ALL code TypeScript-typed with interfaces
+- EVERY feature/change checked for protocol compliance before merge
+- Protocol violations MUST be flagged and fixed immediately
+- NO deviations without explicit approval
 
-### Testing Requirements:
-- [ ] Evidence files persist across workflow stages
-- [ ] No hardcoded values in generated IDs
-- [ ] All API endpoints return proper JSON format
-- [ ] State maintains incident ID associations
+==========================================================================================
 
-## VIOLATION CONSEQUENCES
+# THIS PROTOCOL IS NON-NEGOTIABLE AND APPLIES TO ALL AI/HUMAN CONTRIBUTORS
+# VIOLATIONS COST USER TIME AND MONEY - ZERO TOLERANCE POLICY
+# ANY VIOLATION IS A CRITICAL ERROR REQUIRING IMMEDIATE FIX
 
-**ANY violation of this protocol is considered a CRITICAL ERROR that must be immediately fixed before proceeding with any other work.**
+==========================================================================================
 
-## AUTO-ENFORCEMENT IN replit.md
+## PERMANENT EMBEDDING STATUS
+- **Date Embedded**: January 26, 2025
+- **Purpose**: Prevent recurring protocol violations that cost user time and money
+- **Enforcement**: Automatic compliance checking required before any code changes
+- **Impact**: Zero tolerance for violations - all must be fixed immediately
 
-This protocol is now embedded in the project documentation and will be automatically referenced for all future development decisions.
-
----
-
-**THIS PROTOCOL IS NON-NEGOTIABLE AND APPLIES TO ALL AI/HUMAN CONTRIBUTORS.**
-**VIOLATIONS MUST BE FLAGGED AND DISCUSSED BEFORE PROCEEDING.**
+## AUTOMATIC ENFORCEMENT SYSTEM
+This protocol is now permanently embedded in project documentation and MUST be referenced before any development work. Any violation of these standards is considered a critical error.

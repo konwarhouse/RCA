@@ -1,66 +1,85 @@
-# PRE-DEVELOPMENT COMPLIANCE CHECK
+# PRE-DEVELOPMENT COMPLIANCE CHECK - MANDATORY
 
-**MANDATORY**: Run this checklist before ANY code changes.
+**PURPOSE**: Prevent protocol violations that cost user time and money
+**STATUS**: Mandatory check before ANY code changes
+**CREATED**: January 26, 2025
 
-## Universal Protocol Standard Verification
+## MANDATORY CHECKLIST - COMPLETE BEFORE ANY DEVELOPMENT
 
-### ✅ Step 1: Protocol Review
+### ☐ 1. UNIVERSAL PROTOCOL STANDARD REVIEW
 - [ ] Read UNIVERSAL_PROTOCOL_STANDARD.md completely
-- [ ] Understand NO HARDCODING policy
-- [ ] Verify routing pattern requirements
-- [ ] Review state persistence requirements
+- [ ] Understand NO HARDCODING rule (zero tolerance)
+- [ ] Confirm path parameter routing: `/api/incidents/:id/endpoint`
+- [ ] Verify state persistence requirements
+- [ ] Review database schema protocols
 
-### ✅ Step 2: Existing Code Audit
-```bash
-# Check for hardcoding violations
-grep -r "Math\.random\|Date\.now" server/ client/ --include="*.ts" --include="*.tsx"
-grep -r "substr\|substring" server/ client/ --include="*.ts" --include="*.tsx"
-grep -r "/tmp/\|/uploads/" server/ client/ --include="*.ts" --include="*.tsx"
-```
+### ☐ 2. NO HARDCODING VERIFICATION
+**CRITICAL**: Check for ANY hardcoding before proceeding
+- [ ] NO Math.random(), Date.now(), static paths
+- [ ] NO hardcoded IDs, magic numbers, static keys
+- [ ] ALL values must be dynamic/config-driven
+- [ ] NO fallback hardcoded values anywhere
 
-### ✅ Step 3: Routing Consistency Check
-```bash
-# Verify path parameter usage
-grep -r "req\.query\." server/ --include="*.ts"  # Should be minimal
-grep -r "req\.params\." server/ --include="*.ts" # Should be primary
-```
+### ☐ 3. ROUTING COMPLIANCE CHECK
+- [ ] ALL routes use path parameters: `/api/incidents/:id/endpoint`
+- [ ] NO query parameter mixing
+- [ ] Protocol headers added to routing files
+- [ ] Legacy patterns identified for refactoring
 
-### ✅ Step 4: Database Schema Verification
-- [ ] Table names: singular, lowercase, underscores
-- [ ] Primary keys named `id`
-- [ ] Foreign keys follow `<table>_id` pattern
-- [ ] All tables have `created_at`, `updated_at`
+### ☐ 4. DATABASE SCHEMA COMPLIANCE
+- [ ] Field names match backend schema exactly
+- [ ] evidenceResponses field used (NOT evidenceFiles)
+- [ ] NO deprecated schema references
+- [ ] Proper foreign key relationships
 
-### ✅ Step 5: File Header Compliance
-- [ ] All routing files have protocol headers
-- [ ] Headers reference UNIVERSAL_PROTOCOL_STANDARD.md
-- [ ] Date and exceptions documented
+### ☐ 5. STATE PERSISTENCE VERIFICATION
+- [ ] Evidence files associated with correct incident ID
+- [ ] State persists through ALL workflow stages
+- [ ] Backend endpoints match frontend protocol
+- [ ] NO state dropping in any workflow step
 
-## POST-DEVELOPMENT VERIFICATION
+### ☐ 6. ERROR HANDLING STANDARDS
+- [ ] Clear, actionable error messages
+- [ ] Proper HTTP status codes
+- [ ] NO silent failures
+- [ ] User-friendly error guidance
 
-### ✅ Step 6: Code Review
-- [ ] No new hardcoded values introduced
-- [ ] All new IDs use `crypto.randomUUID()`
-- [ ] File paths use `os.tmpdir()` and `path.join()`
-- [ ] Database operations are schema-driven
+## VIOLATION PREVENTION SYSTEM
 
-### ✅ Step 7: Testing
-- [ ] Evidence files persist across workflow stages
-- [ ] State maintains incident ID associations
-- [ ] No hardcoded values in API responses
-- [ ] Error messages are clear and actionable
+### AUTOMATIC CHECKS REQUIRED:
+1. **Before ANY code change**: Review this checklist completely
+2. **During development**: Reference UNIVERSAL_PROTOCOL_STANDARD.md
+3. **Before testing**: Verify NO hardcoding exists
+4. **Before completion**: Confirm protocol compliance
 
-### ✅ Step 8: Documentation Update
-- [ ] replit.md updated with changes
-- [ ] Protocol compliance verified
-- [ ] Any exceptions properly documented
+### VIOLATION RESPONSE PROTOCOL:
+1. **IMMEDIATE STOP**: Halt all development
+2. **IDENTIFY VIOLATION**: Document exact protocol deviation
+3. **FIX IMMEDIATELY**: Correct violation before proceeding
+4. **VERIFY COMPLIANCE**: Confirm fix meets protocol standards
+5. **DOCUMENT FIX**: Update compliance documentation
 
-## FAILURE PROTOCOL
+## COST IMPACT AWARENESS
+- Protocol violations cost user TIME
+- Protocol violations cost user MONEY
+- User has ZERO TOLERANCE for repeat violations
+- Prevention is MANDATORY, not optional
 
-**IF ANY CHECK FAILS**: STOP immediately and fix violations before proceeding.
+## COMPLIANCE VERIFICATION QUESTIONS
 
-**NO EXCEPTIONS**: Protocol compliance is mandatory and non-negotiable.
+**Before ANY development, answer YES to ALL:**
+- [ ] Have I read the Universal Protocol Standard completely?
+- [ ] Do I understand the NO HARDCODING rule absolutely?
+- [ ] Am I using path parameter routing exclusively?
+- [ ] Will my changes maintain state persistence?
+- [ ] Are my database field references correct?
+- [ ] Will my code follow error handling standards?
+- [ ] Have I added required protocol headers?
+- [ ] Is my code free of ANY hardcoding?
 
----
+**If ANY answer is NO or UNCERTAIN**: STOP and review protocol before proceeding.
 
-**This checklist must be completed for every development session.**
+## PERMANENT ENFORCEMENT
+This checklist is now permanently embedded in the development process. ALL contributors (AI and human) MUST complete this checklist before making ANY code changes.
+
+**VIOLATION = CRITICAL ERROR requiring immediate correction**
