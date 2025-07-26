@@ -1589,6 +1589,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // UNIFIED EVIDENCE REVIEW ENDPOINT (Universal RCA Evidence Flow v2 Compliance)
+  // Route: POST /api/incidents/:id/review-evidence
+  // Protocol: Path parameter routing (/incidents/:id/evidence-files) per Universal Protocol Standard
+  app.post("/api/incidents/:id/review-evidence", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { fileId, action, comments } = req.body;
+      
+      console.log(`[EVIDENCE REVIEW] Processing ${action} for file ${fileId} in incident ${incidentId}`);
+      
+      // Validate required fields (NO HARDCODING - Universal validation)
+      if (!fileId || !action) {
+        return res.status(400).json({ 
+          data: null, 
+          error: "Missing required fields: fileId and action" 
+        });
+      }
+      
+      // Validate action types (Schema-driven validation)
+      const validActions = ['ACCEPTED', 'NEEDS_MORE_INFO', 'REPLACED'];
+      if (!validActions.includes(action)) {
+        return res.status(400).json({ 
+          data: null, 
+          error: `Invalid action. Must be one of: ${validActions.join(', ')}` 
+        });
+      }
+      
+      // Get incident data
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ 
+          data: null, 
+          error: "Incident not found" 
+        });
+      }
+      
+      // Update evidence file review status (Universal RCA Evidence Flow Step 3C compliance)
+      const evidenceResponses = incident.evidenceResponses || [];
+      const updatedResponses = evidenceResponses.map((file: any) => {
+        if (file.id === fileId || file.fileId === fileId) {
+          return {
+            ...file,
+            reviewStatus: action,
+            userComments: comments || '',
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: 'investigator' // TODO: Get from session/auth
+          };
+        }
+        return file;
+      });
+      
+      // Save updated review status to database
+      await investigationStorage.updateIncident(incidentId, {
+        evidenceResponses: updatedResponses
+      });
+      
+      console.log(`[EVIDENCE REVIEW] Successfully updated file ${fileId} status to ${action}`);
+      
+      // Return success response (Universal Protocol Standard - JSON format)
+      res.json({ 
+        data: {
+          success: true,
+          fileId,
+          action,
+          message: `Evidence file review status updated to ${action}`
+        }, 
+        error: null 
+      });
+      
+    } catch (error) {
+      console.error('[EVIDENCE REVIEW] Review action failed:', error);
+      res.status(500).json({ 
+        data: null, 
+        error: "Failed to update evidence review status" 
+      });
+    }
+  });
+
   // CRITICAL MISSING ENDPOINT: Get Evidence Files for Human Review
   app.get("/api/incidents/:id/evidence-files", async (req, res) => {
     try {

@@ -12,15 +12,19 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 interface EvidenceFile {
   id: string;
   fileName: string;
-  fileType: string;
+  fileSize?: number;
+  mimeType?: string;
+  fileType?: string;
   uploadedAt: string;
-  evidenceCategory: string;
+  category?: string;
+  evidenceCategory?: string;
+  description?: string;
   parsedSummary?: string;
   analysisFeatures?: any;
   diagnosticScore?: number;
+  adequacyScore?: number;
   reviewStatus: 'UNREVIEWED' | 'ACCEPTED' | 'NEEDS_MORE_INFO' | 'REPLACED';
   userComments?: string;
-  adequacyScore?: number;
 }
 
 /**
@@ -203,7 +207,7 @@ export default function HumanReview() {
                   </Badge>
                 </div>
                 <div className="text-xs text-slate-500">
-                  {file.evidenceCategory} • {file.fileType} • {file.uploadedAt}
+                  {file.category || file.evidenceCategory || 'General Evidence'} • {file.mimeType || file.fileType || 'Unknown'} • {new Date(file.uploadedAt).toLocaleString()}
                 </div>
               </CardHeader>
               
@@ -216,12 +220,12 @@ export default function HumanReview() {
                   </div>
                 )}
 
-                {/* Diagnostic Score */}
-                {file.diagnosticScore !== undefined && (
+                {/* Adequacy Score */}
+                {file.adequacyScore !== undefined && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">Diagnostic Value:</span>
-                    <Badge variant={file.diagnosticScore >= 80 ? 'default' : file.diagnosticScore >= 60 ? 'secondary' : 'destructive'}>
-                      {file.diagnosticScore}%
+                    <span className="text-sm text-slate-600">Adequacy Score:</span>
+                    <Badge variant={file.adequacyScore >= 80 ? 'default' : file.adequacyScore >= 60 ? 'secondary' : 'destructive'}>
+                      {file.adequacyScore}%
                     </Badge>
                   </div>
                 )}
