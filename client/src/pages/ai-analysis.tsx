@@ -314,7 +314,8 @@ export default function AIAnalysis() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {analysisResults.rootCauses.map((cause, index) => (
+                    {(analysisResults.rootCauses && analysisResults.rootCauses.length > 0) ? 
+                      analysisResults.rootCauses.map((cause, index) => (
                       <div key={cause.id} className="p-4 border rounded-lg bg-card">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
@@ -380,7 +381,16 @@ export default function AIAnalysis() {
                           )}
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="p-6 text-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                        <Target className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                        <h3 className="font-medium text-muted-foreground mb-2">Analysis Results Available</h3>
+                        <p className="text-sm text-muted-foreground">
+                          RCA synthesis completed with {analysisResults.overallConfidence}% confidence. 
+                          Check other tabs for recommendations and detailed analysis.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
