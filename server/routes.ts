@@ -893,34 +893,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/ai-settings/test", async (req, res) => {
     try {
-      const { provider, apiKey } = req.body;
-      console.log(`[ADMIN] Testing API key for provider: ${provider} (ADMIN-MANAGED ONLY - NO HARDCODING)`);
+      // Use enhanced AI test service - UNIVERSAL PROTOCOL STANDARD compliant
+      console.log(`[ADMIN] Testing AI configuration via Enhanced AI Test Service (NO HARDCODING)`);
       
-      // Import AIService dynamically to avoid hardcoded dependencies
-      const { AIService } = await import("./ai-service");
-      const testResult = await AIService.testApiKey(provider, apiKey);
+      // Import Enhanced AI Test Service for professional testing
+      const { EnhancedAITestService } = await import("./enhanced-ai-test-service");
       
-      console.log(`[ADMIN] API key test result: ${testResult.success ? 'SUCCESS' : 'FAILED'} - SOURCE: admin-interface`);
+      // Get active AI settings from database (NO HARDCODING)
+      const aiSettings = await investigationStorage.getAllAiSettings();
+      const activeProvider = aiSettings.find((setting: any) => setting.isActive);
+      
+      if (!activeProvider) {
+        return res.json({
+          success: false,
+          message: 'No active AI provider configured',
+          configurationSource: 'admin-database',
+          testTimestamp: new Date().toISOString()
+        });
+      }
+      
+      // Test the active configuration using Enhanced AI Test Service
+      const testResult = await EnhancedAITestService.performTest(activeProvider.id);
+      
+      console.log(`[ADMIN] Enhanced test result: ${testResult.success ? 'SUCCESS' : 'FAILED'} - Provider: ${activeProvider.provider}`);
       
       // Log the test operation for compliance tracking
       const { AIStatusMonitor } = await import('./ai-status-monitor');
       AIStatusMonitor.logAIOperation({
-        source: 'admin-api-key-test',
+        source: 'admin-enhanced-test',
         success: testResult.success,
-        provider: provider
+        provider: activeProvider.provider
       });
       
       res.json({
         success: testResult.success,
-        message: testResult.success ? 'API key is valid and working' : testResult.error,
+        message: testResult.success ? 'AI configuration tested successfully' : testResult.error || 'Test failed',
         configurationSource: 'admin-database',
-        testTimestamp: new Date().toISOString()
+        testTimestamp: new Date().toISOString(),
+        providerId: activeProvider.id,
+        provider: activeProvider.provider
       });
     } catch (error) {
-      console.error('[ADMIN] Error testing API key:', error);
+      console.error('[ADMIN] Enhanced AI test failed:', error);
       res.status(500).json({ 
         success: false, 
-        message: "Failed to test API key" 
+        message: "Failed to test AI configuration",
+        configurationSource: 'admin-database',
+        testTimestamp: new Date().toISOString()
       });
     }
   });
