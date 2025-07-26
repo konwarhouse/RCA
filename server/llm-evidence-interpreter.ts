@@ -153,12 +153,12 @@ Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${
       const { DynamicAIConfig } = await import('./dynamic-ai-config');
       
       // Use admin panel configuration exclusively - NO HARDCODING
-      const llmResponse = await DynamicAIConfig.performAIAnalysis(prompt, {
-        operation: 'evidence-interpretation',
-        incidentId: incidentId.toString(),
-        analysisType: 'diagnostic',
-        temperature: 0.1
-      });
+      const llmResponse = await DynamicAIConfig.performAIAnalysis(
+        incidentId.toString(),
+        prompt,
+        'evidence-interpretation',
+        'LLM Evidence Interpreter'
+      );
       
       return llmResponse || 'LLM diagnostic analysis unavailable';
       
