@@ -48,6 +48,7 @@ function Router() {
       <Route path="/equipment-selection" component={EquipmentSelection} />
       <Route path="/evidence-checklist" component={EvidenceChecklist} />
       <Route path="/evidence-collection" component={EvidenceCollection} />
+      <Route path="/human-review" component={HumanReview} />
       <Route path="/incidents/:id/human-review" component={HumanReview} />
       <Route path="/incidents/:id/analysis" component={AIAnalysis} />
       <Route path="/ai-analysis" component={AIAnalysis} />

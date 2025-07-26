@@ -217,7 +217,7 @@ export default function EvidenceCollection() {
     if (incidentId) {
       console.log('[EVIDENCE COLLECTION] Proceeding to MANDATORY Stage 3B Human Review');
       // Direct navigation - no backend call needed as files already uploaded
-      setLocation(`/incidents/${incidentId}/human-review`);
+      setLocation(`/human-review?incident=${incidentId}`);
     }
   };
 
