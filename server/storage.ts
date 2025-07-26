@@ -1106,31 +1106,29 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         };
       }).filter(Boolean); // Remove null entries
       
-      // Also check evidence categories for file references
+      // PROTOCOL COMPLIANCE: Check evidenceChecklist from incident for file references (schema-driven)
       const categoryFiles: any[] = [];
-      for (const [categoryId, categoryData] of Object.entries(evidenceCategories)) {
-        if (typeof categoryData === 'object' && categoryData !== null) {
-          const category = categoryData as any;
-          if (category.files && Array.isArray(category.files)) {
-            category.files.forEach((file: any) => {
-              if (!file || typeof file !== 'object') {
-                console.log(`[Evidence Files] Invalid category file object:`, file);
-                return;
-              }
-              
-              categoryFiles.push({
-                id: file.id || file.fileId || Date.now().toString(),
-                fileName: file.fileName || file.name || file.originalname || 'Category File',
-                fileSize: file.fileSize || file.size || 0,
-                mimeType: file.mimeType || file.type || file.mimetype || 'application/octet-stream',
-                uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
-                category: categoryId,
-                description: file.description
-              });
+      const evidenceChecklist = (incident.evidenceChecklist as any[]) || [];
+      evidenceChecklist.forEach((category: any) => {
+        if (category && typeof category === 'object' && category.files && Array.isArray(category.files)) {
+          category.files.forEach((file: any) => {
+            if (!file || typeof file !== 'object') {
+              console.log(`[Evidence Files] Invalid category file object:`, file);
+              return;
+            }
+            
+            categoryFiles.push({
+              id: file.id || file.fileId || Date.now().toString(),
+              fileName: file.fileName || file.name || file.originalname || 'Category File',
+              fileSize: file.fileSize || file.size || 0,
+              mimeType: file.mimeType || file.type || file.mimetype || 'application/octet-stream',
+              uploadedAt: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+              category: category.name || category.id || 'Evidence Category',
+              description: file.description
             });
-          }
+          });
         }
-      }
+      });
       
       const allFiles = [...formattedFiles, ...formattedEvidenceResponses, ...categoryFiles];
       
