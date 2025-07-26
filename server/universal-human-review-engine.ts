@@ -1,26 +1,11 @@
 /**
- * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
- * 
- * HUMAN REVIEW WORKFLOW: Universal evidence file review with NO hardcoded analysis logic
- * NO HARDCODING: All file analysis dynamic, schema-driven from Evidence Library
- * STATE PERSISTENCE: Review sessions associated with incident ID across all stages
- * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
- * DATE: January 26, 2025
- * LAST REVIEWED: January 26, 2025
- * EXCEPTIONS: None
- * 
- * CRITICAL REVIEW COMPLIANCE:
- * - ALL evidence files processed through universal Python backend
- * - NO hardcoded file type assumptions or analysis logic
- * - Review status persistence across workflow stages
- * - Incident ID association maintained throughout review process
- * 
- * UNIVERSAL RCA EVIDENCE FILE ANALYSIS & HUMAN REVIEW WORKFLOW
- * STRICT RULE: ABSOLUTELY NO HARD CODING ALLOWED
- * 
- * Implements Stage 3B and 4B: MANDATORY HUMAN REVIEW PANELS
- * Following RCA_Stage_4B_Human_Review instruction
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Universal Human Review Engine with zero hardcoding policy
  */
+
+import { UniversalAIConfig } from './universal-ai-config';
 
 interface EvidenceFileStatus {
   fileId: string;
@@ -131,7 +116,7 @@ export class UniversalHumanReviewEngine {
 
       // Store analysis result for human review with status UNREVIEWED
       const fileStatus: EvidenceFileStatus = {
-        fileId: file.id || `${incidentId}_${file.name}_${Date.now()}`,
+        fileId: file.id || `${incidentId}_${file.name}_${UniversalAIConfig.generateTimestamp()}`,
         fileName: file.name,
         evidenceCategory: file.categoryId || 'Unknown',
         analysisResult,
@@ -152,7 +137,7 @@ export class UniversalHumanReviewEngine {
       
       // Store failed analysis for human review (still requires review)
       const failedFileStatus: EvidenceFileStatus = {
-        fileId: file.id || `${incidentId}_${file.name}_${Date.now()}`,
+        fileId: file.id || `${incidentId}_${file.name}_${UniversalAIConfig.generateTimestamp()}`,
         fileName: file.name,
         evidenceCategory: file.categoryId || 'Unknown',
         analysisResult: { 

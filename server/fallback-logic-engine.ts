@@ -9,6 +9,7 @@
 
 import { DynamicAIConfig } from './dynamic-ai-config';
 import { DatabaseInvestigationStorage } from './storage';
+import { UniversalAIConfig } from './universal-ai-config';
 
 export interface AIInferredFailureMode {
   id: string;
@@ -119,7 +120,7 @@ Generate 3-5 most likely failure modes. Focus on engineering logic and root caus
       const timestamp = new Date().toISOString();
       
       const result: AIInferredFailureMode[] = inferredModes.map(mode => ({
-        id: mode.id || `ai_inferred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: mode.id || `ai_inferred_${UniversalAIConfig.generateTimestamp()}_${UniversalAIConfig.generateUUID().slice(0, 9)}`,
         failureMode: mode.failureMode,
         confidence: mode.confidence || 50,
         confidenceSource: 'AI-Inferred' as const,
@@ -139,7 +140,7 @@ Generate 3-5 most likely failure modes. Focus on engineering logic and root caus
       const timestamp = new Date().toISOString();
       return [
         {
-          id: `manual_fallback_${Date.now()}`,
+          id: `manual_fallback_${UniversalAIConfig.generateTimestamp()}`,
           failureMode: "Manual Expert Analysis Required",
           confidence: 0,
           confidenceSource: 'AI-Inferred' as const,

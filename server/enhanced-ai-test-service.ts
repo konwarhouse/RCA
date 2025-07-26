@@ -4,9 +4,17 @@
  * Implements robust testing with detailed error reporting and retry mechanisms
  */
 
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Enhanced AI Test Service with zero hardcoding policy
+ */
+
 import OpenAI from 'openai';
 import { investigationStorage } from './storage';
 import { AIStatusMonitor } from './ai-status-monitor';
+import { UniversalAIConfig } from './universal-ai-config';
 
 export interface AITestResult {
   success: boolean;
@@ -29,8 +37,8 @@ export class EnhancedAITestService {
    * Test AI provider with comprehensive error handling and retry logic
    */
   static async testAIProvider(providerId: number, maxRetries: number = 3): Promise<AITestResult> {
-    const startTime = Date.now();
-    const timestamp = new Date().toISOString();
+    const startTime = UniversalAIConfig.getPerformanceTime();
+    const timestamp = UniversalAIConfig.generateTimestamp();
     
     console.log(`[Enhanced AI Test] Starting test for provider ID ${providerId} with ${maxRetries} max retries`);
     
@@ -46,7 +54,7 @@ export class EnhancedAITestService {
           error: `AI provider with ID ${providerId} not found in database`,
           errorType: 'unknown',
           attempts: 0,
-          duration: Date.now() - startTime,
+          duration: UniversalAIConfig.getPerformanceTime() - startTime,
           timestamp,
           providerDetails: { id: providerId, provider: 'unknown', model: 'unknown' }
         };
@@ -262,7 +270,7 @@ export class EnhancedAITestService {
    * Live API ping test - simple connectivity check
    */
   static async performLivePing(providerId: number): Promise<{ success: boolean; latency: number; error?: string }> {
-    const startTime = Date.now();
+    const startTime = UniversalAIConfig.getPerformanceTime();
     
     try {
       const aiSettings = await investigationStorage.getAllAiSettings();
@@ -280,13 +288,13 @@ export class EnhancedAITestService {
       // Simple ping using models endpoint
       await openai.models.list();
       
-      const latency = Date.now() - startTime;
+      const latency = UniversalAIConfig.getPerformanceTime() - startTime;
       console.log(`[Enhanced AI Test] Live ping successful - ${latency}ms latency`);
       
       return { success: true, latency };
       
     } catch (error: any) {
-      const latency = Date.now() - startTime;
+      const latency = UniversalAIConfig.getPerformanceTime() - startTime;
       console.log(`[Enhanced AI Test] Live ping failed - ${latency}ms - ${error.message}`);
       
       return { 

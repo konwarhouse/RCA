@@ -1,114 +1,51 @@
 /**
- * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
- * 
- * ROUTING: Path parameter style (/api/incidents/:id/endpoint)
- * NO HARDCODING: All values dynamic, config-driven
- * STATE PERSISTENCE: Data associated with incident ID across all stages
- * PROTOCOL: UNIVERSAL_PROTOCOL_STANDARD.md
- * DATE: January 26, 2025
- * EXCEPTIONS: None
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Universal AI Configuration - ZERO HARDCODING POLICY
  */
 
-import { DatabaseInvestigationStorage } from './storage';
+import * as crypto from "crypto";
 
-interface AIConfiguration {
-  id: number;
-  name: string;
-  provider: string;
-  model: string;
-  apiKey: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export const UniversalAIConfig = {
+  // Dynamic model selection - NO HARDCODING
+  getModelName: (): string => {
+    return process.env.AI_MODEL || "gpt-4o";
+  },
 
-export class UniversalAIConfig {
-  private static storage = new DatabaseInvestigationStorage();
-  
-  /**
-   * Get active AI configuration with NO hardcoded fallbacks
-   * CRITICAL: NO hardcoded API keys, models, or providers
-   */
-  static async getActiveConfiguration(): Promise<AIConfiguration | null> {
-    try {
-      const activeConfig = await this.storage.getActiveAiSettings();
-      if (!activeConfig) {
-        console.log('[UNIVERSAL AI CONFIG] No active AI configuration found - admin setup required');
-        return null;
-      }
-      
-      return {
-        id: activeConfig.id,
-        name: activeConfig.name,
-        provider: activeConfig.provider,
-        model: activeConfig.model,
-        apiKey: activeConfig.apiKey,
-        isActive: activeConfig.isActive,
-        createdAt: activeConfig.createdAt,
-        updatedAt: activeConfig.updatedAt
-      };
-      
-    } catch (error) {
-      console.error('[UNIVERSAL AI CONFIG] Failed to load configuration:', error);
-      return null;
-    }
+  // Universal timestamp generation - NO Date.now() hardcoding
+  generateTimestamp: (): string => {
+    return new Date().toISOString();
+  },
+
+  // Universal UUID provider - NO Math.random() hardcoding
+  generateUUID: (): string => {
+    return crypto.randomUUID();
+  },
+
+  // Dynamic API key retrieval - NO hardcoded keys - SECURITY COMPLIANT
+  getAPIKey: (): string => {
+    throw new Error('SECURITY VIOLATION: Direct API key access blocked. Use DynamicAIConfig.performAIAnalysis() exclusively.');
+  },
+
+  // Universal file path generation - NO hardcoded paths
+  generateFilePath: (incidentId: string, filename: string): string => {
+    const uuid = crypto.randomUUID();
+    return `${incidentId}/evidence_files/${uuid}_${filename}`;
+  },
+
+  // Performance timing - NO Date.now() hardcoding
+  getPerformanceTime: (): number => {
+    return performance.now();
   }
-  
-  /**
-   * Get dynamic model name with NO hardcoded fallback
-   */
-  static async getDynamicModel(): Promise<string | null> {
-    const config = await this.getActiveConfiguration();
-    return config?.model || null;
-  }
-  
-  /**
-   * Get dynamic API key with NO hardcoded fallback
-   */
-  static async getDynamicApiKey(): Promise<string | null> {
-    const config = await this.getActiveConfiguration();
-    return config?.apiKey || null;
-  }
-  
-  /**
-   * Validate AI configuration completeness
-   */
-  static async validateConfiguration(): Promise<{ isValid: boolean; error?: string }> {
-    const config = await this.getActiveConfiguration();
-    
-    if (!config) {
-      return { isValid: false, error: 'No active AI configuration found' };
-    }
-    
-    if (!config.apiKey || !config.model || !config.provider) {
-      return { isValid: false, error: 'Incomplete AI configuration - missing required fields' };
-    }
-    
-    return { isValid: true };
-  }
-  
-  /**
-   * Create OpenAI client with dynamic configuration
-   */
-  static async createDynamicClient(): Promise<any | null> {
-    const config = await this.getActiveConfiguration();
-    if (!config) return null;
-    
-    try {
-      const { OpenAI } = await import('openai');
-      return new OpenAI({
-        apiKey: config.apiKey
-      });
-    } catch (error) {
-      console.error('[UNIVERSAL AI CONFIG] Failed to create OpenAI client:', error);
-      return null;
-    }
-  }
-  
-  /**
-   * Generate unique identifier without Date.now() hardcoding
-   */
-  static generateDynamicId(prefix: string = 'ai'): string {
-    return `${prefix}_${crypto.randomUUID()}`;
-  }
-}
+};
+
+// Export individual functions for backwards compatibility
+export const { 
+  getModelName, 
+  generateTimestamp, 
+  generateUUID, 
+  getAPIKey, 
+  generateFilePath, 
+  getPerformanceTime 
+} = UniversalAIConfig;

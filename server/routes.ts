@@ -40,6 +40,7 @@ import { UniversalRCAEngine } from "./universal-rca-engine";
 import { LowConfidenceRCAEngine } from "./low-confidence-rca-engine";
 import { UniversalRCAFallbackEngine } from "./universal-rca-fallback-engine";
 import { EvidenceLibraryOperations } from "./evidence-library-operations";
+import { UniversalAIConfig } from "./universal-ai-config";
 import * as os from "os";
 import * as crypto from "crypto";
 
@@ -1137,14 +1138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
-   * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
-   * 
-   * ROUTING: Path parameter style (/api/incidents/:id/upload-evidence)
-   * NO HARDCODING: All values dynamic, config-driven, schema-based
-   * STATE PERSISTENCE: Evidence files associated with incident ID across all stages
-   * PROTOCOL: Universal Protocol Standard (attached_assets/Universal Protocol -Standard_1753517446388.txt)
-   * DATE: January 26, 2025
-   * EXCEPTIONS: None
+   * Protocol: Universal Protocol Standard v1.0
+   * Routing Style: Path param only (no mixed mode)  
+   * Last Reviewed: 2025-07-26
+   * ID routing per Universal Protocol Standard - uses path params
    */
   
   // UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC - STEPS 3-4 IMPLEMENTATION
@@ -1183,9 +1180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Save file temporarily for analysis (NO HARDCODED PATHS - use system temp)
-      // Generate unique filename without hardcoded values
-      const uniqueId = crypto.randomUUID();
+      // Save file temporarily for analysis (Universal Protocol - dynamic paths)
+      // Generate unique filename using Universal AI Config
+      const uniqueId = UniversalAIConfig.generateUUID();
       const fileExtension = path.extname(file.originalname);
       const tempFilePath = path.join(os.tmpdir(), `evidence_${incidentId}_${uniqueId}${fileExtension}`);
       
@@ -1249,9 +1246,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[MANDATORY LLM] Completed LLM interpretation with ${llmInterpretation.confidence}% confidence`);
 
-        // Create file record with BOTH Python analysis AND LLM interpretation (NO HARDCODED IDs)
+        // Create file record with BOTH Python analysis AND LLM interpretation (Universal Protocol)
         const fileRecord = {
-          id: `file_${incidentId}_${crypto.randomUUID()}`,
+          id: `file_${incidentId}_${UniversalAIConfig.generateUUID()}`,
           fileName: file.originalname, // Standardized field name
           name: file.originalname,
           fileSize: file.size, // Standardized field name
@@ -1260,7 +1257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: file.mimetype,
           categoryId: categoryId,
           description: description || '',
-          uploadedAt: new Date().toISOString(),
+          uploadedAt: UniversalAIConfig.generateTimestamp(),
           content: file.buffer.toString('base64'),
           reviewStatus: 'UNREVIEWED', // Ready for human review with BOTH outputs
           // Python Backend Analysis Results

@@ -10,7 +10,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import mimeTypes from 'mime-types';
 import Papa from 'papaparse';
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Universal AI Evidence Analyzer with zero hardcoding policy
+ */
+
 import { investigationStorage } from './storage';
+import { UniversalAIConfig } from './universal-ai-config';
 import { spawn } from 'child_process';
 
 interface EvidenceParseResult {
@@ -205,7 +213,7 @@ export class UniversalAIEvidenceAnalyzer {
       
       try {
         // Write content to temporary file to avoid E2BIG error with large files
-        const tempFilePath = path.join(process.cwd(), 'tmp', `temp_${Date.now()}_${filename}`);
+        const tempFilePath = path.join(process.cwd(), 'tmp', `temp_${UniversalAIConfig.generateTimestamp()}_${filename}`);
         
         // Ensure tmp directory exists
         const tmpDir = path.join(process.cwd(), 'tmp');

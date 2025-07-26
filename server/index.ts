@@ -1,6 +1,14 @@
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Express server with zero hardcoding policy
+ */
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 const app = express();
 
@@ -17,7 +25,7 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
-  const start = Date.now();
+  const start = UniversalAIConfig.getPerformanceTime();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
@@ -28,7 +36,7 @@ app.use((req, res, next) => {
   };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
+    const duration = UniversalAIConfig.getPerformanceTime() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {

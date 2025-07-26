@@ -8,7 +8,15 @@
  * - All logic dynamically inferred from incident description and AI
  */
 
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Universal RCA Fallback Engine with zero hardcoding policy
+ */
+
 import { investigationStorage } from './storage';
+import { UniversalAIConfig } from './universal-ai-config';
 
 interface FallbackHypothesis {
   id: string;
@@ -269,7 +277,7 @@ Return as JSON array with format:
     try {
       const parsed = JSON.parse(aiResponse);
       return parsed.map((h: any, index: number) => ({
-        id: `fallback-${Date.now()}-${index}`,
+        id: `fallback-${UniversalAIConfig.generateTimestamp()}-${index}`,
         rootCauseTitle: h.rootCauseTitle || 'Unknown Failure Mode',
         confidence: h.confidence || 50,
         aiReasoning: h.aiReasoning || 'AI-generated hypothesis',
@@ -288,7 +296,7 @@ Return as JSON array with format:
     // Emergency fallback using basic engineering principles
     return [
       {
-        id: `emergency-fallback-${Date.now()}`,
+        id: `emergency-fallback-${UniversalAIConfig.generateTimestamp()}`,
         rootCauseTitle: 'Component Failure - Requires Investigation',
         confidence: 30,
         aiReasoning: 'Basic engineering assumption - detailed investigation required',

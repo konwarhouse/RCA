@@ -1,33 +1,18 @@
 /**
- * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
- * 
- * ROUTING: Dynamic parameter passing, no hardcoded IDs or paths
- * NO HARDCODING: All values schema-driven from database configuration  
- * STATE PERSISTENCE: LLM interpretations associated with incident ID across workflow
- * PROTOCOL: Universal Protocol Standard (attached_assets/Universal Protocol -Standard_1753517446388.txt)
- * DATE: January 26, 2025
- * EXCEPTIONS: None
- * 
- * CRITICAL MANDATE FROM UNIVERSAL PROTOCOL STANDARD:
- * 1. After Python backend parses each evidence file and produces its summary (JSON), 
- *    that summary MUST ALWAYS be sent to the integrated LLM/AI for analysis 
- *    before ANY human review or report generation.
- * 
- * 2. The LLM/AI must:
- *    - Receive only the parsed summary (never the raw file)
- *    - Analyze, interpret, and generate:
- *      * Most likely root cause(s)
- *      * Pinpointed recommendations  
- *      * Confidence
- *      * Library/fault pattern match
- *      * What evidence is missing or next step needed
- * 
- * 3. No file can be accepted or reviewed until BOTH outputs are visible:
- *    - Python parsed summary AND
- *    - LLM/AI diagnostic interpretation
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: LLM Evidence Interpreter with deterministic schema validation
+ * ZERO HARDCODING POLICY: All values dynamic, config-driven, schema-based
+ */
+
+/**
+ * UNIVERSAL_LLM_SECURITY_INSTRUCTION COMPLIANCE
+ * NO HARDCODED API KEYS - Uses admin panel configuration exclusively
  */
 
 import { UniversalAIConfig } from './universal-ai-config';
+import { RCAInterpretationSchema, validateRCAInterpretation, type RCAInterpretation } from "../shared/rca_interpretation.schema";
 
 interface ParsedEvidenceSummary {
   fileName: string;
@@ -161,29 +146,19 @@ Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${
     try {
       console.log(`[LLM INTERPRETER] Sending parsed summary to LLM for diagnostic analysis`);
       
-      // Use Universal AI Config for LLM analysis - NO HARDCODING
-      const aiConfig = await UniversalAIConfig.getActiveConfiguration();
-      if (!aiConfig) {
-        throw new Error('AI provider not configured. Contact admin to configure AI settings.');
-      }
+      // UNIVERSAL_LLM_SECURITY_INSTRUCTION COMPLIANCE - Use ONLY admin panel config
+      console.log(`[LLM INTERPRETER] Using Dynamic AI Config (admin panel) for SECURITY COMPLIANT analysis`);
       
-      // Create OpenAI client with dynamic configuration
-      const openai = await UniversalAIConfig.createDynamicClient();
-      if (!openai) {
-        throw new Error('Failed to create AI client. Check configuration.');
-      }
+      // Import Dynamic AI Config for SECURE admin-panel-only access
+      const { DynamicAIConfig } = await import('./dynamic-ai-config');
       
-      const response = await openai.chat.completions.create({
-        model: aiConfig.model,
-        messages: [
-          { role: "system", content: "You are an expert reliability and root cause analysis (RCA) AI assistant. Provide deterministic JSON responses." },
-          { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" },
+      // Use admin panel configuration exclusively - NO HARDCODING
+      const llmResponse = await DynamicAIConfig.performAIAnalysis(prompt, {
+        operation: 'evidence-interpretation',
+        incidentId: incidentId.toString(),
+        analysisType: 'diagnostic',
         temperature: 0.1
       });
-      
-      const llmResponse = response.choices[0]?.message?.content || 'LLM diagnostic analysis unavailable';
       
       return llmResponse || 'LLM diagnostic analysis unavailable';
       

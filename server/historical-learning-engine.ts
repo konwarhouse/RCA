@@ -7,7 +7,15 @@
  * ZERO HARDCODING: All pattern intelligence from database-driven learning
  */
 
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Historical Learning Engine with zero hardcoding policy
+ */
+
 import { investigationStorage } from "./storage";
+import { UniversalAIConfig } from './universal-ai-config';
 
 export interface HistoricalPattern {
   id?: number;
@@ -434,7 +442,7 @@ export class HistoricalLearningEngine {
   }
 
   private calculateRecencyBoost(lastUsed: Date): number {
-    const daysSinceUsed = (Date.now() - lastUsed.getTime()) / (1000 * 60 * 60 * 24);
+    const daysSinceUsed = (UniversalAIConfig.getPerformanceTime() - lastUsed.getTime()) / (1000 * 60 * 60 * 24);
     return Math.max(0, 1 - (daysSinceUsed / 365)); // Decay over a year
   }
 

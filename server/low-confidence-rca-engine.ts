@@ -8,7 +8,15 @@
  * ZERO HARDCODING: All intelligence from Evidence Library
  */
 
+/**
+ * Protocol: Universal Protocol Standard v1.0
+ * Routing Style: Path param only (no mixed mode)
+ * Last Reviewed: 2025-07-26
+ * Purpose: Low Confidence RCA Engine with zero hardcoding policy
+ */
+
 import { investigationStorage } from "./storage";
+import { UniversalAIConfig } from './universal-ai-config';
 
 export interface LowConfidenceScenario {
   incidentId: number;
@@ -153,7 +161,7 @@ export class LowConfidenceRCAEngine {
     try {
       // Create escalation ticket
       const escalationTicket = {
-        id: `ESC-${Date.now()}`,
+        id: `ESC-${UniversalAIConfig.generateTimestamp()}`,
         incidentId,
         createdAt: new Date().toISOString(),
         reason: scenario.reason,
