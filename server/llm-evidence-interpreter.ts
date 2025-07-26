@@ -78,63 +78,217 @@ export class LLMEvidenceInterpreter {
   }
   
   /**
-   * UNIVERSAL RCA DETERMINISTIC AI ADDENDUM - STRICT PROMPT TEMPLATE
-   * Creates deterministic diagnostic prompt with mandatory JSON output structure
-   * NO HARDCODING - Equipment-agnostic evidence-driven analysis only
+   * UNIVERSAL_LLM_PROMPT_ENHANCEMENT IMPLEMENTATION
+   * UNIVERSAL RCA DETERMINISTIC AI ADDENDUM - ENHANCED EVIDENCE-RICH PROMPT TEMPLATE  
+   * Creates deterministic diagnostic prompt with structured evidence-specific features
+   * NO HARDCODING - Equipment-agnostic evidence-driven analysis with dynamic adaptation
    */
   private static createDiagnosticPrompt(
     parsedSummary: ParsedEvidenceSummary,
     equipmentContext: any
   ): string {
     
-    return `UNIVERSAL LLM (AI) RCA DIAGNOSTIC PROMPT TEMPLATE – STRICTLY NO HARDCODING
+    // Extract enhanced features for rich LLM analysis
+    const enhancedFeatures = parsedSummary.extractedFeatures || {};
+    
+    // Build evidence-specific structured content for LLM
+    const evidenceContent = this.buildEvidenceSpecificContent(enhancedFeatures);
+    
+    return `UNIVERSAL LLM (AI) RCA DIAGNOSTIC PROMPT TEMPLATE – ENHANCED EVIDENCE ANALYSIS
 
-You are an expert reliability and root cause analysis (RCA) AI assistant.
+You are an expert reliability and root cause analysis (RCA) AI assistant with advanced signal processing and data analysis capabilities.
 
-You will receive as input:
-- A structured summary of parsed features from an evidence file (e.g., vibration data, IR scan, process log, maintenance record, etc.).
-- Equipment information if available (but never assume equipment type or fault signatures unless provided).
-- A list of any missing fields or data limitations.
+EVIDENCE ANALYSIS INPUT:
+${evidenceContent}
 
-Your response MUST:
-1. Identify the most probable failure mode(s) or explicitly state "No abnormality detected" if the data appears normal.
-2. Report a numeric confidence score (0–100%) for your inference.
-3. Provide 2–4 concise, actionable recommendations (short, practical steps for the investigator).
-4. Explicitly mention any missing/uncertain data, and list the specific evidence needed to improve the confidence.
-5. NEVER assume equipment type, failure mode, or fault signature unless present in the summary—no static templates or rules allowed.
-6. Always cite the parsed feature(s) that support your inference or recommendations (e.g., "RMS = 5.8 mm/s").
-7. Use a strict JSON output structure as below—NO free-form narrative, no equipment-specific logic or hardcoding:
+ANALYSIS REQUIREMENTS:
+You MUST analyze the above evidence with deep technical insight:
 
+1. TECHNICAL ANALYSIS: Examine all provided metrics, patterns, and anomalies in detail
+2. FAILURE MODE IDENTIFICATION: Based on the specific evidence patterns, identify the most probable failure mechanism(s) or state "No abnormality detected"
+3. CONFIDENCE ASSESSMENT: Provide 0-100% confidence based on evidence quality, completeness, and diagnostic clarity
+4. SUPPORTING DATA: Reference specific parsed features, measurements, and detected patterns that support your analysis
+5. ACTIONABLE RECOMMENDATIONS: Provide 2-4 specific, technical recommendations based on the evidence patterns
+6. EVIDENCE GAPS: Identify missing data types or measurements that would improve diagnostic confidence
+
+CRITICAL REQUIREMENTS:
+- Base analysis ONLY on provided evidence features - NO equipment-type assumptions
+- Cite specific measurements and patterns from the evidence (e.g., "RMS = 5.8 mm/s", "Dominant frequency at 30 Hz")
+- Consider signal quality, anomalies, and trends in your analysis
+- Use technical language appropriate for reliability engineers
+
+MANDATORY JSON OUTPUT FORMAT:
 {
-  "mostLikelyRootCause": "[Short phrase, or 'No anomaly detected']",
+  "mostLikelyRootCause": "[Technical failure mechanism or 'No anomaly detected']",
   "confidenceScore": [number, 0–100],
   "supportingFeatures": [
-    "[E.g., 'RMS = 5.8 mm/s']", 
-    "[E.g., 'FFT peak at 2.3x']"
+    "[Specific measurement/pattern citations]",
+    "[Additional evidence features]"
   ],
   "recommendations": [
-    "[Action 1]",
-    "[Action 2]",
-    "[Action 3]"
+    "[Specific technical action 1]",
+    "[Specific technical action 2]",
+    "[Additional actions if needed]"
   ],
   "missingEvidenceOrUncertainty": [
-    "[E.g., 'No bearing temp data']", 
-    "[E.g., 'Short time window']"
+    "[Specific missing data types]",
+    "[Additional evidence needed]"
   ]
 }
 
-You must use this output format for every file and every case, regardless of input or asset type.
-
-If the summary is incomplete or no clear root cause is present, say "No anomaly detected" and provide a recommendation for further data or review.
-
-Input follows:
----
-File: ${parsedSummary.fileName}
-Parsed Summary: ${parsedSummary.parsedSummary}
-Adequacy Score: ${parsedSummary.adequacyScore}%
-Extracted Features: ${JSON.stringify(parsedSummary.extractedFeatures)}
-Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${equipmentContext.subtype}
----`;
+Provide only the JSON response with no additional text or formatting.`;
+  }
+  
+  /**
+   * UNIVERSAL_LLM_PROMPT_ENHANCEMENT - EVIDENCE-SPECIFIC CONTENT BUILDER
+   * Dynamically builds rich evidence content based on extracted features
+   * Adapts to ANY evidence type without hardcoding
+   */
+  private static buildEvidenceSpecificContent(extractedFeatures: any): string {
+    let content = '';
+    
+    // Basic file information
+    content += `File: ${extractedFeatures.fileName || 'Unknown'}\n`;
+    content += `Evidence Type: ${extractedFeatures.fileType || 'Unknown'}\n`;
+    
+    // Duration and sampling information
+    if (extractedFeatures.duration) {
+      content += `Duration: ${extractedFeatures.duration}\n`;
+    }
+    if (extractedFeatures.samplingRate && extractedFeatures.samplingRate !== 'Unknown') {
+      content += `Sampling Rate: ${extractedFeatures.samplingRate}\n`;
+    }
+    
+    // Data quality and completeness
+    if (extractedFeatures.diagnosticQuality) {
+      const quality = extractedFeatures.diagnosticQuality;
+      content += `Data Quality: ${quality.level} (Score: ${quality.score}%)\n`;
+      if (quality.flags && quality.flags.length > 0) {
+        content += `Quality Flags: ${quality.flags.join(', ')}\n`;
+      }
+    }
+    
+    // Key indicators section
+    if (extractedFeatures.keyIndicators && Object.keys(extractedFeatures.keyIndicators).length > 0) {
+      content += `\nKEY MEASUREMENTS:\n`;
+      for (const [signal, indicators] of Object.entries(extractedFeatures.keyIndicators)) {
+        const ind = indicators as any;
+        content += `- ${signal}: Max=${ind.max?.toFixed(2)}, Min=${ind.min?.toFixed(2)}, Avg=${ind.avg?.toFixed(2)}, Trend=${ind.trend}\n`;
+      }
+    }
+    
+    // Evidence-specific detailed analysis
+    content += this.buildSpecificAnalysisContent(extractedFeatures);
+    
+    // Anomaly summary
+    if (extractedFeatures.anomalySummary && extractedFeatures.anomalySummary.length > 0) {
+      content += `\nDETECTED ANOMALIES:\n`;
+      extractedFeatures.anomalySummary.forEach((anomaly: string, index: number) => {
+        content += `${index + 1}. ${anomaly}\n`;
+      });
+    }
+    
+    // Signal analysis summary
+    if (extractedFeatures.signalAnalysis && Object.keys(extractedFeatures.signalAnalysis).length > 0) {
+      content += `\nSIGNAL ANALYSIS SUMMARY:\n`;
+      for (const [signal, analysis] of Object.entries(extractedFeatures.signalAnalysis)) {
+        const sig = analysis as any;
+        if (sig && typeof sig === 'object' && !sig.error) {
+          content += `- ${signal}: RMS=${sig.rms?.toFixed(2)}, Peak=${sig.max?.toFixed(2)}`;
+          if (sig.trend_direction) {
+            content += `, Trend=${sig.trend_direction}`;
+          }
+          if (sig.fft_analysis_performed) {
+            content += `, FFT=Complete`;
+          }
+          content += `\n`;
+        }
+      }
+    }
+    
+    return content;
+  }
+  
+  /**
+   * Build evidence-type-specific analysis content
+   * Dynamically adapts based on detected evidence features
+   */
+  private static buildSpecificAnalysisContent(extractedFeatures: any): string {
+    let content = '';
+    
+    // Look for vibration-specific analysis
+    const vibrationKeys = Object.keys(extractedFeatures).filter(key => key.includes('_analysis') && key.includes('Velocity'));
+    if (vibrationKeys.length > 0) {
+      content += `\nVIBRATION ANALYSIS:\n`;
+      vibrationKeys.forEach(key => {
+        const analysis = extractedFeatures[key];
+        if (analysis.rmsAmplitude) {
+          content += `- ${key.replace('_analysis', '')}: RMS=${analysis.rmsAmplitude.toFixed(2)} mm/s, Peak=${analysis.peakAmplitude?.toFixed(2)} mm/s\n`;
+        }
+        if (analysis.dominantFrequencies && analysis.dominantFrequencies.length > 0) {
+          const topFreq = analysis.dominantFrequencies[0];
+          content += `  Dominant Frequency: ${topFreq.frequency?.toFixed(1)} Hz (Magnitude: ${topFreq.magnitude?.toFixed(2)})\n`;
+        }
+        if (analysis.harmonicContent) {
+          content += `  Harmonic Content: ${analysis.harmonicContent}\n`;
+        }
+      });
+    }
+    
+    // Look for temperature-specific analysis
+    const tempKeys = Object.keys(extractedFeatures).filter(key => key.includes('_analysis') && key.toLowerCase().includes('temp'));
+    if (tempKeys.length > 0) {
+      content += `\nTEMPERATURE ANALYSIS:\n`;
+      tempKeys.forEach(key => {
+        const analysis = extractedFeatures[key];
+        if (analysis.maxTemp) {
+          content += `- ${key.replace('_analysis', '')}: Max=${analysis.maxTemp.toFixed(1)}°C, Rise Rate=${analysis.tempRiseRate?.toFixed(3)}/min\n`;
+          content += `  Stability: ${analysis.stabilityDuration}, Baseline: ${analysis.comparisonBaseline?.toFixed(1)}°C\n`;
+        }
+      });
+    }
+    
+    // Look for process-specific analysis
+    const processKeys = Object.keys(extractedFeatures).filter(key => key.includes('_analysis') && 
+      (key.toLowerCase().includes('pressure') || key.toLowerCase().includes('flow')));
+    if (processKeys.length > 0) {
+      content += `\nPROCESS ANALYSIS:\n`;
+      processKeys.forEach(key => {
+        const analysis = extractedFeatures[key];
+        if (analysis.tagFluctuationSummary !== undefined) {
+          content += `- ${key.replace('_analysis', '')}: Fluctuation=${analysis.tagFluctuationSummary.toFixed(3)}, Rate of Change=${analysis.rateOfChange?.toFixed(3)}\n`;
+          content += `  Output Shift: ${analysis.controllerOutputShift?.toFixed(2)}\n`;
+        }
+      });
+    }
+    
+    // Look for acoustic-specific analysis
+    const acousticKeys = Object.keys(extractedFeatures).filter(key => key.includes('_analysis') && 
+      (key.toLowerCase().includes('acoustic') || key.toLowerCase().includes('sound')));
+    if (acousticKeys.length > 0) {
+      content += `\nACOUSTIC ANALYSIS:\n`;
+      acousticKeys.forEach(key => {
+        const analysis = extractedFeatures[key];
+        if (analysis.decibelLevel) {
+          content += `- ${key.replace('_analysis', '')}: Level=${analysis.decibelLevel.toFixed(1)} dB, Transients=${analysis.transientEvents}\n`;
+        }
+      });
+    }
+    
+    // Generic numeric analysis fallback
+    if (extractedFeatures.numeric_analysis) {
+      content += `\nNUMERIC ANALYSIS:\n`;
+      const numAnalysis = extractedFeatures.numeric_analysis;
+      content += `- Channels Analyzed: ${numAnalysis.channels_analyzed}\n`;
+      if (numAnalysis.statistical_summary) {
+        for (const [channel, stats] of Object.entries(numAnalysis.statistical_summary)) {
+          const st = stats as any;
+          content += `- ${channel}: Range=${st.range?.toFixed(2)}, Variability=${st.variability?.toFixed(3)}\n`;
+        }
+      }
+    }
+    
+    return content;
   }
   
   /**

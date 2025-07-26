@@ -85,7 +85,7 @@ export class LLMSecurityValidator {
     const isValidLength = key && key.length > 20;
     const hasValidFormat = !this.containsHardcodedPatterns(key);
     
-    return envMatch || (isValidLength && hasValidFormat);
+    return Boolean(envMatch || (isValidLength && hasValidFormat));
   }
   
   /**
