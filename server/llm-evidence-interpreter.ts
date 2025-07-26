@@ -130,10 +130,10 @@ Provide structured technical diagnostic interpretation focusing on root cause an
       
       // Use Dynamic AI Config for LLM analysis
       const llmResponse = await DynamicAIConfig.performAIAnalysis(
-        prompt,
-        `llm-evidence-diagnostic-incident-${incidentId}`,
         incidentId.toString(),
-        'llm-evidence-diagnostic'
+        prompt,
+        'llm-evidence-diagnostic',
+        'llm-evidence-interpreter'
       );
       
       return llmResponse || 'LLM diagnostic analysis unavailable';
