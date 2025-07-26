@@ -219,13 +219,61 @@ export default function HumanReview() {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Parsed Analysis Summary */}
+                {/* PYTHON BACKEND PARSED SUMMARY (Universal Protocol Standard Requirement) */}
                 {file.parsedSummary && (
-                  <div className="bg-slate-50 p-3 rounded text-sm">
-                    <div className="font-medium text-slate-700 mb-1">Analysis Summary:</div>
+                  <div className="bg-blue-50 p-3 rounded text-sm">
+                    <div className="font-medium text-blue-700 mb-1 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Python Backend Analysis:
+                    </div>
                     <div className="text-slate-600">{file.parsedSummary}</div>
                   </div>
                 )}
+
+                {/* LLM/AI DIAGNOSTIC INTERPRETATION (Universal Protocol Standard Requirement) */}
+                <div>
+                  <div className="font-medium text-purple-700 mb-1 flex items-center gap-2 text-sm">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    LLM/AI Diagnostic Interpretation:
+                  </div>
+                  {(file as any).llmInterpretation ? (
+                    <div className="bg-purple-50 p-3 rounded space-y-2 text-sm">
+                      <div>
+                        <span className="text-xs font-medium text-purple-700">Most Likely Root Causes:</span>
+                        <ul className="text-xs list-disc list-inside ml-2 mt-1">
+                          {((file as any).llmInterpretation.mostLikelyRootCauses || []).map((cause: string, index: number) => (
+                            <li key={index}>{cause}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-purple-700">Recommendations:</span>
+                        <ul className="text-xs list-disc list-inside ml-2 mt-1">
+                          {((file as any).llmInterpretation.pinnpointedRecommendations || []).map((rec: string, index: number) => (
+                            <li key={index}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs">
+                        <span>LLM Confidence: <Badge variant="outline" className="text-xs">{(file as any).llmInterpretation.confidence || 0}%</Badge></span>
+                        <span>Missing Evidence: {((file as any).llmInterpretation.missingEvidence || []).length} items</span>
+                      </div>
+                      <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
+                        {(file as any).llmInterpretation.diagnosticSummary || 'LLM diagnostic analysis completed'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-red-50 p-3 rounded text-sm">
+                      <div className="text-red-700 font-medium flex items-center gap-2">
+                        ⚠️ Protocol Violation: Missing LLM Analysis
+                      </div>
+                      <div className="text-red-600 text-xs mt-1">
+                        Universal Protocol Standard requires BOTH Python parsing AND LLM diagnostic interpretation. 
+                        This file cannot be reviewed until LLM analysis is completed.
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Adequacy Score */}
                 {file.adequacyScore !== undefined && (

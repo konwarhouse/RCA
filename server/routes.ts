@@ -1175,16 +1175,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[UNIVERSAL EVIDENCE] AI Summary: ${analysisResult.aiSummary}`);
         console.log(`[UNIVERSAL EVIDENCE] User Prompt: ${analysisResult.userPrompt}`);
         
-        // Create file record with Universal Evidence Analysis results
+        // MANDATORY LLM ANALYSIS STEP (Universal Protocol Standard Compliance)
+        // After Python backend parsing, MUST send to LLM for diagnostic interpretation
+        console.log(`[MANDATORY LLM] Starting LLM diagnostic interpretation for ${file.originalname}`);
+        
+        const { LLMEvidenceInterpreter } = await import('./llm-evidence-interpreter');
+        
+        const parsedSummaryData = {
+          fileName: file.originalname,
+          parsedSummary: analysisResult.aiSummary || '',
+          adequacyScore: analysisResult.adequacyScore || 0,
+          extractedFeatures: analysisResult.parsedData?.extractedFeatures || {},
+          analysisFeatures: analysisResult
+        };
+        
+        // Perform mandatory LLM diagnostic interpretation
+        const llmInterpretation = await LLMEvidenceInterpreter.interpretParsedEvidence(
+          incidentId,
+          parsedSummaryData,
+          equipmentContext
+        );
+        
+        console.log(`[MANDATORY LLM] Completed LLM interpretation with ${llmInterpretation.confidence}% confidence`);
+
+        // Create file record with BOTH Python analysis AND LLM interpretation
         const fileRecord = {
           id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          fileName: file.originalname, // Standardized field name
           name: file.originalname,
+          fileSize: file.size, // Standardized field name
           size: file.size,
+          mimeType: file.mimetype, // Standardized field name
           type: file.mimetype,
           categoryId: categoryId,
           description: description || '',
           uploadedAt: new Date().toISOString(),
           content: file.buffer.toString('base64'),
+          reviewStatus: 'UNREVIEWED', // Ready for human review with BOTH outputs
+          // Python Backend Analysis Results
+          parsedSummary: analysisResult.aiSummary,
+          adequacyScore: analysisResult.adequacyScore,
+          analysisFeatures: analysisResult,
           // Universal Evidence Analysis Results (Per Universal RCA Instruction)
           universalAnalysis: {
             success: analysisResult.success,
@@ -1196,7 +1227,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             missingRequirements: analysisResult.missingRequirements,
             userPrompt: analysisResult.userPrompt,
             confidence: analysisResult.confidence
-          }
+          },
+          // MANDATORY LLM DIAGNOSTIC INTERPRETATION (Universal Protocol Standard)
+          llmInterpretation: llmInterpretation
         };
         
         // Update incident with analyzed evidence file
