@@ -110,6 +110,12 @@ export interface IInvestigationStorage {
     uploadedAt: Date;
     category?: string;
     description?: string;
+    reviewStatus?: string;
+    parsedSummary?: string;
+    adequacyScore?: number;
+    llmInterpretation?: any;
+    analysisFeatures?: any;
+    universalAnalysis?: any;
   }>>;
   
   // Cascading dropdown operations
@@ -1080,7 +1086,10 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           description: file.description,
           reviewStatus: file.reviewStatus || 'UNREVIEWED',
           parsedSummary: file.parsedSummary,
-          adequacyScore: file.adequacyScore
+          adequacyScore: file.adequacyScore,
+          // CRITICAL UNIVERSAL PROTOCOL STANDARD COMPLIANCE: INCLUDE LLM INTERPRETATION
+          llmInterpretation: file.llmInterpretation,
+          analysisFeatures: file.analysisFeatures
         };
       }).filter(Boolean); // Remove null entries
       
@@ -1102,7 +1111,10 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
           reviewStatus: file.reviewStatus || 'UNREVIEWED',
           parsedSummary: file.parsedSummary || file.universalAnalysis?.aiSummary,
           adequacyScore: file.adequacyScore || file.universalAnalysis?.adequacyScore,
-          analysisFeatures: file.universalAnalysis?.parsedData
+          analysisFeatures: file.universalAnalysis?.parsedData,
+          // CRITICAL UNIVERSAL PROTOCOL STANDARD COMPLIANCE: INCLUDE LLM INTERPRETATION
+          llmInterpretation: file.llmInterpretation,
+          universalAnalysis: file.universalAnalysis
         };
       }).filter(Boolean); // Remove null entries
       
