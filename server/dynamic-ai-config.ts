@@ -160,7 +160,7 @@ export class DynamicAIConfig {
     const aiClient = await this.createAIClient(aiProvider);
     
     // Step 3: Perform AI analysis
-    const startTime = Date.now();
+    const startTime = performance.now();
     
     try {
       console.log(`[Dynamic AI Config] Starting ${analysisType} analysis using ${aiProvider.provider}`);
@@ -193,7 +193,7 @@ export class DynamicAIConfig {
         timestamp: new Date().toISOString()
       });
       
-      console.log(`[Dynamic AI Config] ${analysisType} completed in ${Date.now() - startTime}ms`);
+      console.log(`[Dynamic AI Config] ${analysisType} completed in ${Math.round(performance.now() - startTime)}ms`);
       
       return analysisResult;
       
