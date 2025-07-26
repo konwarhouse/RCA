@@ -161,13 +161,29 @@ Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${
     try {
       console.log(`[LLM INTERPRETER] Sending parsed summary to LLM for diagnostic analysis`);
       
-      // Use Dynamic AI Config for LLM analysis
-      const llmResponse = await DynamicAIConfig.performAIAnalysis(
-        incidentId.toString(),
-        prompt,
-        'llm-evidence-diagnostic',
-        'llm-evidence-interpreter'
-      );
+      // Use Universal AI Config for LLM analysis - NO HARDCODING
+      const aiConfig = await UniversalAIConfig.getActiveConfiguration();
+      if (!aiConfig) {
+        throw new Error('AI provider not configured. Contact admin to configure AI settings.');
+      }
+      
+      // Create OpenAI client with dynamic configuration
+      const openai = await UniversalAIConfig.createDynamicClient();
+      if (!openai) {
+        throw new Error('Failed to create AI client. Check configuration.');
+      }
+      
+      const response = await openai.chat.completions.create({
+        model: aiConfig.model,
+        messages: [
+          { role: "system", content: "You are an expert reliability and root cause analysis (RCA) AI assistant. Provide deterministic JSON responses." },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1
+      });
+      
+      const llmResponse = response.choices[0]?.message?.content || 'LLM diagnostic analysis unavailable';
       
       return llmResponse || 'LLM diagnostic analysis unavailable';
       

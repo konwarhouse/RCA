@@ -140,7 +140,7 @@ export default function EvidenceCollection() {
   const uploadFileMutation = useMutation({
     mutationFn: async (data: { file: File; categoryId: string; description?: string }) => {
       const formData = new FormData();
-      formData.append('file', data.file);
+      formData.append('files', data.file);
       formData.append('categoryId', data.categoryId);
       formData.append('incidentId', incidentId!.toString());
       if (data.description) {

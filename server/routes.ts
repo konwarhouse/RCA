@@ -1148,14 +1148,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   
   // UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC - STEPS 3-4 IMPLEMENTATION
-  app.post("/api/incidents/:id/upload-evidence", upload.single('file'), async (req, res) => {
+  app.post("/api/incidents/:id/upload-evidence", upload.single('files'), async (req, res) => {
     try {
       const incidentId = parseInt(req.params.id);
       const { categoryId, description, evidenceCategory } = req.body;
       const file = req.file;
       
+      console.log('[DEBUG] Upload request received:', {
+        incidentId,
+        categoryId,
+        description,
+        file: file ? { name: file.originalname, size: file.size } : 'No file',
+        bodyKeys: Object.keys(req.body),
+        fileFieldName: req.file ? 'files field found' : 'files field NOT found'
+      });
+      
       if (!file) {
-        return res.status(400).json({ message: "No file uploaded" });
+        return res.status(400).json({ 
+          message: "No file uploaded",
+          debug: {
+            bodyKeys: Object.keys(req.body),
+            hasFile: !!req.file,
+            bodyContent: req.body
+          }
+        });
       }
       
       console.log(`[UNIVERSAL EVIDENCE] Processing file upload for incident ${incidentId}`);
@@ -2872,3 +2888,4 @@ JSON array only:`;
     return ['AI configuration required - Please configure AI provider in admin settings'];
   }
 }
+console.log("Server routes loaded with DEBUG enabled");
