@@ -1690,6 +1690,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // STAGE 5: RCA DRAFT SYNTHESIS WITH DETERMINISTIC AI (Universal RCA Evidence Flow v2)
+  // Route: POST /api/incidents/:id/rca-synthesis
+  // Protocol: Path parameter routing per Universal Protocol Standard
+  app.post("/api/incidents/:id/rca-synthesis", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      console.log(`[RCA SYNTHESIS] Starting deterministic RCA synthesis for incident ${incidentId}`);
+      
+      // Get incident and reviewed evidence files
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ 
+          data: null, 
+          error: "Incident not found" 
+        });
+      }
+      
+      // Verify all evidence files are reviewed (Universal RCA Evidence Flow v2 compliance)
+      const evidenceFiles = (incident.evidenceResponses as any[]) || [];
+      const reviewedFiles = evidenceFiles.filter(file => 
+        file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
+      );
+      
+      if (reviewedFiles.length === 0) {
+        return res.status(400).json({
+          data: null,
+          error: "No reviewed evidence files available for analysis"
+        });
+      }
+      
+      console.log(`[RCA SYNTHESIS] Processing ${reviewedFiles.length} reviewed evidence files`);
+      
+      // Import Deterministic AI Engine
+      const { DeterministicAIEngine } = await import('./deterministic-ai-engine');
+      
+      // Prepare evidence data for deterministic analysis with proper data extraction
+      const evidenceData = reviewedFiles.map((file: any) => ({
+        fileName: file.fileName || 'unknown',
+        parsedSummary: file.parsedSummary || '',
+        adequacyScore: file.adequacyScore || 0,
+        analysisFeatures: file.analysisFeatures || {},
+        extractedFeatures: file.analysisFeatures?.extractedFeatures || file.universalAnalysis?.parsedData?.extractedFeatures || {}
+      }));
+      
+      console.log(`[RCA SYNTHESIS] Evidence data prepared:`, evidenceData.map(e => ({
+        fileName: e.fileName,
+        hasParsedSummary: !!e.parsedSummary,
+        parsedSummaryLength: e.parsedSummary?.length || 0,
+        adequacyScore: e.adequacyScore,
+        hasExtractedFeatures: !!e.extractedFeatures && Object.keys(e.extractedFeatures).length > 0
+      })));
+      
+      // Equipment context for fault signature matching
+      const equipmentContext = {
+        group: incident.equipmentGroup || 'Unknown',
+        type: incident.equipmentType || 'Unknown', 
+        subtype: incident.equipmentSubtype || 'Unknown'
+      };
+      
+      // Generate deterministic recommendations (Universal RCA Deterministic AI Addendum compliance)
+      const rcaResults = await DeterministicAIEngine.generateDeterministicRecommendations(
+        incidentId,
+        evidenceData,
+        equipmentContext
+      );
+      
+      // Create RCA report structure (Universal Protocol Standard - JSON format)
+      const rcaReport = {
+        incidentId,
+        analysisDate: new Date().toISOString(),
+        overallConfidence: rcaResults.overallConfidence,
+        analysisMethod: rcaResults.analysisMethod,
+        determinismCheck: rcaResults.determinismCheck,
+        recommendations: rcaResults.recommendations,
+        evidenceFilesAnalyzed: reviewedFiles.length,
+        equipmentContext,
+        workflowStage: 'rca-synthesis-complete'
+      };
+      
+      // Save RCA results to database
+      await investigationStorage.updateIncident(incidentId, {
+        workflowStatus: 'rca_synthesis_complete',
+        currentStep: 5,
+        rcaResults: rcaReport
+      });
+      
+      console.log(`[RCA SYNTHESIS] Completed with ${rcaResults.overallConfidence}% confidence`);
+      
+      // Return structured response (Universal Protocol Standard)
+      res.json({
+        data: rcaReport,
+        error: null
+      });
+      
+    } catch (error) {
+      console.error('[RCA SYNTHESIS] Synthesis failed:', error);
+      res.status(500).json({
+        data: null,
+        error: "Failed to complete RCA synthesis"
+      });
+    }
+  });
+
   // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
   // System checks adequacy of provided evidence against requirements (from Evidence Library/Schema, NOT hardcoded)
   // AI/GPT summarizes what is present/missing using user-friendly language and suggests best next action

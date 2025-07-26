@@ -80,10 +80,15 @@ export default function HumanReview() {
     },
   });
 
-  // Check if all files are reviewed
-  const allFilesReviewed = Array.isArray(evidenceFiles) && evidenceFiles.every((file: EvidenceFile) => 
+  // Check if all files are reviewed (Universal RCA Evidence Flow v2 compliance)
+  const allFilesReviewed = Array.isArray(evidenceFiles) && evidenceFiles.length > 0 && evidenceFiles.every((file: EvidenceFile) => 
     file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
   );
+  
+  // Count reviewed files for progress display
+  const reviewedCount = Array.isArray(evidenceFiles) ? evidenceFiles.filter((file: EvidenceFile) => 
+    file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
+  ).length : 0;
 
   const handleReviewAction = (fileId: string, action: string) => {
     const comments = reviewComments[fileId] || '';
@@ -93,11 +98,13 @@ export default function HumanReview() {
 
   const proceedToAnalysis = () => {
     if (allFilesReviewed) {
+      // Navigate to Stage 5: RCA Draft Synthesis (Universal RCA Evidence Flow v2)
+      // Protocol: Query parameter routing (?incident=ID) per Universal Protocol Standard
       setLocation(`/ai-analysis?incident=${incidentId}`);
     } else {
       toast({
-        title: "Review Required",
-        description: "Please review all uploaded evidence files before proceeding to analysis",
+        title: "Review Required", 
+        description: `Please review all evidence files (${reviewedCount}/${Array.isArray(evidenceFiles) ? evidenceFiles.length : 0} completed) before proceeding to AI analysis`,
         variant: "destructive",
       });
     }
@@ -158,7 +165,7 @@ export default function HumanReview() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-2xl font-bold text-slate-900">
-                  {Array.isArray(evidenceFiles) ? evidenceFiles.filter((f: EvidenceFile) => f.reviewStatus === 'ACCEPTED' || f.reviewStatus === 'REPLACED').length : 0}
+                  {reviewedCount}
                   <span className="text-slate-500">/{Array.isArray(evidenceFiles) ? evidenceFiles.length : 0}</span>
                 </div>
                 <div className="text-sm text-slate-600">Files Reviewed</div>

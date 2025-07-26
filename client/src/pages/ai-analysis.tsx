@@ -82,56 +82,60 @@ export default function AIAnalysis() {
     enabled: !!incidentId,
   });
 
-  // Execute Universal RCA Analysis (NO HARDCODING)
+  // Execute Deterministic RCA Synthesis (Universal RCA Evidence Flow v2)
   const performAnalysisMutation = useMutation({
     mutationFn: async (incidentId: number) => {
-      const response = await fetch(`/api/incidents/${incidentId}/execute-universal-rca`, {
+      const response = await fetch(`/api/incidents/${incidentId}/rca-synthesis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
       
       if (!response.ok) {
-        throw new Error(`Universal RCA analysis failed: ${response.status}`);
+        throw new Error(`RCA synthesis failed: ${response.status}`);
       }
       
       return await response.json();
     },
     onSuccess: (data) => {
-      console.log('Universal RCA Analysis completed:', data);
+      console.log('RCA Synthesis completed:', data);
       
-      // Extract analysis results from Universal RCA workflow
-      if (data.workflow && data.workflow.stepResults) {
+      // Extract analysis results from deterministic RCA synthesis response
+      if (data.data && data.data.recommendations) {
+        const synthesisData = data.data;
         const analysisData = {
-          overallConfidence: data.workflow.stepResults[5]?.confidence || 0,
-          analysisDate: new Date(),
-          rootCauses: data.workflow.stepResults[7]?.rcaOutput?.primaryRootCause ? [{
-            id: '1',
-            description: data.workflow.stepResults[7].rcaOutput.primaryRootCause,
-            confidence: data.workflow.stepResults[5]?.confidence || 0,
-            category: 'AI Inferred',
-            evidence: data.workflow.stepResults[7]?.rcaOutput?.evidenceUsed || [],
-            likelihood: 'High' as const,
+          overallConfidence: synthesisData.overallConfidence || 0,
+          analysisDate: new Date(synthesisData.analysisDate) || new Date(),
+          rootCauses: synthesisData.recommendations?.map((rec: any, index: number) => ({
+            id: rec.faultId || `fault-${index}`,
+            description: rec.specificFault || 'Unknown fault',
+            confidence: rec.confidence || 0,
+            category: 'Deterministic AI',
+            evidence: rec.evidenceSupport || [],
+            likelihood: rec.confidence >= 80 ? 'Very High' : rec.confidence >= 60 ? 'High' : 'Medium' as const,
             impact: 'Critical' as const,
-            priority: 1
-          }] : [],
-          recommendations: data.workflow.stepResults[7]?.rcaOutput?.recommendedActions?.map((action: string, index: number) => ({
-            id: `rec-${index}`,
-            title: `Action ${index + 1}`,
-            description: action,
-            priority: 'Immediate' as const,
-            category: 'Safety',
-            estimatedCost: 'TBD',
-            timeframe: 'Immediate',
-            responsible: 'Engineering Team',
-            preventsProbability: 85
+            priority: index + 1
           })) || [],
+          recommendations: synthesisData.recommendations?.flatMap((rec: any, index: number) => 
+            rec.recommendedActions?.map((action: string, actionIndex: number) => ({
+              id: `${rec.faultId}-action-${actionIndex}`,
+              title: `${rec.specificFault} - Action ${actionIndex + 1}`,
+              description: action,
+              priority: rec.confidence >= 80 ? 'Immediate' : 'Short-term' as const,
+              category: 'Deterministic',
+              estimatedCost: 'TBD',
+              timeframe: rec.confidence >= 80 ? 'Immediate' : '1-2 weeks',
+              responsible: 'Engineering Team',
+              preventsProbability: rec.confidence
+            })) || []
+          ) || [],
           crossMatchResults: {
-            libraryMatches: data.workflow.stepResults[5]?.historicalSupport || 0,
-            patternSimilarity: Math.round((data.workflow.stepResults[5]?.confidence || 0) * 100),
-            historicalData: data.workflow.stepResults[9]?.patterns?.map((p: any) => p.patternDescription) || []
+            libraryMatches: synthesisData.recommendations?.length || 0,
+            patternSimilarity: synthesisData.overallConfidence || 0,
+            historicalData: [`Analysis Method: ${synthesisData.analysisMethod}`, `Determinism Check: ${synthesisData.determinismCheck}`]
           },
-          evidenceGaps: data.workflow.stepResults[4]?.criticalGaps || [],
-          additionalInvestigation: data.workflow.stepResults[6]?.additionalRequests || []
+          evidenceGaps: synthesisData.recommendations?.filter((rec: any) => rec.requiredEvidence?.length > 0)
+            .flatMap((rec: any) => rec.requiredEvidence) || [],
+          additionalInvestigation: synthesisData.recommendations?.map((rec: any) => rec.analysisRationale).filter(Boolean) || []
         };
         
         setAnalysisResults(analysisData);
