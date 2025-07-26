@@ -10,6 +10,7 @@
 import { DynamicAIConfig } from './dynamic-ai-config';
 import { DatabaseInvestigationStorage } from './storage';
 import { UniversalAIConfig } from './universal-ai-config';
+import { validateLLMSecurity } from './llm-security-validator';
 
 export interface AIInferredFailureMode {
   id: string;

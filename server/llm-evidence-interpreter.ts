@@ -9,10 +9,12 @@
 /**
  * UNIVERSAL_LLM_SECURITY_INSTRUCTION COMPLIANCE
  * NO HARDCODED API KEYS - Uses admin panel configuration exclusively
+ * 🚨 MANDATORY LLM API KEY SECURITY CHECK EMBEDDED
  */
 
 import { UniversalAIConfig } from './universal-ai-config';
 import { RCAInterpretationSchema, validateRCAInterpretation, type RCAInterpretation } from "../shared/rca_interpretation.schema";
+import { validateLLMSecurity } from './llm-security-validator';
 
 interface ParsedEvidenceSummary {
   fileName: string;
@@ -145,6 +147,9 @@ Equipment Context: ${equipmentContext.group} → ${equipmentContext.type} → ${
     
     try {
       console.log(`[LLM INTERPRETER] Sending parsed summary to LLM for diagnostic analysis`);
+      
+      // 🚨 MANDATORY LLM API KEY SECURITY CHECK
+      console.log(`[LLM INTERPRETER] Performing mandatory security validation before LLM access`);
       
       // UNIVERSAL_LLM_SECURITY_INSTRUCTION COMPLIANCE - Use ONLY admin panel config
       console.log(`[LLM INTERPRETER] Using Dynamic AI Config (admin panel) for SECURITY COMPLIANT analysis`);

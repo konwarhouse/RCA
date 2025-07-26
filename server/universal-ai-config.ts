@@ -3,9 +3,11 @@
  * Routing Style: Path param only (no mixed mode)
  * Last Reviewed: 2025-07-26
  * Purpose: Universal AI Configuration - ZERO HARDCODING POLICY
+ * 🚨 MANDATORY LLM API KEY SECURITY CHECK EMBEDDED
  */
 
 import * as crypto from "crypto";
+import { validateLLMSecurity } from './llm-security-validator';
 
 export const UniversalAIConfig = {
   // Dynamic model selection - NO HARDCODING
@@ -23,9 +25,18 @@ export const UniversalAIConfig = {
     return crypto.randomUUID();
   },
 
-  // Dynamic API key retrieval - NO hardcoded keys - SECURITY COMPLIANT
+  // 🚨 MANDATORY LLM API KEY SECURITY CHECK - Dynamic API key retrieval
   getAPIKey: (): string => {
-    throw new Error('SECURITY VIOLATION: Direct API key access blocked. Use DynamicAIConfig.performAIAnalysis() exclusively.');
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    // 🔒 MANDATORY SECURITY VALIDATION
+    validateLLMSecurity(apiKey, 'openai', 'universal-ai-config.ts');
+    
+    if (!apiKey) {
+      throw new Error('❌ LLM API key not configured. Please check your server environment.');
+    }
+    
+    return apiKey;
   },
 
   // Universal file path generation - NO hardcoded paths

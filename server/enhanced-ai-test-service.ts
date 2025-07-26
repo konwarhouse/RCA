@@ -15,6 +15,7 @@ import OpenAI from 'openai';
 import { investigationStorage } from './storage';
 import { AIStatusMonitor } from './ai-status-monitor';
 import { UniversalAIConfig } from './universal-ai-config';
+import { validateLLMSecurity } from './llm-security-validator';
 
 export interface AITestResult {
   success: boolean;
@@ -162,6 +163,9 @@ export class EnhancedAITestService {
     const timeoutMs = 30000; // 30 second timeout
     
     try {
+      // 🚨 MANDATORY LLM API KEY SECURITY CHECK
+      validateLLMSecurity(provider.apiKey, provider.provider, 'enhanced-ai-test-service.ts');
+      
       // Create OpenAI client with timeout
       const openai = new OpenAI({ 
         apiKey: provider.apiKey,

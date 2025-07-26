@@ -5,9 +5,11 @@
  * - NO hardcoded API keys, provider names, or model selections
  * - ALL AI configuration loaded dynamically from database settings
  * - Secure, auditable, and universally configurable
+ * 🚨 MANDATORY LLM API KEY SECURITY CHECK EMBEDDED
  */
 
 import { DatabaseInvestigationStorage } from './storage';
+import { validateLLMSecurity } from './llm-security-validator';
 
 // Add missing method to storage interface if needed
 declare module './storage' {
@@ -57,6 +59,9 @@ export class DynamicAIConfig {
       }
       
       console.log(`[Dynamic AI Config] Active provider: ${activeProvider.provider} (${activeProvider.model})`);
+      
+      // 🚨 MANDATORY LLM API KEY SECURITY CHECK
+      validateLLMSecurity(activeProvider.apiKey, activeProvider.provider, 'dynamic-ai-config.ts');
       
       return {
         id: activeProvider.id,
