@@ -1726,9 +1726,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update evidence file review status (Universal RCA Evidence Flow Step 3C compliance)
-      const evidenceResponses = incident.evidenceResponses || [];
+      const evidenceResponses = (incident.evidenceResponses as any[]) || [];
       const updatedResponses = evidenceResponses.map((file: any) => {
         if (file.id === fileId || file.fileId === fileId) {
+          console.log(`[EVIDENCE REVIEW] Found matching file ${file.id}, updating status to ${action}`);
           return {
             ...file,
             reviewStatus: action,
@@ -1739,6 +1740,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return file;
       });
+      
+      console.log(`[EVIDENCE REVIEW] Updated ${updatedResponses.length} files in incident ${incidentId}`);
       
       // Save updated review status to database
       await investigationStorage.updateIncident(incidentId, {

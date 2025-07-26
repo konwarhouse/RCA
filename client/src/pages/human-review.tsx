@@ -54,6 +54,8 @@ export default function HumanReview() {
   const { data: evidenceFiles = [], isLoading: isLoadingFiles, refetch: refetchFiles } = useQuery({
     queryKey: ['/api/incidents', incidentId, 'evidence-files'],
     enabled: !!incidentId,
+    refetchOnWindowFocus: true,
+    refetchInterval: 3000, // Refresh every 3 seconds to ensure UI stays in sync
   });
 
   // Review action mutation
@@ -67,7 +69,10 @@ export default function HumanReview() {
     },
     onSuccess: (result) => {
       console.log('[REVIEW ACTION] Success:', result);
+      // Force immediate refresh of evidence files
       refetchFiles();
+      // Also invalidate the query cache to force fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/incidents', incidentId, 'evidence-files'] });
       toast({
         title: "Review Submitted",
         description: "Evidence file review status updated successfully",
@@ -234,6 +239,11 @@ export default function HumanReview() {
                     file.reviewStatus === 'REPLACED' ? 'secondary' :
                     file.reviewStatus === 'NEEDS_MORE_INFO' ? 'destructive' :
                     'outline'
+                  } className={
+                    file.reviewStatus === 'ACCEPTED' ? 'bg-green-600 text-white' :
+                    file.reviewStatus === 'REPLACED' ? 'bg-blue-600 text-white' :
+                    file.reviewStatus === 'NEEDS_MORE_INFO' ? 'bg-amber-600 text-white' :
+                    'bg-gray-200 text-gray-700'
                   }>
                     {file.reviewStatus}
                   </Badge>
@@ -318,7 +328,7 @@ export default function HumanReview() {
                 )}
 
                 {/* Review Actions */}
-                {file.reviewStatus === 'UNREVIEWED' && (
+                {file.reviewStatus === 'UNREVIEWED' ? (
                   <div className="space-y-3 pt-3 border-t">
                     <Textarea
                       placeholder="Add review comments (optional)..."
@@ -355,6 +365,20 @@ export default function HumanReview() {
                       >
                         {reviewActionMutation.isPending ? '...' : '↻ Replace'}
                       </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-3 border-t">
+                    <div className={`p-3 rounded text-sm font-medium ${
+                      file.reviewStatus === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                      file.reviewStatus === 'REPLACED' ? 'bg-blue-100 text-blue-800' :
+                      file.reviewStatus === 'NEEDS_MORE_INFO' ? 'bg-amber-100 text-amber-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      ✅ Review Status: {file.reviewStatus}
+                      {file.reviewStatus === 'ACCEPTED' && ' - Ready for AI Analysis'}
+                      {file.reviewStatus === 'REPLACED' && ' - Replacement Required'}
+                      {file.reviewStatus === 'NEEDS_MORE_INFO' && ' - Additional Information Needed'}
                     </div>
                   </div>
                 )}
