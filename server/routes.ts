@@ -1727,9 +1727,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update evidence file review status (Universal RCA Evidence Flow Step 3C compliance)
       const evidenceResponses = (incident.evidenceResponses as any[]) || [];
+      
+      console.log(`[EVIDENCE REVIEW] Looking for fileId: ${fileId}`);
+      console.log(`[EVIDENCE REVIEW] Available file IDs:`, evidenceResponses.map(f => ({ id: f.id, fileName: f.fileName || f.name })));
+      
       const updatedResponses = evidenceResponses.map((file: any) => {
-        if (file.id === fileId || file.fileId === fileId) {
-          console.log(`[EVIDENCE REVIEW] Found matching file ${file.id}, updating status to ${action}`);
+        // Check multiple ID fields for compatibility
+        const fileMatches = file.id === fileId || 
+                           file.fileId === fileId || 
+                           `file_${incidentId}_${file.uploadedAt}_${evidenceResponses.indexOf(file)}` === fileId;
+        
+        if (fileMatches) {
+          console.log(`[EVIDENCE REVIEW] Found matching file ${file.id || file.fileName}, updating status to ${action}`);
           return {
             ...file,
             reviewStatus: action,
@@ -1857,15 +1866,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify all evidence files are reviewed (Universal RCA Evidence Flow v2 compliance)
-      const evidenceFiles = (incident.evidenceResponses as any[]) || [];
-      const reviewedFiles = evidenceFiles.filter(file => 
+      const evidenceResponses = (incident.evidenceResponses as any[]) || [];
+      const reviewedFiles = evidenceResponses.filter((file: any) => 
         file.reviewStatus === 'ACCEPTED' || file.reviewStatus === 'REPLACED'
       );
+      
+      console.log(`[RCA SYNTHESIS] Found ${evidenceResponses.length} total evidence files, ${reviewedFiles.length} reviewed`);
       
       if (reviewedFiles.length === 0) {
         return res.status(400).json({
           data: null,
-          error: "No reviewed evidence files available for analysis"
+          error: "No reviewed evidence files available for analysis. Please complete human review first."
         });
       }
       
@@ -1876,11 +1887,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Prepare evidence data for deterministic analysis with proper data extraction
       const evidenceData = reviewedFiles.map((file: any) => ({
-        fileName: file.fileName || 'unknown',
+        fileName: file.fileName || file.name || 'unknown',
         parsedSummary: file.parsedSummary || '',
         adequacyScore: file.adequacyScore || 0,
         analysisFeatures: file.analysisFeatures || {},
-        extractedFeatures: file.analysisFeatures?.extractedFeatures || file.universalAnalysis?.parsedData?.extractedFeatures || {}
+        extractedFeatures: file.analysisFeatures?.extractedFeatures || file.universalAnalysis?.parsedData?.extractedFeatures || {},
+        llmInterpretation: file.llmInterpretation || null
       }));
       
       console.log(`[RCA SYNTHESIS] Evidence data prepared:`, evidenceData.map(e => ({

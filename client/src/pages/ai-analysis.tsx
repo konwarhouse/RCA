@@ -149,6 +149,11 @@ export default function AIAnalysis() {
       console.error('Universal RCA Analysis failed:', error);
       setAnalysisPhase("error");
       setIsAnalyzing(false);
+      
+      // Check if it's a "no reviewed evidence" error and show helpful message
+      if (error.message.includes('No reviewed evidence files')) {
+        setAnalysisPhase("no_reviewed_evidence");
+      }
     },
   });
 
