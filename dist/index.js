@@ -6656,6 +6656,79 @@ async function registerRoutes(app3) {
     res.json({ success: true, message: "Evidence library direct route working", items: [] });
   });
   console.log("[ROUTES] All evidence library routes registered successfully");
+  app3.get("/api/equipment-groups", async (req, res) => {
+    console.log("[ROUTES] Equipment groups list route accessed - Universal Protocol Standard compliant");
+    try {
+      const equipmentGroups2 = await investigationStorage.getAllEquipmentGroups();
+      console.log(`[ROUTES] Successfully retrieved ${equipmentGroups2.length} equipment groups`);
+      res.json(equipmentGroups2);
+    } catch (error) {
+      console.error("[ROUTES] Equipment Groups fetch error:", error);
+      res.status(500).json({
+        error: "Fetch failed",
+        message: "Unable to fetch equipment groups",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  app3.post("/api/equipment-groups", async (req, res) => {
+    console.log("[ROUTES] Equipment groups create route accessed - Universal Protocol Standard compliant");
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim() === "") {
+        return res.status(400).json({
+          error: "Validation failed",
+          message: "Equipment group name is required and must be non-empty string"
+        });
+      }
+      console.log(`[ROUTES] Creating equipment group with name: ${name}`);
+      const newGroup = await investigationStorage.createEquipmentGroup({ name: name.trim() });
+      console.log(`[ROUTES] Successfully created equipment group with ID: ${newGroup.id}`);
+      res.json(newGroup);
+    } catch (error) {
+      console.error("[ROUTES] Equipment Groups create error:", error);
+      res.status(500).json({
+        error: "Create failed",
+        message: "Unable to create equipment group",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  app3.put("/api/equipment-groups/:id", async (req, res) => {
+    console.log("[ROUTES] Equipment groups update route accessed - Universal Protocol Standard compliant");
+    try {
+      const groupId = parseInt(req.params.id);
+      const updateData = req.body;
+      console.log(`[ROUTES] Updating equipment group ${groupId} with data:`, updateData);
+      const updatedGroup = await investigationStorage.updateEquipmentGroup(groupId, updateData);
+      console.log(`[ROUTES] Successfully updated equipment group ${groupId}`);
+      res.json(updatedGroup);
+    } catch (error) {
+      console.error("[ROUTES] Equipment Groups update error:", error);
+      res.status(500).json({
+        error: "Update failed",
+        message: "Unable to update equipment group",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  app3.delete("/api/equipment-groups/:id", async (req, res) => {
+    console.log("[ROUTES] Equipment groups delete route accessed - Universal Protocol Standard compliant");
+    try {
+      const groupId = parseInt(req.params.id);
+      console.log(`[ROUTES] Deleting equipment group ${groupId}`);
+      await investigationStorage.deleteEquipmentGroup(groupId);
+      console.log(`[ROUTES] Successfully deleted equipment group ${groupId}`);
+      res.json({ message: "Equipment group deleted successfully" });
+    } catch (error) {
+      console.error("[ROUTES] Equipment Groups delete error:", error);
+      res.status(500).json({
+        error: "Delete failed",
+        message: "Unable to delete equipment group",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   app3.post("/api/investigations/create", async (req, res) => {
     try {
       const { whatHappened, whereHappened, whenHappened, consequence, detectedBy } = req.body;
