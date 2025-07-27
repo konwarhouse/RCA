@@ -59,6 +59,8 @@
     "express-session": "^1.18.1",
     "framer-motion": "^11.13.1",
     "franc-min": "^6.2.0",
+    "glob": "^11.0.3",
+    "husky": "^9.1.7",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",

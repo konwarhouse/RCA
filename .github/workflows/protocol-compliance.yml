@@ -1,0 +1,41 @@
+name: Universal Protocol Compliance Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  protocol-compliance:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Make protocol check executable
+      run: chmod +x protocol_check.sh
+      
+    - name: Run Universal Protocol Compliance Check
+      run: |
+        echo "🔍 MANDATORY PROTOCOL COMPLIANCE CHECK"
+        echo "====================================="
+        echo "Zero tolerance policy: Any violation blocks merge/deployment"
+        ./protocol_check.sh
+        
+    - name: Protocol compliance status
+      if: success()
+      run: |
+        echo "✅ PROTOCOL COMPLIANCE PASSED"
+        echo "All Universal Protocol Standards verified"
+        echo "Zero hardcoding violations detected"
+        
+    - name: Protocol violation detected
+      if: failure()
+      run: |
+        echo "🚨 PROTOCOL VIOLATION DETECTED"
+        echo "❌ Merge/deployment BLOCKED until resolved"
+        echo "❌ Fix all hardcoding violations before proceeding"
+        exit 1

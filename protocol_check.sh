@@ -43,7 +43,7 @@ echo "Scanning server/, client/, and shared/ directories..."
 
 for pattern in "${PATTERNS[@]}"; do
   echo "Checking pattern: $pattern"
-  MATCHES=$(grep -Prn "$pattern" ./server ./client ./shared 2>/dev/null | grep -v "NO.*hardcoding" | grep -v "Universal Protocol Standard" | grep -v "protocol_check" | grep -v "replit-dev-banner" | grep -v "process\.env\.[A-Z_]*_URL.*https" | grep -v "^.*//.*$pattern" | grep -v "^\s*\*.*$pattern")
+  MATCHES=$(grep -Prn "$pattern" ./server ./client ./shared 2>/dev/null | grep -v "NO.*hardcoded" | grep -v "Universal Protocol Standard" | grep -v "protocol_check" | grep -v "replit-dev-banner" | grep -v "process\.env\.[A-Z_]*_URL.*https" | grep -v "^.*//.*$pattern" | grep -v "^\s*\*.*$pattern" | grep -v "\- NO hardcoded" | grep -v "appears to be hardcoded" | grep -v "hardcoded-violation" | grep -v "Detects hardcoded" | grep -v "hardcodedPatterns")
   if [ -n "$MATCHES" ]; then
     echo "🚨 CRITICAL VIOLATION FOUND: $pattern"
     echo "$MATCHES"

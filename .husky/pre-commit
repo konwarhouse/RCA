@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Pre-commit Universal Protocol Compliance Check"
+echo "==============================================="
+
+# Make script executable
+chmod +x protocol_check.sh
+
+# Run protocol compliance check
+./protocol_check.sh
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "🚨 COMMIT BLOCKED: Protocol violations detected"
+  echo "❌ Fix all hardcoding violations before committing"
+  echo "❌ Zero tolerance policy enforced"
+  exit 1
+fi
+
+echo "✅ Protocol compliance verified - commit allowed"
