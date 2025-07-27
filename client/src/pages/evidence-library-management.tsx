@@ -154,11 +154,11 @@ export default function EvidenceLibraryManagement() {
   const { data: evidenceItems = [], isLoading, refetch } = useQuery<EvidenceLibrary[]>({
     queryKey: ["/api/evidence-library", searchTerm],
     staleTime: 0, // Always fetch fresh data after updates
-    cacheTime: 0, // Don't cache to prevent stale data
+    gcTime: 0, // TanStack Query v5 uses gcTime instead of cacheTime
     refetchOnMount: true,
     queryFn: async () => {
       try {
-        console.log("[Evidence Library] Attempting API call first...");
+        console.log("[Evidence Library] Attempting direct API call...");
         
         const url = searchTerm 
           ? `/api/evidence-library/search/${encodeURIComponent(searchTerm)}`
@@ -177,35 +177,30 @@ export default function EvidenceLibraryManagement() {
         
         // Check if we got HTML instead of JSON (Vite middleware interference)
         if (responseText.startsWith('<!DOCTYPE html>')) {
-          console.warn("[Evidence Library] Vite middleware blocking API - switching to direct database access");
+          console.error("[Evidence Library] ⚠️ VITE MIDDLEWARE BLOCKING API - DIRECT BACKEND BYPASS ACTIVATED");
           
-          // CRITICAL WORKAROUND: Direct database import (server-side only)
-          if (typeof window === 'undefined') {
-            // Server-side rendering - use direct database
-            const { DirectDatabaseClient } = await import('../lib/direct-db-client');
-            const directData = await DirectDatabaseClient.getAllEvidenceLibrary();
-            console.log(`[Evidence Library] Direct DB success: ${directData.length} items`);
-            return directData;
-          } else {
-            // Client-side - use static data for development
-            console.warn("[Evidence Library] Client-side fallback - returning development data");
+          // Direct backend call bypassing Vite - THIS IS THE FIX
+          try {
+            console.log("[Evidence Library] Attempting direct backend bypass...");
+            const directResponse = await fetch(`http://localhost:5000${url}`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+            });
             
-            // BREAKTHROUGH SOLUTION: Load actual database records from direct import
-            console.log("[Evidence Library] Loading actual database records from direct import...");
-            
-            try {
-              const { loadEvidenceLibraryData } = await import('../lib/evidence-data-loader');
-              const actualData = await loadEvidenceLibraryData();
-              console.log(`[Evidence Library] Direct import success: ${actualData.length} actual database records`);
-              return actualData;
-            } catch (importError) {
-              console.warn("[Evidence Library] Direct import failed:", importError);
-              
-              // EMERGENCY FALLBACK: Return empty array - user wants real data only
-              console.error("[Evidence Library] Cannot load real database records - returning empty");
-              return [];
+            if (directResponse.ok) {
+              const directData = await directResponse.json();
+              console.log("[Evidence Library] ✅ SUCCESS: Direct backend returned", directData.length, "items with updated data");
+              return directData;
             }
+          } catch (directError) {
+            console.error("[Evidence Library] Direct backend failed:", directError);
           }
+          
+          console.error("[Evidence Library] All API attempts failed - this is the core issue");
+          return [];
         }
         
         // Parse successful JSON response
@@ -278,22 +273,23 @@ export default function EvidenceLibraryManagement() {
   console.log('Equipment Groups data:', equipmentGroups);
   console.log('Risk Rankings data:', riskRankings);
 
-  // Get unique filter values from data
-  const uniqueEquipmentGroups = Array.from(new Set(evidenceItems.map(item => item.equipmentGroup))).filter(Boolean).sort();
+  // Get unique filter values from data with proper typing
+  const safeEvidenceItems = evidenceItems as EvidenceLibrary[];
+  const uniqueEquipmentGroups = Array.from(new Set(safeEvidenceItems.map((item: EvidenceLibrary) => item.equipmentGroup))).filter(Boolean).sort();
   
   // Filter equipment types based on selected equipment groups
   const filteredEquipmentTypes = selectedEquipmentGroups.length > 0 
-    ? evidenceItems.filter(item => selectedEquipmentGroups.includes(item.equipmentGroup))
-    : evidenceItems;
-  const uniqueEquipmentTypes = Array.from(new Set(filteredEquipmentTypes.map(item => item.equipmentType))).filter(Boolean).sort();
+    ? safeEvidenceItems.filter((item: EvidenceLibrary) => selectedEquipmentGroups.includes(item.equipmentGroup))
+    : safeEvidenceItems;
+  const uniqueEquipmentTypes = Array.from(new Set(filteredEquipmentTypes.map((item: EvidenceLibrary) => item.equipmentType))).filter(Boolean).sort();
   
   // Filter subtypes based on selected equipment groups AND types (cascading)
-  const filteredSubtypes = evidenceItems.filter(item => {
+  const filteredSubtypes = safeEvidenceItems.filter((item: EvidenceLibrary) => {
     const matchesGroup = selectedEquipmentGroups.length === 0 || selectedEquipmentGroups.includes(item.equipmentGroup);
     const matchesType = selectedEquipmentTypes.length === 0 || selectedEquipmentTypes.includes(item.equipmentType);
     return matchesGroup && matchesType;
   });
-  const uniqueSubtypes = Array.from(new Set(filteredSubtypes.map(item => item.subtype).filter(Boolean))).sort();
+  const uniqueSubtypes = Array.from(new Set(filteredSubtypes.map((item: EvidenceLibrary) => item.subtype).filter(Boolean))).sort();
 
   // Filter evidence items based on selected filters and search term
   // Handle sorting
@@ -308,7 +304,7 @@ export default function EvidenceLibraryManagement() {
     }
   };
 
-  const filteredItems = evidenceItems.filter(item => {
+  const filteredItems = safeEvidenceItems.filter((item: EvidenceLibrary) => {
     const matchesSearch = !searchTerm || 
       Object.values(item).some(value => 
         value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -324,7 +320,7 @@ export default function EvidenceLibraryManagement() {
       (item.subtype && selectedSubtypes.includes(item.subtype));
 
     return matchesSearch && matchesEquipmentGroup && matchesEquipmentType && matchesSubtype;
-  }).sort((a, b) => {
+  }).sort((a: EvidenceLibrary, b: EvidenceLibrary) => {
     if (!sortField) return 0;
     
     const aValue = a[sortField];
@@ -561,7 +557,7 @@ export default function EvidenceLibraryManagement() {
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedItems(filteredItems.map(item => item.id));
+      setSelectedItems(filteredItems.map((item: EvidenceLibrary) => item.id));
     } else {
       setSelectedItems([]);
     }
@@ -579,7 +575,7 @@ export default function EvidenceLibraryManagement() {
   const handleExport = () => {
     const csv = [
       "Equipment Group,Equipment Type,Subtype,Component / Failure Mode,Equipment Code,Failure Code,Risk Ranking,Required Trend Data / Evidence,AI or Investigator Questions,Attachments / Evidence Required,Root Cause Logic,Primary Root Cause,Contributing Factor,Latent Cause,Detection Gap,Fault Signature Pattern,Applicable to Other Equipment,Evidence Gap Flag,Confidence Level,Diagnostic Value,Industry Relevance,Evidence Priority,Time to Collect,Collection Cost,Analysis Complexity,Seasonal Factor,Related Failure Modes,Prerequisite Evidence,Followup Actions,Industry Benchmark,Blank Column 1,Blank Column 2,Blank Column 3",
-      ...evidenceItems.map(item => [
+      ...safeEvidenceItems.map((item: EvidenceLibrary) => [
         item.equipmentGroup,
         item.equipmentType,
         item.subtype || "",

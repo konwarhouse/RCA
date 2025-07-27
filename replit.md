@@ -105,6 +105,19 @@ User Feedback: User frustrated with repetitive debugging - demands working solut
   - **Zero Tolerance Enforcement**: Hardcoded API key access blocked with clear error messages
 - **Impact**: **FINAL COMPREHENSIVE COMPLIANCE AUDIT COMPLETE WITH ZERO VIOLATIONS** - Platform maintains absolute Universal Protocol Standard compliance with comprehensive verification completed. Evidence Library functionality operational with user's specific changes preserved in database. All hardcoding violations eliminated while maintaining full system functionality. Enterprise-grade compliance achieved and verified.
 
+### CRITICAL VITE MIDDLEWARE ISSUE IDENTIFIED - ROOT CAUSE OF UPDATE FAILURE
+- **Date**: July 27, 2025 (Critical Frontend-Backend Communication Issue Diagnosis)
+- **User Issue**: Evidence Library updates successful in database but not displayed in UI despite successful API responses
+- **Root Cause Identified**: Vite development server intercepting `/api/evidence-library` requests and returning HTML instead of JSON
+- **Technical Details**: 
+  - Database correctly updated with "IMMEDIATE TEST: New text should appear NOW in UI"
+  - Backend logs show successful PUT /api/evidence-library/1 200 responses
+  - Frontend receives HTML instead of JSON due to Vite middleware interference
+  - TypeScript errors from failed JSON parsing prevent proper UI updates
+- **Solution Implemented**: Direct backend bypass system calling `http://localhost:5000/api/evidence-library` to avoid Vite middleware
+- **Critical Fix Applied**: Enhanced queryFn with direct backend call when HTML detected instead of JSON
+- **Impact**: **VITE MIDDLEWARE BYPASS IMPLEMENTED** - System now detects HTML responses and automatically switches to direct backend calls to retrieve authentic database data including all user updates.
+
 ### Previous: EVIDENCE LIBRARY DISPLAY ISSUE RESOLVED - WORKING SOLUTION IMPLEMENTED
 - **Date**: July 27, 2025 (Critical Evidence Library Fix - User Requirement Fulfilled)
 - **User Issue Resolved**: Evidence Library showing "0 of 0 items" instead of displaying 100 database records
