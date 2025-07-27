@@ -216,6 +216,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // ADD ACTIVE EQUIPMENT GROUPS ENDPOINT FOR EVIDENCE LIBRARY DROPDOWN
+  app.get("/api/equipment-groups/active", async (req, res) => {
+    console.log("[ROUTES] Active equipment groups route accessed - Universal Protocol Standard compliant");
+    try {
+      const activeGroups = await investigationStorage.getActiveEquipmentGroups();
+      console.log(`[ROUTES] Successfully retrieved ${activeGroups.length} active equipment groups`);
+      res.json(activeGroups);
+    } catch (error) {
+      console.error("[ROUTES] Active Equipment Groups fetch error:", error);
+      res.status(500).json({ 
+        error: "Fetch failed", 
+        message: "Unable to fetch active equipment groups",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // CONTINUE WITH REST OF ROUTES - DO NOT RETURN EARLY
   app.post("/api/investigations/create", async (req, res) => {
