@@ -3440,13 +3440,19 @@ JSON array only:`;
   app.put("/api/evidence-library/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      console.log(`[Evidence Library] Updating evidence library item ${id}`);
+      console.log(`[Evidence Library UPDATE] Starting update for item ${id}`);
+      console.log(`[Evidence Library UPDATE] Request body:`, JSON.stringify(req.body, null, 2));
+      
       const updatedItem = await investigationStorage.updateEvidenceLibrary(id, req.body);
-      console.log(`[Evidence Library] Updated item ${id}`);
+      console.log(`[Evidence Library UPDATE] Successfully updated item ${id}`);
+      console.log(`[Evidence Library UPDATE] Updated data:`, JSON.stringify(updatedItem, null, 2));
+      
       res.json(updatedItem);
     } catch (error) {
-      console.error("[Evidence Library] Error updating evidence library item:", error);
-      res.status(500).json({ message: "Failed to update evidence library item" });
+      console.error("[Evidence Library UPDATE] Error updating evidence library item:", error);
+      console.error("[Evidence Library UPDATE] Error details:", error.message);
+      console.error("[Evidence Library UPDATE] Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to update evidence library item", error: error.message });
     }
   });
 

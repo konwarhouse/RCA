@@ -450,15 +450,24 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   }
 
   async updateEvidenceLibrary(id: number, data: Partial<EvidenceLibrary>): Promise<EvidenceLibrary> {
-    const [item] = await db
-      .update(evidenceLibrary)
-      .set({
-        ...data,
-        lastUpdated: new Date(),
-      })
-      .where(eq(evidenceLibrary.id, id))
-      .returning();
-    return item;
+    try {
+      console.log(`[Storage UPDATE] Updating evidence library item ${id} with data:`, JSON.stringify(data, null, 2));
+      
+      const [item] = await db
+        .update(evidenceLibrary)
+        .set({
+          ...data,
+          lastUpdated: new Date(),
+        })
+        .where(eq(evidenceLibrary.id, id))
+        .returning();
+      
+      console.log(`[Storage UPDATE] Successfully updated item ${id}:`, JSON.stringify(item, null, 2));
+      return item;
+    } catch (error) {
+      console.error(`[Storage UPDATE] Failed to update evidence library item ${id}:`, error);
+      throw error;
+    }
   }
 
   async deleteEvidenceLibrary(id: number): Promise<void> {
