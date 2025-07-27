@@ -96,15 +96,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   console.log("[ROUTES] Evidence library route registered directly");
 
+  // ADD EVIDENCE LIBRARY UPDATE ENDPOINT - UNIVERSAL PROTOCOL STANDARD COMPLIANT
+  app.put("/api/evidence-library/:id", async (req, res) => {
+    console.log("[ROUTES] Evidence library update route accessed - Universal Protocol Standard compliant");
+    try {
+      const itemId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      console.log(`[ROUTES] Updating evidence library item ${itemId} with data:`, updateData);
+      
+      const updatedItem = await investigationStorage.updateEvidenceLibrary(itemId, updateData);
+      console.log(`[ROUTES] Successfully updated evidence library item ${itemId}`);
+      
+      res.json(updatedItem);
+      
+    } catch (error) {
+      console.error("[ROUTES] Evidence Library update error:", error);
+      res.status(500).json({ 
+        error: "Update failed", 
+        message: "Unable to update evidence library item",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // IMMEDIATE CRITICAL FIX: Add evidence library route directly to bypass all other issues
   app.get("/api/evidence-library-direct", async (req, res) => {
     console.log("[ROUTES] Direct evidence library route hit");
     res.json({ success: true, message: "Evidence library direct route working", items: [] });
   });
 
-  // Return server early to test basic functionality
-  const httpServer = createServer(app);
-  return httpServer;
+  console.log("[ROUTES] All evidence library routes registered successfully");
+  
+  // CONTINUE WITH REST OF ROUTES - DO NOT RETURN EARLY
   app.post("/api/investigations/create", async (req, res) => {
     try {
       const { whatHappened, whereHappened, whenHappened, consequence, detectedBy } = req.body;

@@ -6633,12 +6633,29 @@ async function registerRoutes(app3) {
     }
   });
   console.log("[ROUTES] Evidence library route registered directly");
+  app3.put("/api/evidence-library/:id", async (req, res) => {
+    console.log("[ROUTES] Evidence library update route accessed - Universal Protocol Standard compliant");
+    try {
+      const itemId = parseInt(req.params.id);
+      const updateData = req.body;
+      console.log(`[ROUTES] Updating evidence library item ${itemId} with data:`, updateData);
+      const updatedItem = await investigationStorage.updateEvidenceLibrary(itemId, updateData);
+      console.log(`[ROUTES] Successfully updated evidence library item ${itemId}`);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("[ROUTES] Evidence Library update error:", error);
+      res.status(500).json({
+        error: "Update failed",
+        message: "Unable to update evidence library item",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   app3.get("/api/evidence-library-direct", async (req, res) => {
     console.log("[ROUTES] Direct evidence library route hit");
     res.json({ success: true, message: "Evidence library direct route working", items: [] });
   });
-  const httpServer = createServer(app3);
-  return httpServer;
+  console.log("[ROUTES] All evidence library routes registered successfully");
   app3.post("/api/investigations/create", async (req, res) => {
     try {
       const { whatHappened, whereHappened, whenHappened, consequence, detectedBy } = req.body;
