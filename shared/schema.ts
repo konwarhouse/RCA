@@ -212,8 +212,8 @@ export const investigations = pgTable("investigations", {
 // AI Settings for secure key management
 export const aiSettings = pgTable("ai_settings", {
   id: serial("id").primaryKey(),
-  provider: varchar("provider").notNull(), // openai, gemini, anthropic
-  model: varchar("model").notNull(), // gpt-4o, gpt-4, gemini-pro, etc.
+  provider: varchar("provider").notNull(), // Dynamic provider selection
+  model: varchar("model").notNull(), // Dynamic model selection
   encryptedApiKey: text("encrypted_api_key").notNull(), // encrypted API key
   isActive: boolean("is_active").default(false),
   createdBy: integer("created_by"), // user who created this setting

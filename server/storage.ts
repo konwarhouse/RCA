@@ -305,7 +305,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         return {
           id: setting.id,
           provider: setting.provider,
-          model: UniversalAIConfig.getDefaultModel(), // Default model
+          model: setting.model || setting.provider, // Use database model field
           apiKey: decryptedApiKey, // CRITICAL: Decrypted API key for Universal RCA Engine
           isActive: setting.isActive,
           createdBy: setting.createdBy,

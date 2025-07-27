@@ -449,7 +449,7 @@ export default function AdminSettings() {
     switch (provider) {
       case "openai": return "OpenAI";
       case "gemini": return "Google Gemini";
-      case "anthropic": return "Anthropic Claude";
+      case "anthropic": return "Anthropic";
       default: return provider;
     }
   };
@@ -547,7 +547,7 @@ export default function AdminSettings() {
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
                   <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                 </SelectContent>

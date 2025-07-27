@@ -260,7 +260,7 @@ export class AIService {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-sonnet-20240229",
+        model: "dynamic-model-selection",
         max_tokens: 1000,
         system: systemPrompt,
         messages: [{ role: "user", content: prompt }],
