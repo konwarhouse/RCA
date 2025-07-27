@@ -3249,6 +3249,41 @@ JSON array only:`;
     res.end(responseData);
   });
 
+  // RAW DATABASE ACCESS ENDPOINT - BYPASS VITE MIDDLEWARE COMPLETELY
+  app.post("/api/evidence-library-raw", async (req: Request, res: Response) => {
+    console.log("[Evidence Library RAW] Direct database access endpoint called");
+    
+    try {
+      const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
+      console.log(`[Evidence Library RAW] Retrieved ${evidenceItems.length} records from database`);
+      
+      const transformedItems = evidenceItems.map(item => ({
+        id: item.id,
+        equipmentGroup: item.equipmentGroup,
+        equipmentType: item.equipmentType,
+        subtype: item.subtype,
+        componentFailureMode: item.componentFailureMode,
+        equipmentCode: item.equipmentCode,
+        failureCode: item.failureCode,
+        riskRanking: item.riskRanking,
+        requiredTrendDataEvidence: item.requiredTrendDataEvidence,
+        aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
+        attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
+        rootCauseLogic: item.rootCauseLogic,
+        confidenceLevel: item.confidenceLevel || null,
+        diagnosticValue: item.diagnosticValue || null,
+        industryRelevance: item.industryRelevance || null,
+        evidencePriority: item.evidencePriority || null,
+      }));
+      
+      res.json(transformedItems);
+      
+    } catch (error: any) {
+      console.error("[Evidence Library RAW] Database error:", error);
+      res.status(500).json({ error: error?.message || "Database access failed" });
+    }
+  });
+
   // Evidence Library API Routes - UNIVERSAL PROTOCOL STANDARD COMPLIANT WITH VITE BYPASS
   app.get("/api/evidence-library", async (req: Request, res: Response) => {
     console.log("[Evidence Library] Universal Protocol Standard compliant route processing");

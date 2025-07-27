@@ -187,40 +187,21 @@ export default function EvidenceLibraryManagement() {
             // Client-side - use static data for development
             console.warn("[Evidence Library] Client-side fallback - returning development data");
             
-            // TEMPORARY WORKAROUND: Load sample data until API is fixed
-            const sampleData = [
-              {
-                id: 1,
-                equipmentGroup: "Electrical",
-                equipmentType: "Motors",
-                subtype: "AC Induction",
-                componentFailureMode: "Bearing Overheating",
-                equipmentCode: "MOT-001",
-                failureCode: "BRG-OH",
-                riskRanking: "High",
-                requiredTrendDataEvidence: "Vibration analysis, temperature trending",
-                aiOrInvestigatorQuestions: "What was the bearing temperature before failure?",
-                attachmentsEvidenceRequired: "Vibration spectrum, thermal images",
-                rootCauseLogic: "Inadequate lubrication leading to bearing degradation"
-              },
-              {
-                id: 2,
-                equipmentGroup: "Rotating Equipment",
-                equipmentType: "Pumps",
-                subtype: "Centrifugal",
-                componentFailureMode: "Impeller Cavitation",
-                equipmentCode: "PMP-001",
-                failureCode: "IMP-CAV",
-                riskRanking: "Medium",
-                requiredTrendDataEvidence: "Flow rate, NPSH available, suction pressure",
-                aiOrInvestigatorQuestions: "Was NPSH requirement met during operation?",
-                attachmentsEvidenceRequired: "P&ID, pump curve, operating data",
-                rootCauseLogic: "Insufficient NPSH causing vapor bubble formation"
-              }
-            ];
+            // BREAKTHROUGH SOLUTION: Load actual database records from direct import
+            console.log("[Evidence Library] Loading actual database records from direct import...");
             
-            console.log(`[Evidence Library] Using ${sampleData.length} sample items for development`);
-            return sampleData;
+            try {
+              const { loadEvidenceLibraryData } = await import('../lib/evidence-data-loader');
+              const actualData = await loadEvidenceLibraryData();
+              console.log(`[Evidence Library] Direct import success: ${actualData.length} actual database records`);
+              return actualData;
+            } catch (importError) {
+              console.warn("[Evidence Library] Direct import failed:", importError);
+              
+              // EMERGENCY FALLBACK: Return empty array - user wants real data only
+              console.error("[Evidence Library] Cannot load real database records - returning empty");
+              return [];
+            }
           }
         }
         
