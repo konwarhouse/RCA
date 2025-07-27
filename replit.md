@@ -13,6 +13,7 @@ This is a comprehensive web-based AI-powered platform for root cause analysis (R
 
 Preferred communication style: Simple, everyday language.
 Technical Requirements: Must follow ISO 14224 taxonomy, implement proper fault tree logic, ensure complete auditability.
+User Feedback: User frustrated with repetitive debugging - demands working solutions immediately, not extended troubleshooting cycles.
 
 ## MANDATORY UNIVERSAL PROTOCOL STANDARD COMPLIANCE - PERMANENTLY EMBEDDED
 
