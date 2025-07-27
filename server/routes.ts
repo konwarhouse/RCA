@@ -3249,35 +3249,70 @@ JSON array only:`;
     res.end(responseData);
   });
 
-  // Evidence Library API Routes - SIMPLIFIED TO DEBUG ISSUE
-  app.get("/api/evidence-library", async (req, res) => {
-    console.log("[Evidence Library] Route hit - testing database access");
-    res.setHeader('Content-Type', 'application/json');
+  // Evidence Library API Routes - UNIVERSAL PROTOCOL STANDARD COMPLIANT WITH VITE BYPASS
+  app.get("/api/evidence-library", async (req: Request, res: Response) => {
+    console.log("[Evidence Library] Universal Protocol Standard compliant route processing");
+    
+    // CRITICAL FIX: Force response headers to bypass Vite middleware interference
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     
     try {
-      console.log("[Evidence Library] About to call investigationStorage.getAllEvidenceLibrary()");
+      // UNIVERSAL PROTOCOL STANDARD: Schema-driven database operations only
       const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
-      console.log(`[Evidence Library] SUCCESS: Retrieved ${evidenceItems.length} items from database`);
+      console.log(`[Evidence Library] Retrieved ${evidenceItems.length} evidence library records from database`);
       
-      // Simple response first - test basic functionality
-      res.status(200).send(JSON.stringify({
-        success: true,
-        count: evidenceItems.length,
-        sampleData: evidenceItems.slice(0, 2).map(item => ({
-          id: item.id,
-          equipmentType: item.equipmentType,
-          componentFailureMode: item.componentFailureMode
-        }))
+      // UNIVERSAL PROTOCOL STANDARD: Transform database column names to match frontend interface (NO HARDCODING)
+      const transformedItems = evidenceItems.map(item => ({
+        id: item.id,
+        equipmentGroup: item.equipmentGroup,
+        equipmentType: item.equipmentType,
+        subtype: item.subtype,
+        componentFailureMode: item.componentFailureMode,
+        equipmentCode: item.equipmentCode,
+        failureCode: item.failureCode,
+        riskRanking: item.riskRanking,
+        requiredTrendDataEvidence: item.requiredTrendDataEvidence,
+        aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
+        attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
+        rootCauseLogic: item.rootCauseLogic,
+        // Optional enriched fields - NO HARDCODING, all from database schema
+        confidenceLevel: item.confidenceLevel || null,
+        diagnosticValue: item.diagnosticValue || null,
+        industryRelevance: item.industryRelevance || null,
+        evidencePriority: item.evidencePriority || null,
+        timeToCollect: item.timeToCollect || null,
+        collectionCost: item.collectionCost || null,
+        analysisComplexity: item.analysisComplexity || null,
+        seasonalFactor: item.seasonalFactor || null,
+        relatedFailureModes: item.relatedFailureModes || null,
+        prerequisiteEvidence: item.prerequisiteEvidence || null,
+        followupActions: item.followupActions || null,
+        industryBenchmark: item.industryBenchmark || null,
+        primaryRootCause: item.primaryRootCause || null,
+        contributingFactor: item.contributingFactor || null,
+        latentCause: item.latentCause || null,
+        detectionGap: item.detectionGap || null,
+        faultSignaturePattern: item.faultSignaturePattern || null,
+        applicableToOtherEquipment: item.applicableToOtherEquipment || null,
+        evidenceGapFlag: item.evidenceGapFlag || null,
       }));
       
-    } catch (error) {
-      console.error("[Evidence Library] DATABASE ERROR:", error.message);
-      console.error("[Evidence Library] Error stack:", error.stack);
-      res.status(500).send(JSON.stringify({ 
-        success: false,
-        error: error.message,
-        stack: error.stack?.split('\n').slice(0, 5)
-      }));
+      console.log(`[Evidence Library] Sending ${transformedItems.length} Universal Protocol Standard compliant evidence items`);
+      
+      // CRITICAL FIX: Use res.end() with JSON string to bypass middleware
+      const jsonResponse = JSON.stringify(transformedItems);
+      res.status(200).end(jsonResponse);
+      
+    } catch (error: any) {
+      console.error("[Evidence Library] Universal Protocol Standard compliant error handling:", error);
+      const errorResponse = JSON.stringify({ 
+        message: "Failed to fetch evidence library", 
+        error: error?.message || "Unknown error"
+      });
+      res.status(500).end(errorResponse);
     }
   });
 

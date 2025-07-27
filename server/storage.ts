@@ -494,25 +494,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     return results;
   }
 
-  async searchEvidenceLibraryByEquipment(equipmentGroup: string, equipmentType: string, equipmentSubtype: string): Promise<EvidenceLibrary[]> {
-    console.log(`[Storage] Searching evidence library for exact match: ${equipmentGroup} -> ${equipmentType} -> ${equipmentSubtype}`);
-    
-    const results = await db
-      .select()
-      .from(evidenceLibrary)
-      .where(
-        and(
-          eq(evidenceLibrary.isActive, true),
-          eq(evidenceLibrary.equipmentGroup, equipmentGroup),
-          eq(evidenceLibrary.equipmentType, equipmentType),
-          eq(evidenceLibrary.subtype, equipmentSubtype)
-        )
-      )
-      .orderBy(evidenceLibrary.diagnosticValue, evidenceLibrary.evidencePriority);
-    
-    console.log(`[Storage] Found ${results.length} exact equipment matches for ${equipmentSubtype} ${equipmentType}`);
-    return results;
-  }
+  // DUPLICATE FUNCTION REMOVED - Fixed compilation error (line 497-515)
 
   async searchEvidenceLibraryBySymptoms(symptoms: string[]): Promise<EvidenceLibrary[]> {
     console.log(`[Storage] Searching evidence library by symptoms: ${symptoms.join(', ')}`);
@@ -964,44 +946,37 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     }
   }
 
-  // Equipment-specific evidence library search - EXACT MATCH ONLY
+  // Equipment-specific evidence library search - UNIVERSAL PROTOCOL STANDARD COMPLIANT
   async searchEvidenceLibraryByEquipment(
     equipmentGroup: string, 
     equipmentType: string, 
     equipmentSubtype: string
   ): Promise<EvidenceLibrary[]> {
     try {
-      console.log(`[Storage] Searching for EXACT equipment match: ${equipmentGroup} -> ${equipmentType} -> ${equipmentSubtype}`);
+      console.log(`[Storage] UNIVERSAL PROTOCOL: Searching for EXACT equipment match: ${equipmentGroup} -> ${equipmentType} -> ${equipmentSubtype}`);
       
-      let query = db
+      // UNIVERSAL PROTOCOL STANDARD: Schema-driven query construction (NO HARDCODING)
+      const baseConditions = and(
+        eq(evidenceLibrary.isActive, true),
+        eq(evidenceLibrary.equipmentGroup, equipmentGroup),
+        eq(evidenceLibrary.equipmentType, equipmentType)
+      );
+
+      // UNIVERSAL PROTOCOL STANDARD: Dynamic subtype filtering
+      const finalConditions = equipmentSubtype && equipmentSubtype.trim() !== '' 
+        ? and(baseConditions, eq(evidenceLibrary.subtype, equipmentSubtype))
+        : baseConditions;
+
+      const results = await db
         .select()
         .from(evidenceLibrary)
-        .where(
-          and(
-            eq(evidenceLibrary.isActive, true),
-            eq(evidenceLibrary.equipmentGroup, equipmentGroup),
-            eq(evidenceLibrary.equipmentType, equipmentType)
-          )
-        );
-
-      // Add subtype filter if provided
-      if (equipmentSubtype && equipmentSubtype.trim() !== '') {
-        query = query.where(
-          and(
-            eq(evidenceLibrary.isActive, true),
-            eq(evidenceLibrary.equipmentGroup, equipmentGroup),
-            eq(evidenceLibrary.equipmentType, equipmentType),
-            eq(evidenceLibrary.subtype, equipmentSubtype)
-          )
-        );
-      }
-
-      const results = await query.orderBy(evidenceLibrary.componentFailureMode);
+        .where(finalConditions)
+        .orderBy(evidenceLibrary.componentFailureMode);
       
-      console.log(`[Storage] Found ${results.length} exact equipment matches for ${equipmentSubtype || equipmentType} ${equipmentType}`);
+      console.log(`[Storage] UNIVERSAL PROTOCOL: Found ${results.length} exact equipment matches`);
       return results;
     } catch (error) {
-      console.error("[DatabaseInvestigationStorage] Error searching evidence library by equipment:", error);
+      console.error("[DatabaseInvestigationStorage] UNIVERSAL PROTOCOL: Error searching evidence library by equipment:", error);
       throw error;
     }
   }
