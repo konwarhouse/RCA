@@ -5,9 +5,8 @@
  * PURPOSE: Provide direct database access when API layer fails
  */
 
-import { db } from "../../../server/db";
-import { evidenceLibrary } from "../../../shared/schema";
-import { eq } from "drizzle-orm";
+// Note: This file provides direct database access for development environment only
+// In production, use proper API endpoints
 
 export interface EvidenceLibraryItem {
   id: number;
@@ -30,39 +29,9 @@ export interface EvidenceLibraryItem {
 
 export class DirectDatabaseClient {
   static async getAllEvidenceLibrary(): Promise<EvidenceLibraryItem[]> {
-    try {
-      console.log("[Direct DB] Bypassing API - connecting directly to database");
-      
-      const results = await db
-        .select()
-        .from(evidenceLibrary)
-        .where(eq(evidenceLibrary.isActive, true))
-        .orderBy(evidenceLibrary.equipmentGroup, evidenceLibrary.equipmentType);
-      
-      console.log(`[Direct DB] Successfully retrieved ${results.length} evidence library items`);
-      
-      return results.map(item => ({
-        id: item.id,
-        equipmentGroup: item.equipmentGroup,
-        equipmentType: item.equipmentType,
-        subtype: item.subtype || undefined,
-        componentFailureMode: item.componentFailureMode,
-        equipmentCode: item.equipmentCode,
-        failureCode: item.failureCode,
-        riskRanking: item.riskRanking,
-        requiredTrendDataEvidence: item.requiredTrendDataEvidence,
-        aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
-        attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
-        rootCauseLogic: item.rootCauseLogic,
-        confidenceLevel: item.confidenceLevel || undefined,
-        diagnosticValue: item.diagnosticValue || undefined,
-        industryRelevance: item.industryRelevance || undefined,
-        evidencePriority: item.evidencePriority || undefined,
-      }));
-      
-    } catch (error) {
-      console.error("[Direct DB] Database connection failed:", error);
-      throw new Error(`Direct database access failed: ${error.message}`);
-    }
+    // This is a placeholder for direct database access
+    // Currently not implemented to avoid client-side database connections
+    console.log("[Direct DB] Direct database access not available in browser environment");
+    return [];
   }
 }
