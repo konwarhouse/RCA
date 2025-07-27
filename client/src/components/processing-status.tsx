@@ -87,7 +87,7 @@ export default function ProcessingStatus({ analysisId }: ProcessingStatusProps) 
               
               if (stage.status === "processing") {
                 hasActiveStage = true;
-                stage.progress = Math.min(stage.progress + ((Date.now() % 15) + 5), 100);
+                stage.progress = Math.min(stage.progress + 5, 100);
                 
                 if (stage.progress >= 100) {
                   stage.status = "completed";

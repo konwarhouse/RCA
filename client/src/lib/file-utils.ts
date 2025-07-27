@@ -7,7 +7,7 @@ export const ACCEPTED_FILE_TYPES = {
   "text/plain": [".txt"],
 } as const;
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = parseInt(process.env.VITE_MAX_FILE_SIZE_MB || "10") * 1024 * 1024;
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 Bytes";

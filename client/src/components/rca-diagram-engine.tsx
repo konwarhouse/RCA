@@ -170,14 +170,14 @@ export default function RCADiagramEngine({
       evidence: [],
       parent: parentNode.id,
       position: { 
-        x: parentNode.position!.x + ((Date.now() % 100) + 50), 
+        x: parentNode.position!.x + 100, 
         y: parentNode.position!.y + 150 
       }
     };
     
     const nodeWithId: RCANode = {
       ...newNode,
-      id: `new-${Date.now()}`
+      id: `new-${self.crypto.randomUUID()}`
     };
     
     setNodes([...nodes, nodeWithId]);
