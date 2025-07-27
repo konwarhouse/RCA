@@ -390,22 +390,37 @@ export default function EvidenceLibraryManagement() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: EvidenceLibraryForm }) => {
-      return await apiRequest(`/api/evidence-library/${id}`, {
+      console.log(`[Evidence Update] Updating item ${id} with data:`, data);
+      
+      const response = await apiRequest(`/api/evidence-library/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       });
+      
+      const result = await response.json();
+      console.log(`[Evidence Update] Response:`, result);
+      return result;
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Evidence item updated successfully" });
+    onSuccess: (result, { id, data }) => {
+      console.log(`[Evidence Update] Success for item ${id}:`, result);
+      toast({ 
+        title: "Success", 
+        description: `Evidence item ${id} updated successfully` 
+      });
+      
+      // Force refresh the evidence library data
       queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
+      queryClient.refetchQueries({ queryKey: ["/api/evidence-library"] });
+      
       setIsDialogOpen(false);
       setSelectedItem(null);
       form.reset();
     },
     onError: (error) => {
+      console.error(`[Evidence Update] Error:`, error);
       toast({ 
-        title: "Error", 
-        description: error.message,
+        title: "Update Failed", 
+        description: `Failed to update evidence item: ${error.message}`,
         variant: "destructive" 
       });
     },
