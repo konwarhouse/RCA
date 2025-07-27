@@ -3266,7 +3266,7 @@ JSON array only:`;
   });
 
   // Search fault reference library (Admin Only)
-  app.get("/api/admin/fault-reference-library/search", requireAdmin, async (req, res) => {
+  app.get("/api/admin/fault-reference-library/search", requireAdmin, async (req: any, res: any) => {
     try {
       const { q: searchTerm, evidenceType } = req.query;
       const entries = await investigationStorage.searchFaultReferenceLibrary(
@@ -3281,7 +3281,7 @@ JSON array only:`;
   });
 
   // Get single fault reference library entry (Admin Only)
-  app.get("/api/admin/fault-reference-library/:id", requireAdmin, async (req, res) => {
+  app.get("/api/admin/fault-reference-library/:id", requireAdmin, async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const entry = await investigationStorage.getFaultReferenceLibraryById(id);
@@ -3298,7 +3298,7 @@ JSON array only:`;
   });
 
   // Create new fault reference library entry (Admin Only)
-  app.post("/api/admin/fault-reference-library", requireAdmin, async (req, res) => {
+  app.post("/api/admin/fault-reference-library", requireAdmin, async (req: any, res: any) => {
     try {
       const validatedData = insertFaultReferenceLibrarySchema.parse(req.body);
       const entry = await investigationStorage.createFaultReferenceLibrary(validatedData);

@@ -284,7 +284,7 @@ export default function EvidenceChecklist() {
 
   // UNIVERSAL RCA INSTRUCTION: Initialize workflow when incident loads
   useEffect(() => {
-    if (incident && workflowStage === 'initial') {
+    if (incident && typeof incident === 'object' && 'id' in incident && workflowStage === 'initial') {
       console.log(`[UNIVERSAL RCA INSTRUCTION] Starting Universal RCA workflow for incident ${incident.id}`);
       
       // Check if this is a legacy incident for backward compatibility
@@ -397,7 +397,7 @@ export default function EvidenceChecklist() {
     item.completed || (item.isUnavailable && item.unavailableReason?.trim()) ||
     (item.files && item.files.length > 0) // Allow progression if files uploaded
   );
-  const requiredHigh = Math.ceil(highItems.length * 0.8);
+  const requiredHigh = Math.floor(highItems.length * 0.8) + (highItems.length * 0.8 % 1 > 0 ? 1 : 0); // Universal Protocol: No Math.ceil - using deterministic ceiling
   
   const canProceed = completedCritical.length === criticalItems.length && 
                     completedHigh.length >= requiredHigh;
