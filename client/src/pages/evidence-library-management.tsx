@@ -152,7 +152,10 @@ export default function EvidenceLibraryManagement() {
 
   // DIRECT DATABASE ACCESS - BYPASSING VITE MIDDLEWARE COMPLETELY
   const { data: evidenceItems = [], isLoading, refetch } = useQuery<EvidenceLibrary[]>({
-    queryKey: ["/api/evidence-library"],
+    queryKey: ["/api/evidence-library", searchTerm],
+    staleTime: 0, // Always fetch fresh data after updates
+    cacheTime: 0, // Don't cache to prevent stale data
+    refetchOnMount: true,
     queryFn: async () => {
       try {
         console.log("[Evidence Library] Attempting API call first...");
@@ -404,14 +407,24 @@ export default function EvidenceLibraryManagement() {
     },
     onSuccess: (result, { id, data }) => {
       console.log(`[Evidence Update] Success for item ${id}:`, result);
+      
+      // CRITICAL: Force immediate cache refresh and UI update
+      queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
+      queryClient.removeQueries({ queryKey: ["/api/evidence-library"] });
+      
+      // Force immediate refetch of current data
+      refetch();
+      
+      // Secondary refresh to ensure UI updates
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
+        refetch();
+      }, 200);
+      
       toast({ 
         title: "Success", 
-        description: `Evidence item ${id} updated successfully` 
+        description: `Evidence item ${id} updated successfully - Data refreshed` 
       });
-      
-      // Force refresh the evidence library data
-      queryClient.invalidateQueries({ queryKey: ["/api/evidence-library"] });
-      queryClient.refetchQueries({ queryKey: ["/api/evidence-library"] });
       
       setIsDialogOpen(false);
       setSelectedItem(null);
