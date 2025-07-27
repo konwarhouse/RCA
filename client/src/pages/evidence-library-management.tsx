@@ -158,7 +158,7 @@ export default function EvidenceLibraryManagement() {
         console.log("[Evidence Library] Attempting API call first...");
         
         const url = searchTerm 
-          ? `/api/evidence-library/search?q=${encodeURIComponent(searchTerm)}`
+          ? `/api/evidence-library/search/${encodeURIComponent(searchTerm)}`
           : "/api/evidence-library";
           
         const response = await fetch(url, {

@@ -7,7 +7,7 @@
 
 // Universal Protocol Standard compliant ID generation
 export function generateUniversalId(prefix: string = ''): string {
-  const timestamp = new Date().getTime();
-  const randomSuffix = Math.floor(performance.now() * 1000) % 10000;
-  return prefix ? `${prefix}_${timestamp}_${randomSuffix}` : `${timestamp}_${randomSuffix}`;
+  const timestamp = performance.now();
+  const uniqueSuffix = timestamp.toString().replace('.', '').slice(-6);
+  return prefix ? `${prefix}_${timestamp.toFixed(0)}_${uniqueSuffix}` : `${timestamp.toFixed(0)}_${uniqueSuffix}`;
 }
