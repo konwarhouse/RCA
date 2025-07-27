@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mime from 'mime-types';
 import { DynamicAIClientFactory } from './dynamic-ai-client-factory';
+import { DynamicAIConfig } from './dynamic-ai-config';
 
 export interface EvidenceParsingResult {
   adequacyLevel: 'Sufficient' | 'Partially adequate' | 'Inadequate' | 'Irrelevant';
@@ -86,7 +87,7 @@ export class CleanAIEvidenceParser {
       
       // Perform text-based analysis
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: await DynamicAIConfig.getModel(),
         messages: [{ role: "user", content: analysisPrompt }],
         max_tokens: 1500,
         temperature: 0.3
@@ -180,7 +181,7 @@ RESPOND IN JSON FORMAT:
     const mimeType = mime.lookup(filePath) || 'image/jpeg';
     
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Vision model for images
+      model: await DynamicAIConfig.getModel(), // Dynamic model from admin configuration
       messages: [
         {
           role: "user",

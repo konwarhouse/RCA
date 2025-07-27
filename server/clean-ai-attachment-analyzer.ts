@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as mime from 'mime-types';
 import { investigationStorage } from './storage';
 import { DynamicAIClientFactory } from './dynamic-ai-client-factory';
+import { DynamicAIConfig } from './dynamic-ai-config';
 
 export interface AttachmentAnalysisResult {
   adequacyScore: number; // 0-100%
@@ -62,7 +63,7 @@ export class CleanAIAttachmentAnalyzer {
         const base64Image = imageBuffer.toString('base64');
         
         const response = await openai.chat.completions.create({
-          model: "gpt-4o", // Vision model for images
+          model: await DynamicAIConfig.getModel(), // Dynamic model from admin configuration
           messages: [
             {
               role: "user",
@@ -101,7 +102,7 @@ export class CleanAIAttachmentAnalyzer {
       // Perform text analysis
       if (analysisPrompt) {
         const response = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: await DynamicAIConfig.getModel(),
           messages: [{ role: "user", content: analysisPrompt }],
           max_tokens: 1000,
           temperature: 0.3

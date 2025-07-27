@@ -12,6 +12,7 @@
 import OpenAI from 'openai';
 import * as mimeTypes from 'mime-types';
 import { investigationStorage } from './storage';
+import { DynamicAIConfig } from './dynamic-ai-config';
 
 // Dynamic AI configuration - NO HARDCODING
 const getOpenAIClient = async () => {
@@ -177,7 +178,7 @@ export class EvidenceValidationEngine {
     
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o", // Latest model with vision capabilities
+        model: await DynamicAIConfig.getModel(), // Dynamic model from admin configuration
         messages: [
           {
             role: "user",
@@ -355,7 +356,7 @@ Be strict - only mark as VALID if the file genuinely contains the required evide
 `;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o", // Latest model for best analysis
+        model: await DynamicAIConfig.getModel(), // Dynamic model from admin configuration
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.1 // Low temperature for consistent validation
