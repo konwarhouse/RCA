@@ -3554,7 +3554,7 @@ JSON array only:`;
       const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
       console.log(`[Evidence Library] Retrieved ${evidenceItems.length} evidence library records from database`);
       
-      // UNIVERSAL PROTOCOL STANDARD: Evidence Library items already use correct schema mapping
+      // UNIVERSAL PROTOCOL STANDARD: Evidence Library items with ALL enriched RCA fields
       const transformedItems = evidenceItems.map(item => ({
         id: item.id,
         equipmentGroup: item.equipmentGroup,
@@ -3568,6 +3568,33 @@ JSON array only:`;
         aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
         attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
         rootCauseLogic: item.rootCauseLogic,
+
+        // RCA-specific fields - Universal Protocol Standard compliant (no hardcoding)
+        primaryRootCause: item.primaryRootCause || null,
+        contributingFactor: item.contributingFactor || null,
+        latentCause: item.latentCause || null,
+        detectionGap: item.detectionGap || null,
+        confidenceLevel: item.confidenceLevel || null,
+        faultSignaturePattern: item.faultSignaturePattern || null,
+        applicableToOtherEquipment: item.applicableToOtherEquipment || null,
+        evidenceGapFlag: item.evidenceGapFlag || null,
+        eliminatedIfTheseFailuresConfirmed: item.eliminatedIfTheseFailuresConfirmed || null,
+        whyItGetsEliminated: item.whyItGetsEliminated || null,
+
+        // Configurable Intelligence Fields - Admin editable (no hardcoding)  
+        diagnosticValue: item.diagnosticValue || null,
+        industryRelevance: item.industryRelevance || null,
+        evidencePriority: item.evidencePriority || null,
+        timeToCollect: item.timeToCollect || null,
+        collectionCost: item.collectionCost || null,
+        analysisComplexity: item.analysisComplexity || null,
+        seasonalFactor: item.seasonalFactor || null,
+        relatedFailureModes: item.relatedFailureModes || null,
+        prerequisiteEvidence: item.prerequisiteEvidence || null,
+        followupActions: item.followupActions || null,
+        industryBenchmark: item.industryBenchmark || null,
+
+        // Metadata fields
         isActive: item.isActive,
         lastUpdated: item.lastUpdated?.toISOString(),
         updatedBy: item.updatedBy || 'system'

@@ -759,14 +759,42 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
         'Equipment Group': 'equipmentGroup',
         'Equipment Type': 'equipmentType',
         'Subtype': 'subtype',
+        'Subtype / Example': 'subtype',
         'Component / Failure Mode': 'componentFailureMode',
         'Equipment Code': 'equipmentCode',
         'Failure Code': 'failureCode',
         'Risk Ranking': 'riskRanking',
         'Required Trend Data Evidence': 'requiredTrendDataEvidence',
+        'Required Trend Data / Evidence': 'requiredTrendDataEvidence',
         'AI or Investigator Questions': 'aiOrInvestigatorQuestions',
         'Attachments Evidence Required': 'attachmentsEvidenceRequired',
-        'Root Cause Logic': 'rootCauseLogic'
+        'Attachments / Evidence Required': 'attachmentsEvidenceRequired',
+        'Root Cause Logic': 'rootCauseLogic',
+        
+        // RCA-specific fields - Universal Protocol Standard compliant (no hardcoding)
+        'Primary Root Cause': 'primaryRootCause',
+        'Contributing Factor': 'contributingFactor',
+        'Latent Cause': 'latentCause',
+        'Detection Gap': 'detectionGap',
+        'Confidence Level': 'confidenceLevel',
+        'Fault Signature Pattern': 'faultSignaturePattern',
+        'Applicable to Other Equipment': 'applicableToOtherEquipment',
+        'Evidence Gap Flag': 'evidenceGapFlag',
+        'Eliminated If These Failures Confirmed': 'eliminatedIfTheseFailuresConfirmed',
+        'Why It Gets Eliminated': 'whyItGetsEliminated',
+        
+        // Configurable Intelligence Fields - Admin editable
+        'Diagnostic Value': 'diagnosticValue',
+        'Industry Relevance': 'industryRelevance',
+        'Evidence Priority': 'evidencePriority',
+        'Time to Collect': 'timeToCollect',
+        'Collection Cost': 'collectionCost',
+        'Analysis Complexity': 'analysisComplexity',
+        'Seasonal Factor': 'seasonalFactor',
+        'Related Failure Modes': 'relatedFailureModes',
+        'Prerequisite Evidence': 'prerequisiteEvidence',
+        'Followup Actions': 'followupActions',
+        'Industry Benchmark': 'industryBenchmark'
       };
 
       // Validate and process each row
@@ -807,6 +835,32 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             aiOrInvestigatorQuestions: transformedRow.aiOrInvestigatorQuestions || '',
             attachmentsEvidenceRequired: transformedRow.attachmentsEvidenceRequired || '',
             rootCauseLogic: transformedRow.rootCauseLogic || '',
+            
+            // RCA-specific fields - Universal Protocol Standard compliant
+            primaryRootCause: transformedRow.primaryRootCause || null,
+            contributingFactor: transformedRow.contributingFactor || null,
+            latentCause: transformedRow.latentCause || null,
+            detectionGap: transformedRow.detectionGap || null,
+            confidenceLevel: transformedRow.confidenceLevel || null,
+            faultSignaturePattern: transformedRow.faultSignaturePattern || null,
+            applicableToOtherEquipment: transformedRow.applicableToOtherEquipment || null,
+            evidenceGapFlag: transformedRow.evidenceGapFlag || null,
+            eliminatedIfTheseFailuresConfirmed: transformedRow.eliminatedIfTheseFailuresConfirmed || null,
+            whyItGetsEliminated: transformedRow.whyItGetsEliminated || null,
+            
+            // Configurable Intelligence Fields - Admin editable (no hardcoding)
+            diagnosticValue: transformedRow.diagnosticValue || null,
+            industryRelevance: transformedRow.industryRelevance || null,
+            evidencePriority: transformedRow.evidencePriority ? parseInt(transformedRow.evidencePriority) : null,
+            timeToCollect: transformedRow.timeToCollect || null,
+            collectionCost: transformedRow.collectionCost || null,
+            analysisComplexity: transformedRow.analysisComplexity || null,
+            seasonalFactor: transformedRow.seasonalFactor || null,
+            relatedFailureModes: transformedRow.relatedFailureModes || null,
+            prerequisiteEvidence: transformedRow.prerequisiteEvidence || null,
+            followupActions: transformedRow.followupActions || null,
+            industryBenchmark: transformedRow.industryBenchmark || null,
+            
             updatedBy: 'csv-import'
           });
         } catch (error) {
