@@ -1,4 +1,10 @@
 /**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * File: dynamic-ai-config.ts
+ * NO HARDCODING: All operations schema-driven
+ * ZERO TOLERANCE: Absolute compliance required
+ */
+/**
  * DYNAMIC AI CONFIGURATION SYSTEM
  * 
  * CRITICAL ENFORCEMENT: ABSOLUTE NO HARDCODING

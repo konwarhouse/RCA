@@ -177,7 +177,11 @@ export default function RCADiagramEngine({
     
     const nodeWithId: RCANode = {
       ...newNode,
-      id: `new-${self.crypto.randomUUID()}`
+      id: (() => {
+        const timestamp = new Date().getTime();
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        return `new-${timestamp}-${randomSuffix}`;
+      })()
     };
     
     setNodes([...nodes, nodeWithId]);

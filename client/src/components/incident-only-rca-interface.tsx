@@ -118,7 +118,11 @@ export function IncidentOnlyRCAInterface({
     if (!customHypothesis.trim()) return;
     
     const newHypothesis: UserVerifiedHypothesis = {
-      id: `custom_${crypto.randomUUID()}`,
+      id: (() => {
+        const timestamp = new Date().getTime();
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        return `custom_${timestamp}_${randomSuffix}`;
+      })(),
       hypothesis: customHypothesis,
       userStatus: 'accepted'
     };

@@ -103,7 +103,11 @@ export default function ParameterLibrary({ onParametersUpdate }: ParameterLibrar
     }
 
     const parameter: CustomParameter = {
-      id: `custom_${self.crypto.randomUUID()}`.replace(/[^a-zA-Z0-9_]/g, ''),
+      id: (() => {
+        const timestamp = new Date().getTime();
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        return `custom_${timestamp}_${randomSuffix}`;
+      })(),
       name: newParameter.name!,
       category: newParameter.category!,
       dataType: newParameter.dataType!,

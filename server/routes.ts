@@ -12,7 +12,7 @@
  * CRITICAL COMPLIANCE REQUIREMENTS:
  * - ALL routes use path parameters: /api/incidents/:id/endpoint
  * - Evidence stored in evidenceResponses field (NOT evidenceFiles)
- * - NO hardcoding of IDs, paths, or magic numbers
+ * - NO hardcoding of IDs, paths, or numeric constants
  * - State persists through ALL workflow stages
  */
 

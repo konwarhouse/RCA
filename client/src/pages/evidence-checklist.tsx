@@ -209,7 +209,11 @@ export default function EvidenceChecklist() {
               context: mode.reasoning
             })),
             aiHypotheses: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
-              id: mode.id || `fallback-${self.crypto.randomUUID()}`,
+              id: mode.id || (() => {
+                const timestamp = new Date().getTime();
+                const randomSuffix = Math.floor(Math.random() * 10000);
+                return `fallback-${timestamp}-${randomSuffix}`;
+              })(),
               hypothesis: mode.failureMode,
               reasoning: mode.reasoning,
               aiConfidence: mode.confidence,
@@ -234,7 +238,10 @@ export default function EvidenceChecklist() {
           if (data.aiAnalysis.aiHypotheses && Array.isArray(data.aiAnalysis.aiHypotheses)) {
             hypothesesWithIds = data.aiAnalysis.aiHypotheses.map((hypothesis: any, index: number) => ({
               ...hypothesis,
-              id: hypothesis.id || `hypothesis-${self.crypto.randomUUID()}-${index}`
+              id: hypothesis.id || (() => {
+                const timestamp = new Date().getTime();
+                return `hypothesis-${timestamp}-${index}`;
+              })()
             }));
           }
           

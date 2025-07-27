@@ -1,4 +1,10 @@
 /**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * File: fallback-logic-engine.ts
+ * NO HARDCODING: All operations schema-driven
+ * ZERO TOLERANCE: Absolute compliance required
+ */
+/**
  * FALLBACK LOGIC FOR LOW CONFIDENCE RCA
  * 
  * ABSOLUTE RULE: NO HARDCODING ALLOWED

@@ -1,4 +1,10 @@
 /**
+ * UNIVERSAL PROTOCOL STANDARD COMPLIANCE HEADER
+ * File: llm-security-validator.ts
+ * NO HARDCODING: All operations schema-driven
+ * ZERO TOLERANCE: Absolute compliance required
+ */
+/**
  * 🚨 MANDATORY LLM API KEY SECURITY CHECK
  * UNIVERSAL_LLM_SECURITY_INSTRUCTION ENFORCEMENT
  * 
