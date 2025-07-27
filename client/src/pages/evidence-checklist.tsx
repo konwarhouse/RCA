@@ -211,7 +211,7 @@ export default function EvidenceChecklist() {
             aiHypotheses: data.fallbackAnalysis.inferredFailureModes.map((mode: any) => ({
               id: mode.id || (() => {
                 const timestamp = new Date().getTime();
-                const randomSuffix = Math.floor(Math.random() * 10000);
+                const randomSuffix = (timestamp % 10000);
                 return `fallback-${timestamp}-${randomSuffix}`;
               })(),
               hypothesis: mode.failureMode,

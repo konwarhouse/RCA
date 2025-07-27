@@ -120,7 +120,7 @@ export function IncidentOnlyRCAInterface({
     const newHypothesis: UserVerifiedHypothesis = {
       id: (() => {
         const timestamp = new Date().getTime();
-        const randomSuffix = Math.floor(Math.random() * 10000);
+        const randomSuffix = (timestamp % 10000);
         return `custom_${timestamp}_${randomSuffix}`;
       })(),
       hypothesis: customHypothesis,

@@ -179,7 +179,7 @@ export default function RCADiagramEngine({
       ...newNode,
       id: (() => {
         const timestamp = new Date().getTime();
-        const randomSuffix = Math.floor(Math.random() * 10000);
+        const randomSuffix = (timestamp % 10000);
         return `new-${timestamp}-${randomSuffix}`;
       })()
     };

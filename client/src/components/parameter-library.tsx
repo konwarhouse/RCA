@@ -105,7 +105,7 @@ export default function ParameterLibrary({ onParametersUpdate }: ParameterLibrar
     const parameter: CustomParameter = {
       id: (() => {
         const timestamp = new Date().getTime();
-        const randomSuffix = Math.floor(Math.random() * 10000);
+        const randomSuffix = (timestamp % 10000);
         return `custom_${timestamp}_${randomSuffix}`;
       })(),
       name: newParameter.name!,

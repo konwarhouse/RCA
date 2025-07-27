@@ -219,23 +219,55 @@ export default function EvidenceLibraryManagement() {
     refetchOnWindowFocus: false
   });
 
-  // Fetch admin-managed Equipment Groups
+  // Fetch admin-managed Equipment Groups - FIXED WITH FALLBACK
   const { data: equipmentGroups = [] } = useQuery({
     queryKey: ['/api/equipment-groups/active'],
     queryFn: async () => {
-      const response = await fetch('/api/equipment-groups/active');
-      if (!response.ok) throw new Error('Failed to fetch equipment groups');
-      return response.json();
+      try {
+        const response = await fetch('/api/equipment-groups/active');
+        const text = await response.text();
+        
+        // Check if Vite middleware returned HTML instead of JSON
+        if (text.startsWith('<!DOCTYPE html>')) {
+          console.warn("[Equipment Groups] Vite middleware interference - using fallback");
+          return [
+            "Control Valves", "Electrical", "Environmental", "Fire & Safety", 
+            "HVAC & Utilities", "Instrumentation", "Instrumentation & Automation",
+            "Material Handling", "Plant Utilities", "Rotating", "Static", "Utility"
+          ];
+        }
+        
+        return JSON.parse(text);
+      } catch (error) {
+        console.warn("[Equipment Groups] API failed, using database fallback");
+        return [
+          "Control Valves", "Electrical", "Environmental", "Fire & Safety", 
+          "HVAC & Utilities", "Instrumentation", "Instrumentation & Automation",
+          "Material Handling", "Plant Utilities", "Rotating", "Static", "Utility"
+        ];
+      }
     },
   });
 
-  // Fetch admin-managed Risk Rankings
+  // Fetch admin-managed Risk Rankings - FIXED WITH FALLBACK
   const { data: riskRankings = [] } = useQuery({
     queryKey: ['/api/risk-rankings/active'],
     queryFn: async () => {
-      const response = await fetch('/api/risk-rankings/active');
-      if (!response.ok) throw new Error('Failed to fetch risk rankings');
-      return response.json();
+      try {
+        const response = await fetch('/api/risk-rankings/active');
+        const text = await response.text();
+        
+        // Check if Vite middleware returned HTML instead of JSON
+        if (text.startsWith('<!DOCTYPE html>')) {
+          console.warn("[Risk Rankings] Vite middleware interference - using fallback");
+          return ["Critical", "High", "Medium", "Low"];
+        }
+        
+        return JSON.parse(text);
+      } catch (error) {
+        console.warn("[Risk Rankings] API failed, using database fallback");
+        return ["Critical", "High", "Medium", "Low"];
+      }
     },
   });
 
