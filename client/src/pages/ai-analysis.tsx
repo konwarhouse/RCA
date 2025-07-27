@@ -185,11 +185,11 @@ export default function AIAnalysis() {
 
   const simulateAnalysisProgress = () => {
     const phases = [
-      { name: "Steps 1-3: AI Hypothesis Generation", duration: 2000 },
-      { name: "Step 4: Evidence Status Validation", duration: 2000 },
-      { name: "Step 5: Data Analysis with Confidence Assessment", duration: 3000 },
-      { name: "Step 6: Low-Confidence Fallback (if needed)", duration: 2000 },
-      { name: "Steps 7-9: Enhanced RCA with PSM Integration", duration: 3000 }
+      { name: "Steps 1-3: AI Hypothesis Generation", duration: parseInt(import.meta.env.VITE_HYPOTHESIS_DURATION || '2000') },
+      { name: "Step 4: Evidence Status Validation", duration: parseInt(import.meta.env.VITE_VALIDATION_DURATION || '2000') },
+      { name: "Step 5: Data Analysis with Confidence Assessment", duration: parseInt(import.meta.env.VITE_ANALYSIS_DURATION || '3000') },
+      { name: "Step 6: Low-Confidence Fallback (if needed)", duration: parseInt(import.meta.env.VITE_FALLBACK_DURATION || '2000') },
+      { name: "Steps 7-9: Enhanced RCA with PSM Integration", duration: parseInt(import.meta.env.VITE_INTEGRATION_DURATION || '3000') }
     ];
 
     let totalDuration = 0;

@@ -147,7 +147,7 @@ export default function ISO14224EvidenceForm() {
       if (Object.keys(answers).length > 0 && saveStatus !== 'saving') {
         autoSave();
       }
-    }, 30000);
+    }, parseInt(import.meta.env.VITE_AUTOSAVE_INTERVAL || '30000'));
 
     return () => clearInterval(autoSaveInterval);
   }, [answers, saveStatus]);

@@ -69,7 +69,7 @@ export default function ReportExport({ analysis }: ReportExportProps) {
     
     try {
       // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, parseInt(import.meta.env.VITE_REPORT_GENERATION_DELAY || '3000')));
       
       // In a real implementation, this would call the backend API
       // const response = await fetch('/api/reports/generate', {

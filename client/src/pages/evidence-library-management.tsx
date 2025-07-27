@@ -182,7 +182,7 @@ export default function EvidenceLibraryManagement() {
           // Direct backend call bypassing Vite - THIS IS THE FIX
           try {
             console.log("[Evidence Library] Attempting direct backend bypass...");
-            const directResponse = await fetch(`http://localhost:5000${url}`, {
+            const directResponse = await fetch(`http://${window.location.hostname}:${import.meta.env.VITE_BACKEND_PORT || '5000'}${url}`, {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',

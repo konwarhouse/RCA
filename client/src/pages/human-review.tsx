@@ -58,7 +58,7 @@ export default function HumanReview() {
     queryKey: ['/api/incidents', incidentId, 'evidence-files'],
     enabled: !!incidentId,
     refetchOnWindowFocus: true,
-    refetchInterval: 3000, // Refresh every 3 seconds to ensure UI stays in sync
+    refetchInterval: parseInt(import.meta.env.VITE_REFRESH_INTERVAL || '3000'), // Dynamic refresh interval
   });
 
   // Review action mutation
@@ -82,7 +82,8 @@ export default function HumanReview() {
       });
       
       // Update local state to reflect the change immediately
-      const { fileId, action } = result.data || {};
+      const reviewResult = result as any;
+      const { fileId, action } = reviewResult?.data || {};
       if (fileId && action) {
         setFileReviewStates(prev => ({ ...prev, [fileId]: action }));
       }
