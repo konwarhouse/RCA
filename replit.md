@@ -97,6 +97,7 @@ User Feedback: User frustrated with repetitive debugging - demands working solut
   - ✅ **Storage Integration**: Uses existing `investigationStorage` methods
 - **User Experience Fix**: "Add Group" button in Equipment Groups Manager now works correctly with database persistence
 - **Impact**: **ADD GROUP FUNCTIONALITY COMPLETE** - Users can now successfully add, view, edit, and delete equipment groups through the admin interface. All operations persist to database with proper validation and Universal Protocol Standard compliance.
+- **SYSTEM DESIGN CLARIFICATION**: Equipment Groups Manager controls dropdown options, Evidence Library table shows actual records. Filter dropdown now correctly uses `/api/equipment-groups/active` endpoint.
 
 ### Previous: UNIVERSAL PROTOCOL & VITE PROXY COMPLIANCE INSTRUCTIONS PERMANENTLY EMBEDDED - ENFORCEMENT SYSTEM COMPLETE
 - **Date**: July 27, 2025 (Universal Protocol & Vite Proxy Compliance Permanent Embedding Achievement)
