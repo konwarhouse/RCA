@@ -1316,6 +1316,81 @@ var init_storage = __esm({
           throw error;
         }
       }
+      // CSV/Excel file import for Evidence Library - Universal Protocol Standard compliant
+      async importEvidenceLibrary(file) {
+        try {
+          console.log(`[RCA] Starting evidence library import from file: ${file.originalname}`);
+          const Papa2 = await import("papaparse");
+          const fileContent = file.buffer.toString("utf-8");
+          const parseResult = Papa2.parse(fileContent, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: (header) => {
+              const headerMap = {
+                "Equipment Group": "equipmentGroup",
+                "Equipment Type": "equipmentType",
+                "Subtype": "subtype",
+                "Component / Failure Mode": "componentFailureMode",
+                "Equipment Code": "equipmentCode",
+                "Failure Code": "failureCode",
+                "Risk Ranking": "riskRanking",
+                "Required Trend Data Evidence": "requiredTrendDataEvidence",
+                "AI or Investigator Questions": "aiOrInvestigatorQuestions",
+                "Attachments Evidence Required": "attachmentsEvidenceRequired",
+                "Root Cause Logic": "rootCauseLogic"
+              };
+              return headerMap[header] || header.toLowerCase().replace(/\s+/g, "");
+            }
+          });
+          if (parseResult.errors.length > 0) {
+            console.error("[RCA] CSV parsing errors:", parseResult.errors);
+            return {
+              imported: 0,
+              errors: parseResult.errors.length,
+              details: parseResult.errors.map((err) => `Row ${err.row}: ${err.message}`)
+            };
+          }
+          const validRows = [];
+          const errorDetails = [];
+          let errorCount = 0;
+          parseResult.data.forEach((row, index2) => {
+            try {
+              if (!row.equipmentGroup || !row.equipmentType || !row.componentFailureMode || !row.equipmentCode || !row.failureCode || !row.riskRanking) {
+                errorDetails.push(`Row ${index2 + 2}: Missing required fields`);
+                errorCount++;
+                return;
+              }
+              validRows.push({
+                equipmentGroup: row.equipmentGroup,
+                equipmentType: row.equipmentType,
+                subtype: row.subtype || null,
+                componentFailureMode: row.componentFailureMode,
+                equipmentCode: row.equipmentCode,
+                failureCode: row.failureCode,
+                riskRanking: row.riskRanking,
+                requiredTrendDataEvidence: row.requiredTrendDataEvidence || "",
+                aiOrInvestigatorQuestions: row.aiOrInvestigatorQuestions || "",
+                attachmentsEvidenceRequired: row.attachmentsEvidenceRequired || "",
+                rootCauseLogic: row.rootCauseLogic || "",
+                updatedBy: "csv-import"
+              });
+            } catch (error) {
+              errorDetails.push(`Row ${index2 + 2}: ${error instanceof Error ? error.message : "Invalid data"}`);
+              errorCount++;
+            }
+          });
+          const imported = await this.bulkUpsertEvidenceLibrary(validRows);
+          console.log(`[RCA] Import completed: ${imported.length} imported, ${errorCount} errors`);
+          return {
+            imported: imported.length,
+            errors: errorCount,
+            details: errorDetails
+          };
+        } catch (error) {
+          console.error("[RCA] Error in importEvidenceLibrary:", error);
+          throw new Error("Failed to import evidence library file");
+        }
+      }
       // Equipment Groups operations
       async getAllEquipmentGroups() {
         return await db.select().from(equipmentGroups).orderBy(equipmentGroups.name);
@@ -6740,6 +6815,35 @@ async function registerRoutes(app3) {
       res.status(500).json({
         error: "Fetch failed",
         message: "Unable to fetch active equipment groups",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  app3.post("/api/evidence-library/import", upload.single("file"), async (req, res) => {
+    console.log("[ROUTES] Evidence library import route accessed - Universal Protocol Standard compliant");
+    try {
+      if (!req.file) {
+        console.log("[ROUTES] No file provided for evidence library import");
+        return res.status(400).json({
+          error: "No file provided",
+          message: "Please select a CSV file to import"
+        });
+      }
+      console.log(`[ROUTES] Processing evidence library import file: ${req.file.originalname}, size: ${req.file.size} bytes`);
+      const result = await investigationStorage.importEvidenceLibrary(req.file);
+      console.log(`[ROUTES] Successfully imported ${result.imported || 0} evidence library items, ${result.errors || 0} errors`);
+      res.json({
+        success: true,
+        message: `Successfully imported ${result.imported || 0} items`,
+        imported: result.imported || 0,
+        errors: result.errors || 0,
+        details: result.details || []
+      });
+    } catch (error) {
+      console.error("[ROUTES] Evidence Library import error:", error);
+      res.status(500).json({
+        error: "Import failed",
+        message: "Unable to import evidence library data",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

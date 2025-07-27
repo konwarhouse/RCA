@@ -71,6 +71,7 @@ export interface IInvestigationStorage {
   searchEvidenceLibraryBySymptoms(symptoms: string[]): Promise<EvidenceLibrary[]>;
   bulkImportEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
   bulkUpsertEvidenceLibrary(data: InsertEvidenceLibrary[]): Promise<EvidenceLibrary[]>;
+  importEvidenceLibrary(file: Express.Multer.File): Promise<{ imported: number; errors: number; details: string[] }>;
   
   // AI Settings operations
   getAllAiSettings(): Promise<any[]>;
@@ -724,6 +725,97 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     } catch (error) {
       console.error('[RCA] Error in bulkUpsertEvidenceLibrary:', error);
       throw error;
+    }
+  }
+
+  // CSV/Excel file import for Evidence Library - Universal Protocol Standard compliant
+  async importEvidenceLibrary(file: Express.Multer.File): Promise<{ imported: number; errors: number; details: string[] }> {
+    try {
+      console.log(`[RCA] Starting evidence library import from file: ${file.originalname}`);
+      
+      const Papa = await import('papaparse');
+      const fileContent = file.buffer.toString('utf-8');
+      
+      const parseResult = Papa.parse(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header: string) => {
+          // Transform CSV headers to match database schema
+          const headerMap: { [key: string]: string } = {
+            'Equipment Group': 'equipmentGroup',
+            'Equipment Type': 'equipmentType',
+            'Subtype': 'subtype',
+            'Component / Failure Mode': 'componentFailureMode',
+            'Equipment Code': 'equipmentCode',
+            'Failure Code': 'failureCode',
+            'Risk Ranking': 'riskRanking',
+            'Required Trend Data Evidence': 'requiredTrendDataEvidence',
+            'AI or Investigator Questions': 'aiOrInvestigatorQuestions',
+            'Attachments Evidence Required': 'attachmentsEvidenceRequired',
+            'Root Cause Logic': 'rootCauseLogic'
+          };
+          return headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
+        }
+      });
+
+      if (parseResult.errors.length > 0) {
+        console.error('[RCA] CSV parsing errors:', parseResult.errors);
+        return {
+          imported: 0,
+          errors: parseResult.errors.length,
+          details: parseResult.errors.map(err => `Row ${err.row}: ${err.message}`)
+        };
+      }
+
+      const validRows: InsertEvidenceLibrary[] = [];
+      const errorDetails: string[] = [];
+      let errorCount = 0;
+
+      // Validate and process each row
+      parseResult.data.forEach((row: any, index: number) => {
+        try {
+          // Required fields validation
+          if (!row.equipmentGroup || !row.equipmentType || !row.componentFailureMode || 
+              !row.equipmentCode || !row.failureCode || !row.riskRanking) {
+            errorDetails.push(`Row ${index + 2}: Missing required fields`);
+            errorCount++;
+            return;
+          }
+
+          validRows.push({
+            equipmentGroup: row.equipmentGroup,
+            equipmentType: row.equipmentType,
+            subtype: row.subtype || null,
+            componentFailureMode: row.componentFailureMode,
+            equipmentCode: row.equipmentCode,
+            failureCode: row.failureCode,
+            riskRanking: row.riskRanking,
+            requiredTrendDataEvidence: row.requiredTrendDataEvidence || '',
+            aiOrInvestigatorQuestions: row.aiOrInvestigatorQuestions || '',
+            attachmentsEvidenceRequired: row.attachmentsEvidenceRequired || '',
+            rootCauseLogic: row.rootCauseLogic || '',
+            updatedBy: 'csv-import'
+          });
+        } catch (error) {
+          errorDetails.push(`Row ${index + 2}: ${error instanceof Error ? error.message : 'Invalid data'}`);
+          errorCount++;
+        }
+      });
+
+      // Import valid rows using bulk upsert
+      const imported = await this.bulkUpsertEvidenceLibrary(validRows);
+      
+      console.log(`[RCA] Import completed: ${imported.length} imported, ${errorCount} errors`);
+      
+      return {
+        imported: imported.length,
+        errors: errorCount,
+        details: errorDetails
+      };
+      
+    } catch (error) {
+      console.error('[RCA] Error in importEvidenceLibrary:', error);
+      throw new Error('Failed to import evidence library file');
     }
   }
 

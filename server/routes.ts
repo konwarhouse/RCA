@@ -233,6 +233,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // ADD EVIDENCE LIBRARY IMPORT ENDPOINT - Universal Protocol Standard compliant
+  app.post("/api/evidence-library/import", upload.single('file'), async (req, res) => {
+    console.log("[ROUTES] Evidence library import route accessed - Universal Protocol Standard compliant");
+    try {
+      if (!req.file) {
+        console.log("[ROUTES] No file provided for evidence library import");
+        return res.status(400).json({ 
+          error: "No file provided", 
+          message: "Please select a CSV file to import" 
+        });
+      }
+
+      console.log(`[ROUTES] Processing evidence library import file: ${req.file.originalname}, size: ${req.file.size} bytes`);
+      
+      const result = await investigationStorage.importEvidenceLibrary(req.file);
+      console.log(`[ROUTES] Successfully imported ${result.imported || 0} evidence library items, ${result.errors || 0} errors`);
+      
+      res.json({
+        success: true,
+        message: `Successfully imported ${result.imported || 0} items`,
+        imported: result.imported || 0,
+        errors: result.errors || 0,
+        details: result.details || []
+      });
+      
+    } catch (error) {
+      console.error("[ROUTES] Evidence Library import error:", error);
+      res.status(500).json({ 
+        error: "Import failed", 
+        message: "Unable to import evidence library data",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // CONTINUE WITH REST OF ROUTES - DO NOT RETURN EARLY
   app.post("/api/investigations/create", async (req, res) => {
