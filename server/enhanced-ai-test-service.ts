@@ -94,7 +94,7 @@ export class EnhancedAITestService {
               success: true,
               message: `AI configuration test successful using ${provider.provider} ${provider.model}`,
               attempts,
-              duration: Date.now() - startTime,
+              duration: UniversalAIConfig.getPerformanceTime() - startTime,
               timestamp,
               providerDetails
             };
@@ -135,7 +135,7 @@ export class EnhancedAITestService {
         error: errorAnalysis.error,
         errorType: errorAnalysis.errorType,
         attempts: attempts - 1,
-        duration: Date.now() - startTime,
+        duration: UniversalAIConfig.getPerformanceTime() - startTime,
         timestamp,
         providerDetails
       };
@@ -149,7 +149,7 @@ export class EnhancedAITestService {
         error: error.message,
         errorType: 'unknown',
         attempts: 0,
-        duration: Date.now() - startTime,
+        duration: UniversalAIConfig.getPerformanceTime() - startTime,
         timestamp,
         providerDetails: { id: providerId, provider: 'unknown', model: 'unknown' }
       };

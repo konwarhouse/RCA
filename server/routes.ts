@@ -1808,7 +1808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const uniqueKey = `${fileName}_${uploadedAt.substring(0, 19)}`; // Remove milliseconds for grouping
         
         if (!uniqueEvidenceMap.has(uniqueKey)) {
-          const uniqueId = `file_${incidentId}_${evidence.uploadedAt || Date.now()}_${index}`;
+          const uniqueId = `file_${incidentId}_${evidence.uploadedAt || UniversalAIConfig.generateTimestamp()}_${index}`;
           
           uniqueEvidenceMap.set(uniqueKey, {
             id: uniqueId,

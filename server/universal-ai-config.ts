@@ -25,18 +25,9 @@ export const UniversalAIConfig = {
     return crypto.randomUUID();
   },
 
-  // 🚨 MANDATORY LLM API KEY SECURITY CHECK - Dynamic API key retrieval
+  // 🚨 CRITICAL ERROR: HARDCODED API KEY ACCESS BLOCKED
   getAPIKey: (): string => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    // 🔒 MANDATORY SECURITY VALIDATION
-    validateLLMSecurity(apiKey, 'openai', 'universal-ai-config.ts');
-    
-    if (!apiKey) {
-      throw new Error('❌ LLM API key not configured. Please check your server environment.');
-    }
-    
-    return apiKey;
+    throw new Error('❌ UNIVERSAL PROTOCOL VIOLATION: Direct API key access not allowed. Use DynamicAIConfig.performAIAnalysis() instead. ALL AI operations MUST use admin panel configuration only.');
   },
 
   // Universal file path generation - NO hardcoded paths
