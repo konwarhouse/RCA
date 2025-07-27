@@ -2223,9 +2223,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Incident not found" });
       }
       
-      // Check if RCA synthesis was completed
-      const rcaResults = incident.rcaResults as any;
+      // Check if RCA synthesis was completed - look in multiple possible fields
+      let rcaResults = incident.rcaResults as any;
+      
+      // Fallback to aiAnalysis if rcaResults is null (backward compatibility)
+      if (!rcaResults && incident.aiAnalysis) {
+        rcaResults = incident.aiAnalysis;
+        console.log(`[SUMMARY REPORT] Using aiAnalysis as fallback for incident ${incidentId}`);
+      }
+      
       if (!rcaResults) {
+        console.log(`[SUMMARY REPORT] No RCA results found for incident ${incidentId}. Workflow status: ${incident.workflowStatus}`);
         return res.status(400).json({ 
           message: "Analysis data not available. Please complete the analysis first.",
           error: "NO_RCA_DATA"
@@ -2269,6 +2277,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         data: null,
         error: "Failed to generate summary report"
+      });
+    }
+  });
+
+  // GET COMPLETENESS CHECK - Evidence Completeness Validation
+  // Route: GET /api/incidents/:id/completeness-check
+  // Protocol: Path parameter routing per Universal Protocol Standard
+  app.get("/api/incidents/:id/completeness-check", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      console.log(`[COMPLETENESS CHECK] Checking evidence completeness for incident ${incidentId}`);
+      
+      // Get incident with evidence files
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      const evidenceFiles = (incident.evidenceResponses as any[]) || [];
+      const reviewedFiles = evidenceFiles.filter(f => f.reviewStatus === 'APPROVED');
+      
+      // Calculate completeness based on evidence uploaded and reviewed
+      const completenessScore = evidenceFiles.length > 0 ? 
+        Math.round((reviewedFiles.length / evidenceFiles.length) * 100) : 0;
+      
+      const isComplete = completenessScore >= 80; // 80% threshold for completeness
+      
+      const completenessData = {
+        totalFiles: evidenceFiles.length,
+        reviewedFiles: reviewedFiles.length,
+        completenessScore,
+        isComplete,
+        readyForSynthesis: isComplete && reviewedFiles.length > 0,
+        workflowStatus: incident.workflowStatus
+      };
+      
+      console.log(`[COMPLETENESS CHECK] Incident ${incidentId}: ${completenessScore}% complete (${reviewedFiles.length}/${evidenceFiles.length} files reviewed)`);
+      
+      res.json({
+        data: completenessData,
+        error: null
+      });
+      
+    } catch (error) {
+      console.error('[COMPLETENESS CHECK] Failed:', error);
+      res.status(500).json({
+        data: null,
+        error: "Failed to check evidence completeness"
       });
     }
   });
