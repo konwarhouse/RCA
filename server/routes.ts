@@ -1379,6 +1379,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Last Reviewed: 2025-07-26
    * ID routing per Universal Protocol Standard - uses path params
    */
+
+  // UPDATE EVIDENCE PROGRESS - Universal Protocol Standard compliant
+  app.put("/api/incidents/:id/evidence-progress", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      const { currentStep, workflowStatus, evidenceChecklist } = req.body;
+      
+      console.log(`[EVIDENCE PROGRESS] Updating incident ${incidentId} - Step: ${currentStep}, Status: ${workflowStatus}`);
+      
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Update incident with progress information
+      const updatedIncident = await investigationStorage.updateIncident(incidentId, {
+        currentStep: currentStep || incident.currentStep,
+        workflowStatus: workflowStatus || incident.workflowStatus,
+        evidenceChecklist: evidenceChecklist || incident.evidenceChecklist
+      });
+      
+      console.log(`[EVIDENCE PROGRESS] Successfully updated incident ${incidentId}`);
+      
+      res.json({
+        success: true,
+        incident: updatedIncident,
+        message: "Evidence progress updated successfully"
+      });
+      
+    } catch (error) {
+      console.error('[EVIDENCE PROGRESS] Update failed:', error);
+      res.status(500).json({ 
+        message: "Failed to update evidence progress",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // UNIVERSAL RCA AI EVIDENCE ANALYSIS & PARSING LOGIC - STEPS 3-4 IMPLEMENTATION
   app.post("/api/incidents/:id/upload-evidence", upload.single('files'), async (req, res) => {

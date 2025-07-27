@@ -388,11 +388,14 @@ export default function EvidenceChecklist() {
   const lowItems = evidenceItems?.filter(item => item.priority === "Low") || [];
 
   // Updated logic: Allow progression if evidence completed OR marked unavailable with reason
+  // Also consider items with uploaded files as eligible for completion
   const completedCritical = criticalItems.filter(item => 
-    item.completed || (item.isUnavailable && item.unavailableReason?.trim())
+    item.completed || (item.isUnavailable && item.unavailableReason?.trim()) ||
+    (item.files && item.files.length > 0) // Allow progression if files uploaded
   );
   const completedHigh = highItems.filter(item => 
-    item.completed || (item.isUnavailable && item.unavailableReason?.trim())
+    item.completed || (item.isUnavailable && item.unavailableReason?.trim()) ||
+    (item.files && item.files.length > 0) // Allow progression if files uploaded
   );
   const requiredHigh = Math.ceil(highItems.length * 0.8);
   
