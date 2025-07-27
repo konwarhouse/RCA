@@ -36,6 +36,11 @@ import {
   incidents,
   type Incident,
   type InsertIncident,
+  faultReferenceLibrary,
+  type FaultReferenceLibrary,
+  type InsertFaultReferenceLibrary,
+  users,
+  type User,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, sql } from "drizzle-orm";
@@ -73,6 +78,19 @@ export interface IInvestigationStorage {
   saveAiSettings(data: any): Promise<any>;
   updateAiSettingsTestStatus(id: number, success: boolean): Promise<void>;
   deleteAiSettings(id: number): Promise<void>;
+  
+  // Fault Reference Library operations (Admin Only)
+  getAllFaultReferenceLibrary(): Promise<FaultReferenceLibrary[]>;
+  getFaultReferenceLibraryById(id: string): Promise<FaultReferenceLibrary | undefined>;
+  createFaultReferenceLibrary(data: InsertFaultReferenceLibrary): Promise<FaultReferenceLibrary>;
+  updateFaultReferenceLibrary(id: string, data: Partial<FaultReferenceLibrary>): Promise<FaultReferenceLibrary>;
+  deleteFaultReferenceLibrary(id: string): Promise<void>;
+  searchFaultReferenceLibrary(searchTerm?: string, evidenceType?: string): Promise<FaultReferenceLibrary[]>;
+  bulkImportFaultReferenceLibrary(data: InsertFaultReferenceLibrary[]): Promise<FaultReferenceLibrary[]>;
+  
+  // User operations (for admin check)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: any): Promise<User>;
   
   // Equipment Groups operations
   getAllEquipmentGroups(): Promise<EquipmentGroup[]>;
@@ -1204,6 +1222,150 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
   async updateHistoricalPattern(id: number, data: any): Promise<any> {
     console.log(`[Historical Learning] Updating historical pattern ${id}`);
     return { id, ...data };
+  }
+
+  // Fault Reference Library operations (Admin Only)
+  async getAllFaultReferenceLibrary(): Promise<FaultReferenceLibrary[]> {
+    try {
+      return await db.select().from(faultReferenceLibrary);
+    } catch (error) {
+      console.error('Error getting all fault reference library:', error);
+      throw new Error('Failed to retrieve fault reference library');
+    }
+  }
+
+  async getFaultReferenceLibraryById(id: string): Promise<FaultReferenceLibrary | undefined> {
+    try {
+      const [result] = await db.select().from(faultReferenceLibrary).where(eq(faultReferenceLibrary.id, id));
+      return result;
+    } catch (error) {
+      console.error('Error getting fault reference library by id:', error);
+      throw new Error('Failed to retrieve fault reference library entry');
+    }
+  }
+
+  async createFaultReferenceLibrary(data: InsertFaultReferenceLibrary): Promise<FaultReferenceLibrary> {
+    try {
+      const [result] = await db.insert(faultReferenceLibrary).values({
+        ...data,
+        updatedAt: new Date(),
+      }).returning();
+      return result;
+    } catch (error) {
+      console.error('Error creating fault reference library:', error);
+      throw new Error('Failed to create fault reference library entry');
+    }
+  }
+
+  async updateFaultReferenceLibrary(id: string, data: Partial<FaultReferenceLibrary>): Promise<FaultReferenceLibrary> {
+    try {
+      const [result] = await db.update(faultReferenceLibrary)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(faultReferenceLibrary.id, id))
+        .returning();
+      
+      if (!result) {
+        throw new Error('Fault reference library entry not found');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error updating fault reference library:', error);
+      throw new Error('Failed to update fault reference library entry');
+    }
+  }
+
+  async deleteFaultReferenceLibrary(id: string): Promise<void> {
+    try {
+      await db.delete(faultReferenceLibrary).where(eq(faultReferenceLibrary.id, id));
+    } catch (error) {
+      console.error('Error deleting fault reference library:', error);
+      throw new Error('Failed to delete fault reference library entry');
+    }
+  }
+
+  async searchFaultReferenceLibrary(searchTerm?: string, evidenceType?: string): Promise<FaultReferenceLibrary[]> {
+    try {
+      let query = db.select().from(faultReferenceLibrary);
+      
+      const conditions = [];
+      
+      if (searchTerm) {
+        conditions.push(
+          or(
+            like(faultReferenceLibrary.pattern, `%${searchTerm}%`),
+            like(faultReferenceLibrary.probableFault, `%${searchTerm}%`),
+            like(faultReferenceLibrary.matchingCriteria, `%${searchTerm}%`),
+            like(faultReferenceLibrary.recommendations, `%${searchTerm}%`)
+          )
+        );
+      }
+      
+      if (evidenceType) {
+        conditions.push(eq(faultReferenceLibrary.evidenceType, evidenceType));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('Error searching fault reference library:', error);
+      throw new Error('Failed to search fault reference library');
+    }
+  }
+
+  async bulkImportFaultReferenceLibrary(data: InsertFaultReferenceLibrary[]): Promise<FaultReferenceLibrary[]> {
+    try {
+      if (data.length === 0) return [];
+      
+      const results = await db.insert(faultReferenceLibrary).values(
+        data.map(item => ({
+          ...item,
+          updatedAt: new Date(),
+        }))
+      ).returning();
+      
+      return results;
+    } catch (error) {
+      console.error('Error bulk importing fault reference library:', error);
+      throw new Error('Failed to bulk import fault reference library entries');
+    }
+  }
+
+  // User operations (for admin check) - Replit Auth compatibility
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      throw new Error('Failed to retrieve user');
+    }
+  }
+
+  async upsertUser(userData: any): Promise<User> {
+    try {
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    } catch (error) {
+      console.error('Error upserting user:', error);
+      throw new Error('Failed to upsert user');
+    }
   }
 
   // CASCADING DROPDOWN OPERATIONS - NO HARDCODING

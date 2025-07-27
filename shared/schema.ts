@@ -30,6 +30,7 @@ import {
   date,
   serial,
 } from "drizzle-orm/pg-core";
+import { sql } from 'drizzle-orm';
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -57,6 +58,38 @@ export const users = pgTable("users", {
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Fault Reference Library table - Admin Only "Feature-to-Fault Library" / "RCA Knowledge Library"
+export const faultReferenceLibrary = pgTable("fault_reference_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  evidenceType: varchar("evidence_type", { length: 32 }).notNull(),
+  pattern: varchar("pattern", { length: 255 }).notNull(),
+  matchingCriteria: text("matching_criteria").notNull(),
+  probableFault: varchar("probable_fault", { length: 255 }).notNull(),
+  confidence: integer("confidence").notNull(), // 0-100 range enforced in validation
+  recommendations: text("recommendations"), // JSON array or comma-separated
+  referenceStandard: varchar("reference_standard", { length: 64 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFaultReferenceLibrarySchema = createInsertSchema(faultReferenceLibrary)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    confidence: z.number().min(0).max(100),
+    evidenceType: z.string().min(1).max(32),
+    pattern: z.string().min(1).max(255),
+    matchingCriteria: z.string().min(1),
+    probableFault: z.string().min(1).max(255),
+  });
+
+export type InsertFaultReferenceLibrary = z.infer<typeof insertFaultReferenceLibrarySchema>;
+export type FaultReferenceLibrary = typeof faultReferenceLibrary.$inferSelect;
 
 // Evidence Library table - EXACT CSV column mapping: Equipment Group, Equipment Type, Subtype, Component / Failure Mode, Equipment Code, Failure Code, Risk Ranking, Required Trend Data / Evidence, AI or Investigator Questions, Attachments / Evidence Required, Root Cause Logic, Blank Column 1, Blank Column 2, Blank Column 3
 export const evidenceLibrary = pgTable("evidence_library", {

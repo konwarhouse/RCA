@@ -26,6 +26,7 @@ import SummaryReport from "@/pages/summary-report";
 import AnalysisDetails from "@/pages/analysis-details";
 import NotFound from "@/pages/not-found";
 import DebugRoutes from "@/pages/debug-routes";
+import FaultReferenceLibrary from "@/pages/admin/fault-reference-library";
 
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/admin-settings" component={AdminSettings} />
       <Route path="/admin/evidence-library" component={EvidenceLibraryAdmin} />
       <Route path="/admin/evidence-management" component={EvidenceLibraryManagement} />
+      <Route path="/admin/fault-reference-library" component={FaultReferenceLibrary} />
       <Route path="/evidence-library-management" component={EvidenceLibraryManagement} />
       <Route path="/evidence-library" component={EvidenceLibraryManagement} />
       <Route path="/incident-reporting" component={IncidentReporting} />

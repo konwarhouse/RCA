@@ -27,6 +27,8 @@ import { RCAAnalysisEngine } from "./rca-analysis-engine";
 import { nlpAnalyzer } from "./nlp-analyzer";
 import multer from "multer";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { insertFaultReferenceLibrarySchema } from "@shared/schema";
 import { AIAttachmentAnalyzer } from "./ai-attachment-analyzer";
 import { EquipmentDecisionEngine } from "./config/equipment-decision-engine";
 import { UniversalConfidenceEngine } from "./rca-confidence-scoring";
@@ -2963,5 +2965,269 @@ JSON array only:`;
     console.error('[AI Contributing Factors] Error:', error);
     return ['AI configuration required - Please configure AI provider in admin settings'];
   }
+  // ADMIN ONLY: Feature-to-Fault Library / RCA Knowledge Library Routes
+  // Authentication middleware for admin-only routes
+  const requireAdmin = async (req: any, res: any, next: any) => {
+    try {
+      // Check if user is authenticated and has admin rights
+      if (!req.isAuthenticated() || !req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Invalid user session" });
+      }
+
+      // Get user from database to check admin status
+      const user = await investigationStorage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // For now, we'll use a simple check (you can modify this based on your admin system)
+      // Check if user email contains 'admin' or has admin role
+      const isAdmin = user.email?.includes('admin') || 
+                     user.firstName?.toLowerCase() === 'admin' ||
+                     user.email?.endsWith('@admin.com'); // Modify as needed
+
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Admin auth error:", error);
+      res.status(500).json({ message: "Authentication error" });
+    }
+  };
+
+  // Get all fault reference library entries (Admin Only)
+  app.get("/api/admin/fault-reference-library", requireAdmin, async (req, res) => {
+    try {
+      const entries = await investigationStorage.getAllFaultReferenceLibrary();
+      res.json(entries);
+    } catch (error) {
+      console.error("Error getting fault reference library:", error);
+      res.status(500).json({ message: "Failed to retrieve fault reference library" });
+    }
+  });
+
+  // Search fault reference library (Admin Only)
+  app.get("/api/admin/fault-reference-library/search", requireAdmin, async (req, res) => {
+    try {
+      const { q: searchTerm, evidenceType } = req.query;
+      const entries = await investigationStorage.searchFaultReferenceLibrary(
+        searchTerm as string, 
+        evidenceType as string
+      );
+      res.json(entries);
+    } catch (error) {
+      console.error("Error searching fault reference library:", error);
+      res.status(500).json({ message: "Failed to search fault reference library" });
+    }
+  });
+
+  // Get single fault reference library entry (Admin Only)
+  app.get("/api/admin/fault-reference-library/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const entry = await investigationStorage.getFaultReferenceLibraryById(id);
+      
+      if (!entry) {
+        return res.status(404).json({ message: "Fault reference library entry not found" });
+      }
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error getting fault reference library entry:", error);
+      res.status(500).json({ message: "Failed to retrieve fault reference library entry" });
+    }
+  });
+
+  // Create new fault reference library entry (Admin Only)
+  app.post("/api/admin/fault-reference-library", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertFaultReferenceLibrarySchema.parse(req.body);
+      const entry = await investigationStorage.createFaultReferenceLibrary(validatedData);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating fault reference library entry:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create fault reference library entry" });
+    }
+  });
+
+  // Update fault reference library entry (Admin Only)
+  app.put("/api/admin/fault-reference-library/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertFaultReferenceLibrarySchema.partial().parse(req.body);
+      const entry = await investigationStorage.updateFaultReferenceLibrary(id, validatedData);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating fault reference library entry:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update fault reference library entry" });
+    }
+  });
+
+  // Delete fault reference library entry (Admin Only)
+  app.delete("/api/admin/fault-reference-library/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await investigationStorage.deleteFaultReferenceLibrary(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting fault reference library entry:", error);
+      res.status(500).json({ message: "Failed to delete fault reference library entry" });
+    }
+  });
+
+  // Export fault reference library as CSV (Admin Only)
+  app.get("/api/admin/fault-reference-library/export/csv", requireAdmin, async (req, res) => {
+    try {
+      const entries = await investigationStorage.getAllFaultReferenceLibrary();
+      
+      // Convert to CSV format
+      const csvData = Papa.unparse(entries.map(entry => ({
+        id: entry.id,
+        evidence_type: entry.evidenceType,
+        pattern: entry.pattern,
+        matching_criteria: entry.matchingCriteria,
+        probable_fault: entry.probableFault,
+        confidence: entry.confidence,
+        recommendations: entry.recommendations || '',
+        reference_standard: entry.referenceStandard || '',
+        notes: entry.notes || '',
+        created_at: entry.createdAt?.toISOString() || '',
+        updated_at: entry.updatedAt?.toISOString() || ''
+      })));
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=fault-reference-library.csv');
+      res.send(csvData);
+    } catch (error) {
+      console.error("Error exporting fault reference library:", error);
+      res.status(500).json({ message: "Failed to export fault reference library" });
+    }
+  });
+
+  // Export fault reference library as Excel (Admin Only)
+  app.get("/api/admin/fault-reference-library/export/excel", requireAdmin, async (req, res) => {
+    try {
+      const entries = await investigationStorage.getAllFaultReferenceLibrary();
+      
+      // Convert to Excel format
+      const worksheet = XLSX.utils.json_to_sheet(entries.map(entry => ({
+        'ID': entry.id,
+        'Evidence Type': entry.evidenceType,
+        'Pattern': entry.pattern,
+        'Matching Criteria': entry.matchingCriteria,
+        'Probable Fault': entry.probableFault,
+        'Confidence (%)': entry.confidence,
+        'Recommendations': entry.recommendations || '',
+        'Reference Standard': entry.referenceStandard || '',
+        'Notes': entry.notes || '',
+        'Created At': entry.createdAt?.toISOString() || '',
+        'Updated At': entry.updatedAt?.toISOString() || ''
+      })));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Fault Reference Library');
+      
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=fault-reference-library.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting fault reference library:", error);
+      res.status(500).json({ message: "Failed to export fault reference library" });
+    }
+  });
+
+  // Import fault reference library from CSV/Excel (Admin Only)
+  app.post("/api/admin/fault-reference-library/import", requireAdmin, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const fileBuffer = req.file.buffer;
+      const fileName = req.file.originalname.toLowerCase();
+      let data: any[] = [];
+
+      if (fileName.endsWith('.csv')) {
+        // Parse CSV
+        const csvText = fileBuffer.toString('utf8');
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+        data = parsed.data;
+      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // Parse Excel
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        data = XLSX.utils.sheet_to_json(worksheet);
+      } else {
+        return res.status(400).json({ message: "Unsupported file format. Please upload CSV or Excel files." });
+      }
+
+      // Validate and transform data
+      const validEntries = [];
+      const errors = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        try {
+          // Map column names to schema fields
+          const entry = {
+            evidenceType: row.evidence_type || row['Evidence Type'] || row.evidenceType,
+            pattern: row.pattern || row['Pattern'],
+            matchingCriteria: row.matching_criteria || row['Matching Criteria'] || row.matchingCriteria,
+            probableFault: row.probable_fault || row['Probable Fault'] || row.probableFault,
+            confidence: parseInt(row.confidence || row['Confidence (%)'] || row['confidence']),
+            recommendations: row.recommendations || row['Recommendations'] || '',
+            referenceStandard: row.reference_standard || row['Reference Standard'] || row.referenceStandard || '',
+            notes: row.notes || row['Notes'] || ''
+          };
+
+          // Validate using schema
+          const validatedEntry = insertFaultReferenceLibrarySchema.parse(entry);
+          validEntries.push(validatedEntry);
+        } catch (error) {
+          errors.push({ row: i + 1, error: error.message });
+        }
+      }
+
+      if (errors.length > 0 && validEntries.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid entries found", 
+          errors: errors.slice(0, 10) // Limit error details
+        });
+      }
+
+      // Import valid entries
+      const importedEntries = await investigationStorage.bulkImportFaultReferenceLibrary(validEntries);
+
+      res.json({
+        message: `Successfully imported ${importedEntries.length} entries`,
+        imported: importedEntries.length,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 5) // Show first 5 errors
+      });
+    } catch (error) {
+      console.error("Error importing fault reference library:", error);
+      res.status(500).json({ message: "Failed to import fault reference library" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
 }
+
 console.log("Server routes loaded with DEBUG enabled");
