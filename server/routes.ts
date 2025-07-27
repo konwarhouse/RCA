@@ -3226,6 +3226,75 @@ JSON array only:`;
     }
   });
 
+  // Evidence Library API Routes - CRITICAL MISSING ROUTES
+  app.get("/api/evidence-library", async (req, res) => {
+    try {
+      console.log("[Evidence Library] GET /api/evidence-library called");
+      const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
+      console.log(`[Evidence Library] Returning ${evidenceItems.length} evidence items`);
+      res.json(evidenceItems);
+    } catch (error) {
+      console.error("[Evidence Library] Error fetching evidence library:", error);
+      res.status(500).json({ message: "Failed to fetch evidence library" });
+    }
+  });
+
+  app.get("/api/evidence-library/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      console.log(`[Evidence Library] Search called with query: ${q}`);
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: "Search query parameter 'q' is required" });
+      }
+      
+      const evidenceItems = await investigationStorage.searchEvidenceLibrary(q);
+      console.log(`[Evidence Library] Search returned ${evidenceItems.length} results`);
+      res.json(evidenceItems);
+    } catch (error) {
+      console.error("[Evidence Library] Error searching evidence library:", error);
+      res.status(500).json({ message: "Failed to search evidence library" });
+    }
+  });
+
+  app.post("/api/evidence-library", async (req, res) => {
+    try {
+      console.log("[Evidence Library] Creating new evidence library item");
+      const newItem = await investigationStorage.createEvidenceLibrary(req.body);
+      console.log(`[Evidence Library] Created item with ID: ${newItem.id}`);
+      res.json(newItem);
+    } catch (error) {
+      console.error("[Evidence Library] Error creating evidence library item:", error);
+      res.status(500).json({ message: "Failed to create evidence library item" });
+    }
+  });
+
+  app.put("/api/evidence-library/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      console.log(`[Evidence Library] Updating evidence library item ${id}`);
+      const updatedItem = await investigationStorage.updateEvidenceLibrary(id, req.body);
+      console.log(`[Evidence Library] Updated item ${id}`);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("[Evidence Library] Error updating evidence library item:", error);
+      res.status(500).json({ message: "Failed to update evidence library item" });
+    }
+  });
+
+  app.delete("/api/evidence-library/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      console.log(`[Evidence Library] Deleting evidence library item ${id}`);
+      await investigationStorage.deleteEvidenceLibrary(id);
+      console.log(`[Evidence Library] Deleted item ${id}`);
+      res.json({ message: "Evidence library item deleted successfully" });
+    } catch (error) {
+      console.error("[Evidence Library] Error deleting evidence library item:", error);
+      res.status(500).json({ message: "Failed to delete evidence library item" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
