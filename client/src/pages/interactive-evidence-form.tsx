@@ -636,7 +636,7 @@ export default function InteractiveEvidenceForm() {
       });
       setTimeout(() => {
         setLocation(`/analysis/${id}`);
-      }, 2000);
+      }, parseInt(import.meta.env.VITE_REDIRECT_DELAY || '2000'));
     },
     onError: (error) => {
       toast({
@@ -652,7 +652,7 @@ export default function InteractiveEvidenceForm() {
     if (autoSaveEnabled && Object.keys(answers).length > 0) {
       const timeoutId = setTimeout(() => {
         autoSaveMutation.mutate(answers);
-      }, 2000); // Auto-save after 2 seconds of inactivity
+      }, parseInt(import.meta.env.VITE_AUTOSAVE_DELAY || '2000')); // Auto-save after configurable delay
 
       return () => clearTimeout(timeoutId);
     }

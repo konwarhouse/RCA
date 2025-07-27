@@ -162,7 +162,7 @@ export default function ISO14224EvidenceForm() {
       });
       setLastSaved(new Date());
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      setTimeout(() => setSaveStatus('idle'), parseInt(import.meta.env.VITE_SAVE_STATUS_TIMEOUT || '2000'));
     } catch (error) {
       setSaveStatus('error');
       console.error('Auto-save failed:', error);

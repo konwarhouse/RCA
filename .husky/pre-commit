@@ -1,21 +1,22 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-echo "🔍 Pre-commit Universal Protocol Compliance Check"
-echo "==============================================="
-
-# Make script executable
-chmod +x protocol_check.sh
-
-# Run protocol compliance check
-./protocol_check.sh
+echo "🔍 Running Universal Protocol Standard compliance check..."
+node protocol-violation-scanner.js
 
 if [ $? -ne 0 ]; then
   echo ""
-  echo "🚨 COMMIT BLOCKED: Protocol violations detected"
-  echo "❌ Fix all hardcoding violations before committing"
-  echo "❌ Zero tolerance policy enforced"
+  echo "❌ CRITICAL HARDCODING VIOLATIONS DETECTED"
+  echo "Commit blocked to prevent Universal Protocol Standard violations"
+  echo "Please fix violations and try again"
+  echo ""
+  echo "Common fixes:"
+  echo "• Replace Math.random() with UniversalAIConfig.generateUUID()"
+  echo "• Replace Date.now() with UniversalAIConfig.generateTimestamp()"
+  echo "• Replace direct API key access with DynamicAIConfig methods"
+  echo "• Replace hardcoded timeouts with environment variables"
+  echo ""
   exit 1
 fi
 
-echo "✅ Protocol compliance verified - commit allowed"
+echo "✅ Universal Protocol Standard compliance verified"
