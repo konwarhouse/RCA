@@ -392,13 +392,14 @@ export default function EvidenceLibraryManagement() {
     mutationFn: async ({ id, data }: { id: number; data: EvidenceLibraryForm }) => {
       console.log(`[Evidence Update] Updating item ${id} with data:`, data);
       
-      const response = await apiRequest(`/api/evidence-library/${id}`, {
+      console.log(`[Evidence Update] Sending PUT request to /api/evidence-library/${id}`);
+      
+      const result = await apiRequest(`/api/evidence-library/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       });
       
-      const result = await response.json();
-      console.log(`[Evidence Update] Response:`, result);
+      console.log(`[Evidence Update] Response received:`, result);
       return result;
     },
     onSuccess: (result, { id, data }) => {
