@@ -7,6 +7,7 @@
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { createServer } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import { fileURLToPath } from 'url';
@@ -84,10 +85,25 @@ app.use((req, res, next) => {
   } else {
     log("🚀 SERVING BUILT FRONTEND - Bypassing Vite middleware API interception");
     
-    // CRITICAL: Register API routes FIRST, before ANY static file serving
-    server = await registerRoutes(app);
+    // CRITICAL: Register API routes FIRST, before ANY middleware or static serving
+    console.log("[SERVER] Registering API routes directly to Express app");
     
-    // Serve static assets from built React app - but NOT for API routes
+    // IMMEDIATE DEBUG: Add test route directly to app
+    app.get("/api/test-direct", (req, res) => {
+      console.log("[SERVER] Direct test route hit");
+      res.json({ success: true, message: "Direct route working" });
+    });
+    
+    try {
+      console.log("[SERVER] About to call registerRoutes");
+      await registerRoutes(app);
+      console.log("[SERVER] registerRoutes completed successfully");
+    } catch (error) {
+      console.error("[SERVER] CRITICAL ERROR in registerRoutes:", error);
+      throw error;
+    }
+    
+    // AFTER API routes: Serve static assets from built React app - but NOT for API routes
     const publicPath = path.resolve(__dirname, '../dist/public');
     app.use((req, res, next) => {
       // Skip static file serving for API routes
@@ -97,7 +113,7 @@ app.use((req, res, next) => {
       return express.static(publicPath)(req, res, next);
     });
     
-    // Handle React Router - serve index.html for non-API routes only (MUST be last)
+    // LAST: Handle React Router - serve index.html for non-API routes only (MUST be last)
     app.get('*', (req, res, next) => {
       // API routes should never reach here
       if (req.path.startsWith('/api/')) {
@@ -109,6 +125,8 @@ app.use((req, res, next) => {
       const indexPath = path.resolve(publicPath, 'index.html');
       res.sendFile(indexPath);
     });
+    
+    server = createServer(app);
     
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
