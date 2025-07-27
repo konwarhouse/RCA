@@ -8,6 +8,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { UniversalAIConfig } from "./universal-ai-config";
 
 const app = express();
@@ -55,23 +60,64 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  // CRITICAL FIX: Force built frontend mode to bypass Vite middleware API interception
+  // WORKAROUND DOCUMENTATION: Vite dev server intercepts ALL API calls returning HTML instead of JSON
+  // SOLUTION: Serve built React frontend so API calls reach backend directly
+  // REVERT CONDITION: When Vite proxy configuration becomes available in vite.config.ts
+  
+  const forceBuiltMode = true; // Override to fix API interception issue
+  let server;
+  
+  if (app.get("env") === "development" && !forceBuiltMode) {
+    log("⚠️  Using Vite dev server - API calls may be intercepted");
+    
+    server = await registerRoutes(app);
     await setupVite(app, server);
+    
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+      throw err;
+    });
+    
   } else {
-    serveStatic(app);
+    log("🚀 SERVING BUILT FRONTEND - Bypassing Vite middleware API interception");
+    
+    // CRITICAL: Register API routes FIRST, before ANY static file serving
+    server = await registerRoutes(app);
+    
+    // Serve static assets from built React app - but NOT for API routes
+    const publicPath = path.resolve(__dirname, '../dist/public');
+    app.use((req, res, next) => {
+      // Skip static file serving for API routes
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
+      return express.static(publicPath)(req, res, next);
+    });
+    
+    // Handle React Router - serve index.html for non-API routes only (MUST be last)
+    app.get('*', (req, res, next) => {
+      // API routes should never reach here
+      if (req.path.startsWith('/api/')) {
+        console.log(`[Server] CRITICAL: API route ${req.path} reached catch-all - check route registration`);
+        return res.status(404).json({ error: 'API endpoint not found', path: req.path });
+      }
+      
+      // Serve React app for all other routes
+      const indexPath = path.resolve(publicPath, 'index.html');
+      res.sendFile(indexPath);
+    });
+    
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+      throw err;
+    });
+    
+    log("✅ Built frontend active - API calls now reach backend directly");
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
@@ -79,6 +125,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  
   server.listen({
     port,
     host: "0.0.0.0",

@@ -209,14 +209,7 @@ export default function EvidenceLibraryManagement() {
           }
         }
         
-        // All endpoints failed - Vite middleware blocking all requests
-        console.error("[Evidence Library] CRITICAL: All API endpoints failed - Vite middleware interference confirmed");
-        
-        // UNIVERSAL PROTOCOL STANDARD: Return empty array to show accurate state
-        // User requested to see why "0 of 0 items" appears - this demonstrates the root cause
-        console.log("[Evidence Library] Returning empty array to demonstrate Vite middleware blocking issue");
-        console.log("[Evidence Library] Database contains 100 items but cannot be accessed due to development server configuration");
-        
+        console.error("[Evidence Library] All API endpoints failed - returning empty array");
         return [];
         
         try {
