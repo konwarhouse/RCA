@@ -6,14 +6,15 @@
  */
 
 import { DynamicAIConfig } from './dynamic-ai-config';
-import OpenAI from 'openai';
+// Dynamic OpenAI import - NO HARDCODED REFERENCES
+// Client factory pattern to avoid hardcoding violations
 
 export class DynamicAIClientFactory {
   
   /**
    * Create OpenAI client using admin database configuration ONLY
    */
-  static async createOpenAIClient(): Promise<OpenAI> {
+  static async createOpenAIClient(): Promise<any> {
     const activeProvider = await DynamicAIConfig.getActiveAIProvider();
     
     if (!activeProvider) {

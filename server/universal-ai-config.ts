@@ -12,17 +12,29 @@ import { validateLLMSecurity } from './llm-security-validator';
 export const UniversalAIConfig = {
   // Dynamic model selection - NO HARDCODING
   getModelName: (): string => {
-    return process.env.AI_MODEL || "dynamic-selection";
+    const envModel = process.env.AI_MODEL;
+    if (!envModel) {
+      throw new Error('AI_MODEL environment variable not configured - use admin panel for AI configuration');
+    }
+    return envModel;
   },
 
   // Default model for dynamic selection - NO HARDCODING
   getDefaultModel: (): string => {
-    return process.env.AI_MODEL || "dynamic-selection";
+    const envModel = process.env.AI_MODEL;
+    if (!envModel) {
+      throw new Error('AI_MODEL environment variable not configured - use admin panel for AI configuration');
+    }
+    return envModel;
   },
 
   // Dynamic model selection for AI operations
   getDynamicModel: (): string => {
-    return process.env.AI_MODEL || "universal-model";
+    const envModel = process.env.AI_MODEL;
+    if (!envModel) {
+      throw new Error('AI_MODEL environment variable not configured - use admin panel for AI configuration');
+    }
+    return envModel;
   },
 
   // Universal timestamp generation - NO Date.now() hardcoding

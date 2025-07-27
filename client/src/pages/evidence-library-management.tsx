@@ -906,14 +906,25 @@ export default function EvidenceLibraryManagement() {
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Select group" />
+                                      <SelectValue placeholder="Select Equipment Group" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {Array.isArray(equipmentGroups) && equipmentGroups.map((group: any) => (
-                                        <SelectItem key={group.id} value={group.name}>
-                                          {group.name}
-                                        </SelectItem>
-                                      ))}
+                                      {Array.isArray(equipmentGroups) && equipmentGroups.length > 0 
+                                        ? equipmentGroups.map((group: any) => (
+                                            <SelectItem key={group.id || group} value={group.name || group}>
+                                              {group.name || group}
+                                            </SelectItem>
+                                          ))
+                                        : [
+                                            "Control Valves", "Electrical", "Environmental", "Fire & Safety", 
+                                            "HVAC & Utilities", "Instrumentation", "Instrumentation & Automation",
+                                            "Material Handling", "Plant Utilities", "Rotating", "Static", "Utility"
+                                          ].map((group) => (
+                                            <SelectItem key={group} value={group}>
+                                              {group}
+                                            </SelectItem>
+                                          ))
+                                      }
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
@@ -1011,11 +1022,18 @@ export default function EvidenceLibraryManagement() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {Array.isArray(riskRankings) && riskRankings.map((ranking: any) => (
-                                        <SelectItem key={ranking.id} value={ranking.label}>
-                                          {ranking.label}
-                                        </SelectItem>
-                                      ))}
+                                      {Array.isArray(riskRankings) && riskRankings.length > 0 
+                                        ? riskRankings.map((ranking: any) => (
+                                            <SelectItem key={ranking.id || ranking} value={ranking.label || ranking}>
+                                              {ranking.label || ranking}
+                                            </SelectItem>
+                                          ))
+                                        : ["Critical", "High", "Medium", "Low"].map((ranking) => (
+                                            <SelectItem key={ranking} value={ranking}>
+                                              {ranking}
+                                            </SelectItem>
+                                          ))
+                                      }
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
