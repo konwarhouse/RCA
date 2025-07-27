@@ -2208,6 +2208,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET SUMMARY REPORT - Final RCA Report Generation 
+  // Route: GET /api/incidents/:id/summary-report
+  // Protocol: Path parameter routing per Universal Protocol Standard
+  app.get("/api/incidents/:id/summary-report", async (req, res) => {
+    try {
+      const incidentId = parseInt(req.params.id);
+      
+      console.log(`[SUMMARY REPORT] Generating final report for incident ${incidentId}`);
+      
+      // Get incident with RCA results
+      const incident = await investigationStorage.getIncident(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      
+      // Check if RCA synthesis was completed
+      const rcaResults = incident.rcaResults as any;
+      if (!rcaResults) {
+        return res.status(400).json({ 
+          message: "Analysis data not available. Please complete the analysis first.",
+          error: "NO_RCA_DATA"
+        });
+      }
+      
+      // Generate comprehensive summary report (Universal Protocol Standard compliant)
+      const summaryReport = {
+        incidentDetails: {
+          id: incident.id,
+          title: incident.title,
+          description: incident.description,
+          equipmentGroup: incident.equipmentGroup,
+          equipmentType: incident.equipmentType,
+          equipmentSubtype: incident.equipmentSubtype,
+          createdAt: incident.createdAt,
+          analysisDate: rcaResults.analysisDate
+        },
+        analysisResults: {
+          overallConfidence: rcaResults.overallConfidence || 0,
+          analysisMethod: rcaResults.analysisMethod || "Deterministic AI Analysis",
+          determinismCheck: rcaResults.determinismCheck || false,
+          evidenceFilesAnalyzed: rcaResults.evidenceFilesAnalyzed || 0,
+          workflowStage: rcaResults.workflowStage || "complete"
+        },
+        recommendations: rcaResults.recommendations || [],
+        equipmentContext: rcaResults.equipmentContext || {},
+        reportGenerated: new Date().toISOString(),
+        reportStatus: "complete"
+      };
+      
+      console.log(`[SUMMARY REPORT] Generated report for incident ${incidentId} with ${summaryReport.analysisResults.overallConfidence}% confidence`);
+      
+      res.json({
+        data: summaryReport,
+        error: null
+      });
+      
+    } catch (error) {
+      console.error('[SUMMARY REPORT] Failed to generate report:', error);
+      res.status(500).json({
+        data: null,
+        error: "Failed to generate summary report"
+      });
+    }
+  });
+
   // STAGE 4: EVIDENCE ADEQUACY SCORING & GAP FEEDBACK (Per Universal RCA Instruction)
   // System checks adequacy of provided evidence against requirements (from Evidence Library/Schema, NOT hardcoded)
   // AI/GPT summarizes what is present/missing using user-friendly language and suggests best next action
