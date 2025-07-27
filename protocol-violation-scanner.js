@@ -113,6 +113,12 @@ function scanDirectory(dir) {
 
 function main() {
   console.log('🔍 UNIVERSAL PROTOCOL STANDARD VIOLATION SCANNER');
+console.log('📋 VITE PROXY COMPLIANCE INSTRUCTIONS:');
+console.log('• ALL API calls must use relative paths: /api/route');
+console.log('• NO hardcoded ports or absolute URLs in client code');
+console.log('• Check vite.config.ts proxy config for /api routes');
+console.log('• Run this script before EVERY commit/push');
+console.log('• ZERO TOLERANCE: Fix ALL violations before proceeding');
   console.log('Smart detection - distinguishes real violations from legitimate code');
   console.log('=====================================\n');
   

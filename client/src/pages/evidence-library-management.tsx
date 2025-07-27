@@ -160,14 +160,10 @@ export default function EvidenceLibraryManagement() {
       try {
         console.log("[Evidence Library] Attempting direct backend bypass...");
         
-        // UNIVERSAL PROTOCOL STANDARD: Use dynamic hostname detection, no hardcoding
-        const backendPort = import.meta.env.VITE_BACKEND_PORT || '5000';
-        const hostname = window.location.hostname;
-        const directBackendUrl = `http://${hostname}:${backendPort}`;
-        
+        // UNIVERSAL PROTOCOL STANDARD: Use relative API paths only - no hardcoded URLs
         const url = searchTerm 
-          ? `${directBackendUrl}/api/evidence-library/search/${encodeURIComponent(searchTerm)}`
-          : `${directBackendUrl}/api/evidence-library`;
+          ? `/api/evidence-library/search/${encodeURIComponent(searchTerm)}`
+          : `/api/evidence-library`;
           
         console.log("[Evidence Library] Direct backend URL:", url);
           

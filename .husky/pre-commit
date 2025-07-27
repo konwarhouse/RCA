@@ -2,6 +2,12 @@
 . "$(dirname "$0")/_/husky.sh"
 
 echo "🔍 Running Universal Protocol Standard compliance check..."
+echo "📋 VITE PROXY COMPLIANCE INSTRUCTIONS:"
+echo "• ALL API calls must use relative paths: /api/route"
+echo "• NO hardcoded ports or absolute URLs in client code"
+echo "• Check vite.config.ts proxy config for /api routes"
+echo "• ZERO TOLERANCE: Fix ALL violations before proceeding"
+echo ""
 node protocol-violation-scanner.js
 
 if [ $? -ne 0 ]; then

@@ -3,6 +3,12 @@
 
 echo "🔍 Pre-push Universal Protocol Compliance Check"
 echo "=============================================="
+echo "📋 VITE PROXY COMPLIANCE INSTRUCTIONS:"
+echo "• ALL API calls must use relative paths: /api/route"
+echo "• NO hardcoded ports or absolute URLs in client code"
+echo "• Check vite.config.ts proxy config for /api routes"
+echo "• ZERO TOLERANCE: Fix ALL violations before proceeding"
+echo "=============================================="
 
 # Make script executable
 chmod +x protocol_check.sh

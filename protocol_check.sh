@@ -6,6 +6,15 @@ VIOLATIONS=0
 
 echo "🔍 Universal Protocol Compliance Check - ZERO TOLERANCE ENFORCEMENT"
 echo "=================================================================="
+echo ""
+echo "📋 VITE PROXY COMPLIANCE INSTRUCTIONS:"
+echo "• ALL API calls must use relative paths: /api/route"
+echo "• NO hardcoded ports or absolute URLs in client code"
+echo "• Check vite.config.ts proxy config for /api routes"
+echo "• Run this script before EVERY commit/push"
+echo "• ZERO TOLERANCE: Fix ALL violations before proceeding"
+echo "=================================================================="
+echo ""
 
 # Comprehensive forbidden patterns with zero tolerance
 PATTERNS=(
