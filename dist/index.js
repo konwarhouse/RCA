@@ -1322,25 +1322,9 @@ var init_storage = __esm({
           console.log(`[RCA] Starting evidence library import from file: ${file.originalname}`);
           const Papa2 = await import("papaparse");
           const fileContent = file.buffer.toString("utf-8");
-          const parseResult = Papa2.parse(fileContent, {
+          const parseResult = Papa2.default.parse(fileContent, {
             header: true,
-            skipEmptyLines: true,
-            transformHeader: (header) => {
-              const headerMap = {
-                "Equipment Group": "equipmentGroup",
-                "Equipment Type": "equipmentType",
-                "Subtype": "subtype",
-                "Component / Failure Mode": "componentFailureMode",
-                "Equipment Code": "equipmentCode",
-                "Failure Code": "failureCode",
-                "Risk Ranking": "riskRanking",
-                "Required Trend Data Evidence": "requiredTrendDataEvidence",
-                "AI or Investigator Questions": "aiOrInvestigatorQuestions",
-                "Attachments Evidence Required": "attachmentsEvidenceRequired",
-                "Root Cause Logic": "rootCauseLogic"
-              };
-              return headerMap[header] || header.toLowerCase().replace(/\s+/g, "");
-            }
+            skipEmptyLines: true
           });
           if (parseResult.errors.length > 0) {
             console.error("[RCA] CSV parsing errors:", parseResult.errors);
@@ -1353,25 +1337,50 @@ var init_storage = __esm({
           const validRows = [];
           const errorDetails = [];
           let errorCount = 0;
+          const headerMap = {
+            "Equipment Group": "equipmentGroup",
+            "Equipment Type": "equipmentType",
+            "Subtype": "subtype",
+            "Component / Failure Mode": "componentFailureMode",
+            "Equipment Code": "equipmentCode",
+            "Failure Code": "failureCode",
+            "Risk Ranking": "riskRanking",
+            "Required Trend Data Evidence": "requiredTrendDataEvidence",
+            "AI or Investigator Questions": "aiOrInvestigatorQuestions",
+            "Attachments Evidence Required": "attachmentsEvidenceRequired",
+            "Root Cause Logic": "rootCauseLogic"
+          };
           parseResult.data.forEach((row, index2) => {
             try {
-              if (!row.equipmentGroup || !row.equipmentType || !row.componentFailureMode || !row.equipmentCode || !row.failureCode || !row.riskRanking) {
-                errorDetails.push(`Row ${index2 + 2}: Missing required fields`);
+              const transformedRow = {};
+              Object.keys(row).forEach((key) => {
+                const mappedKey = headerMap[key] || key;
+                transformedRow[mappedKey] = row[key];
+              });
+              if (!transformedRow.equipmentGroup || !transformedRow.equipmentType || !transformedRow.componentFailureMode || !transformedRow.equipmentCode || !transformedRow.failureCode || !transformedRow.riskRanking) {
+                const missingFields = [];
+                if (!transformedRow.equipmentGroup) missingFields.push("Equipment Group");
+                if (!transformedRow.equipmentType) missingFields.push("Equipment Type");
+                if (!transformedRow.componentFailureMode) missingFields.push("Component / Failure Mode");
+                if (!transformedRow.equipmentCode) missingFields.push("Equipment Code");
+                if (!transformedRow.failureCode) missingFields.push("Failure Code");
+                if (!transformedRow.riskRanking) missingFields.push("Risk Ranking");
+                errorDetails.push(`Row ${index2 + 2}: Missing required fields: ${missingFields.join(", ")}`);
                 errorCount++;
                 return;
               }
               validRows.push({
-                equipmentGroup: row.equipmentGroup,
-                equipmentType: row.equipmentType,
-                subtype: row.subtype || null,
-                componentFailureMode: row.componentFailureMode,
-                equipmentCode: row.equipmentCode,
-                failureCode: row.failureCode,
-                riskRanking: row.riskRanking,
-                requiredTrendDataEvidence: row.requiredTrendDataEvidence || "",
-                aiOrInvestigatorQuestions: row.aiOrInvestigatorQuestions || "",
-                attachmentsEvidenceRequired: row.attachmentsEvidenceRequired || "",
-                rootCauseLogic: row.rootCauseLogic || "",
+                equipmentGroup: transformedRow.equipmentGroup,
+                equipmentType: transformedRow.equipmentType,
+                subtype: transformedRow.subtype || null,
+                componentFailureMode: transformedRow.componentFailureMode,
+                equipmentCode: transformedRow.equipmentCode,
+                failureCode: transformedRow.failureCode,
+                riskRanking: transformedRow.riskRanking,
+                requiredTrendDataEvidence: transformedRow.requiredTrendDataEvidence || "",
+                aiOrInvestigatorQuestions: transformedRow.aiOrInvestigatorQuestions || "",
+                attachmentsEvidenceRequired: transformedRow.attachmentsEvidenceRequired || "",
+                rootCauseLogic: transformedRow.rootCauseLogic || "",
                 updatedBy: "csv-import"
               });
             } catch (error) {
