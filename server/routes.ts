@@ -3226,27 +3226,67 @@ JSON array only:`;
     }
   });
 
-  // Simple Evidence Library Test Route - DEBUGGING RESPONSE ISSUE
-  app.get("/api/evidence-library-test", (req, res) => {
-    console.log("[Test] Route hit - preparing JSON response");
+  // Evidence Library Direct Database Test - CRITICAL FIX FOR VITE MIDDLEWARE ISSUE
+  app.get("/api/evidence-library-test", async (req, res) => {
+    console.log("[Evidence Library TEST] Testing direct database access with raw SQL");
     
-    // Bypass any potential middleware interference
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache',
-      'X-API-Response': 'direct'
-    });
-    
-    const responseData = JSON.stringify({ 
-      message: "Direct API response working", 
-      timestamp: new Date().toISOString(),
-      method: req.method,
-      path: req.path,
-      headers: req.headers.accept || 'none'
-    });
-    
-    console.log("[Test] Sending JSON response:", responseData);
-    res.end(responseData);
+    try {
+      // CRITICAL FIX: Use raw database connection to bypass all middleware
+      const { Pool } = await import("@neondatabase/serverless");
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      
+      const result = await pool.query(`
+        SELECT id, equipment_group, equipment_type, subtype, 
+               component_failure_mode, risk_ranking, is_active
+        FROM evidence_library 
+        WHERE is_active = true 
+        ORDER BY id
+        LIMIT 5
+      `);
+      
+      // Transform snake_case to camelCase for frontend compatibility
+      const transformedItems = result.rows.map((row: any) => ({
+        id: row.id,
+        equipmentGroup: row.equipment_group,
+        equipmentType: row.equipment_type, 
+        subtype: row.subtype,
+        componentFailureMode: row.component_failure_mode,
+        riskRanking: row.risk_ranking,
+        isActive: row.is_active
+      }));
+      
+      const testResponse = {
+        success: true,
+        message: "Evidence Library database access successful",
+        totalItems: result.rows.length,
+        sampleData: transformedItems,
+        timestamp: new Date().toISOString(),
+        databaseConnected: true
+      };
+      
+      // Force headers to bypass Vite middleware
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': '*'
+      });
+      
+      res.end(JSON.stringify(testResponse));
+      
+    } catch (error: any) {
+      console.error("[Evidence Library TEST] Database connection failed:", error);
+      
+      const errorResponse = {
+        success: false,
+        message: "Database connection failed",
+        error: error?.message || "Unknown error",
+        timestamp: new Date().toISOString()
+      };
+      
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(errorResponse));
+    }
   });
 
   // RAW DATABASE ACCESS ENDPOINT - BYPASS VITE MIDDLEWARE COMPLETELY
@@ -3299,7 +3339,7 @@ JSON array only:`;
       const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
       console.log(`[Evidence Library] Retrieved ${evidenceItems.length} evidence library records from database`);
       
-      // UNIVERSAL PROTOCOL STANDARD: Transform database column names to match frontend interface (NO HARDCODING)
+      // UNIVERSAL PROTOCOL STANDARD: Evidence Library items already use correct schema mapping
       const transformedItems = evidenceItems.map(item => ({
         id: item.id,
         equipmentGroup: item.equipmentGroup,
@@ -3313,26 +3353,9 @@ JSON array only:`;
         aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
         attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
         rootCauseLogic: item.rootCauseLogic,
-        // Optional enriched fields - NO HARDCODING, all from database schema
-        confidenceLevel: item.confidenceLevel || null,
-        diagnosticValue: item.diagnosticValue || null,
-        industryRelevance: item.industryRelevance || null,
-        evidencePriority: item.evidencePriority || null,
-        timeToCollect: item.timeToCollect || null,
-        collectionCost: item.collectionCost || null,
-        analysisComplexity: item.analysisComplexity || null,
-        seasonalFactor: item.seasonalFactor || null,
-        relatedFailureModes: item.relatedFailureModes || null,
-        prerequisiteEvidence: item.prerequisiteEvidence || null,
-        followupActions: item.followupActions || null,
-        industryBenchmark: item.industryBenchmark || null,
-        primaryRootCause: item.primaryRootCause || null,
-        contributingFactor: item.contributingFactor || null,
-        latentCause: item.latentCause || null,
-        detectionGap: item.detectionGap || null,
-        faultSignaturePattern: item.faultSignaturePattern || null,
-        applicableToOtherEquipment: item.applicableToOtherEquipment || null,
-        evidenceGapFlag: item.evidenceGapFlag || null,
+        isActive: item.isActive,
+        lastUpdated: item.lastUpdated?.toISOString(),
+        updatedBy: item.updatedBy || 'system'
       }));
       
       console.log(`[Evidence Library] Sending ${transformedItems.length} Universal Protocol Standard compliant evidence items`);
