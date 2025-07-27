@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { readFileSync } from "fs";
 import path from "path";
 import { EquipmentDecisionEngine } from "./config/equipment-decision-engine";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 /**
  * AI-Powered Attachment Content Analyzer
@@ -170,7 +171,7 @@ export class AIAttachmentAnalyzer {
     
     try {
       const response = await this.openai.chat.completions.create({
-        model: activeConfig?.model || "gpt-4o-mini",
+        model: activeConfig?.model || UniversalAIConfig.getDefaultModel(),
         messages: [
           {
             role: "user",

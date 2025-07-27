@@ -10,6 +10,7 @@
  */
 
 import { investigationStorage } from "./storage";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 export interface AIHypothesis {
   id: string;
@@ -183,7 +184,7 @@ Return your response as a JSON array with this structure:
       
       // Convert to AIHypothesis format
       return aiHypotheses.map((hypothesis: any, index: number) => ({
-        id: `ai-hypothesis-${index + 1}-${crypto.randomUUID()}`,
+        id: `ai-hypothesis-${index + 1}-${UniversalAIConfig.generateTimestamp()}`,
         failureMode: hypothesis.failureMode,
         description: hypothesis.description,
         confidence: hypothesis.confidence,

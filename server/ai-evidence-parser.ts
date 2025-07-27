@@ -7,6 +7,7 @@
 import OpenAI from "openai";
 import { readFileSync } from "fs";
 import path from "path";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 interface EvidenceParseResult {
   status: 'sufficient' | 'partially_adequate' | 'inadequate' | 'irrelevant';
@@ -215,7 +216,7 @@ export class UniversalEvidenceParser {
     
     try {
       const response = await this.openai.chat.completions.create({
-        model: activeConfig?.model || "gpt-4o-mini",
+        model: activeConfig?.model || UniversalAIConfig.getDefaultModel(),
         messages: [
           {
             role: "user",
@@ -323,7 +324,7 @@ export class UniversalEvidenceParser {
     
     try {
       const response = await this.openai.chat.completions.create({
-        model: activeConfig?.model || "gpt-4o-mini",
+        model: activeConfig?.model || UniversalAIConfig.getDefaultModel(),
         messages: [
           {
             role: "system",

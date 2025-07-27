@@ -10,6 +10,7 @@
 
 import crypto from "crypto";
 import { investigationStorage } from "./storage";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 const ENCRYPTION_KEY = process.env.AI_KEY_ENCRYPTION_SECRET || "your-32-char-secret-key-here-123456";
 const ALGORITHM = "aes-256-cbc";
@@ -17,7 +18,7 @@ const ALGORITHM = "aes-256-cbc";
 export class AIService {
   // Encrypt API key for storage
   static encryptApiKey(apiKey: string): string {
-    const iv = Buffer.from(crypto.randomUUID().replace(/-/g, '').slice(0, 32), 'hex');
+    const iv = Buffer.from(UniversalAIConfig.generateTimestamp().replace(/-/g, '').slice(0, 32), 'hex');
     const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
     
@@ -110,7 +111,7 @@ export class AIService {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
+          model: activeConfig?.model || UniversalAIConfig.getDefaultModel(),
           max_tokens: 1,
           messages: [{ role: "user", content: "test" }],
         }),
@@ -203,7 +204,7 @@ export class AIService {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: activeConfig?.model || "gpt-4o-mini", // Dynamic model selection from admin configuration
+        model: activeConfig?.model || UniversalAIConfig.getDefaultModel(), // Dynamic model selection from admin configuration
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }

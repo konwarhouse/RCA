@@ -166,14 +166,14 @@ export class UniversalAIEvidenceAnalyzer {
       const fileContent = fileBuffer.toString('utf-8');
       const pythonResult = await this.callPythonAnalyzer(fileContent, filename, evidenceConfig);
       
-      if (pythonResult.status === 'error') {
+      if (!pythonResult || pythonResult.status === 'Incomplete') {
         return {
           filename,
           evidenceType: evidenceConfig.evidenceCategory,
           diagnosticValue: 'Low',
           parsedResultSummary: 'Python data science analysis failed',
           evidenceConfidenceImpact: 10,
-          aiRemarks: `Python error: ${pythonResult.error}`,
+          aiRemarks: `Python analysis failed`,
           status: 'Incomplete',
           requiresUserClarification: true,
           clarificationPrompt: 'File could not be analyzed with data science methods. Please check format.'
@@ -389,14 +389,14 @@ export class UniversalAIEvidenceAnalyzer {
       const base64Content = fileBuffer.toString('base64');
       const pythonResult = await this.callPythonAnalyzer(base64Content, filename, evidenceConfig);
       
-      if (pythonResult.status === 'error') {
+      if (!pythonResult || pythonResult.status === 'Incomplete') {
         return {
           filename,
           evidenceType: evidenceConfig.evidenceCategory,
           diagnosticValue: 'Low',
           parsedResultSummary: 'Python spreadsheet analysis failed',
           evidenceConfidenceImpact: 10,
-          aiRemarks: `Python error: ${pythonResult.error}`,
+          aiRemarks: `Python analysis failed`,
           status: 'Incomplete',
           requiresUserClarification: true,
           clarificationPrompt: 'Spreadsheet could not be analyzed with data science methods. Please check format.'
@@ -476,7 +476,7 @@ export class UniversalAIEvidenceAnalyzer {
       
       // AI Vision Analysis
       const aiResponse = await this.aiService.chat.completions.create({
-        model: "gpt-4o",
+        model: UniversalAIConfig.getDefaultModel(),
         messages: [
           {
             role: "user",
@@ -575,7 +575,7 @@ Respond in JSON format with: enhancedDiagnosticValue, enhancedSummary, enhancedC
 `;
 
       const aiResponse = await this.aiService.chat.completions.create({
-        model: "gpt-4o",
+        model: UniversalAIConfig.getDefaultModel(),
         messages: [{ role: "user", content: aiPrompt }],
         max_tokens: 800
       });

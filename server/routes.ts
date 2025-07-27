@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // STEP 5: Convert confirmed hypotheses to evidence requirements (NO HARDCODING)
       const evidenceItems = confirmedHypotheses.map((hypothesis: any, index: number) => ({
-        id: `ai_evidence_${hypothesis.id}_${crypto.randomUUID()}`,
+        id: `ai_evidence_${hypothesis.id}_${UniversalAIConfig.generateTimestamp()}`,
         category: hypothesis.failureMode,
         title: hypothesis.failureMode,
         description: `${hypothesis.description} | AI Reasoning: ${hypothesis.aiReasoning}`,
@@ -651,7 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add custom hypotheses to evidence items if provided
       const customEvidenceItems = customHypotheses.map((customHypothesis: any, index: number) => ({
-        id: `custom_evidence_${crypto.randomUUID()}`,
+        id: `custom_evidence_${UniversalAIConfig.generateTimestamp()}`,
         category: 'Custom Investigation',
         title: customHypothesis,
         description: `Human-added hypothesis: ${customHypothesis}`,
@@ -750,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add custom failure modes
       for (const customMode of customFailureModes || []) {
         confirmedHypotheses.push({
-          id: `custom_${crypto.randomUUID()}`,
+          id: `custom_${UniversalAIConfig.generateTimestamp()}`,
           rootCauseTitle: customMode,
           humanDecision: 'accept',
           userReasoning: 'User-defined failure mode'
@@ -821,7 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert to evidence checklist format
       const evidenceItems = evidenceResults.map((item: any, index: number) => ({
-        id: `legacy_${id}_${crypto.randomUUID()}`,
+        id: `legacy_${id}_${UniversalAIConfig.generateTimestamp()}`,
         category: item.category || 'Equipment Analysis',
         title: item.componentFailureMode,
         description: `${item.faultSignaturePattern || item.componentFailureMode}`,
@@ -877,7 +877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: 'admin-configuration-save',
         success: true,
         provider: settingsData.provider,
-        model: settingsData.model || 'gpt-4o'
+        model: settingsData.model || UniversalAIConfig.getDefaultModel()
       });
       
       res.json({
@@ -3003,7 +3003,7 @@ JSON array only:`;
   };
 
   // Get all fault reference library entries (Admin Only)
-  app.get("/api/admin/fault-reference-library", requireAdmin, async (req, res) => {
+  app.get("/api/admin/fault-reference-library", requireAdmin, async (req: any, res: any) => {
     try {
       const entries = await investigationStorage.getAllFaultReferenceLibrary();
       res.json(entries);
@@ -3231,11 +3231,49 @@ JSON array only:`;
     try {
       console.log("[Evidence Library] GET /api/evidence-library called");
       const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
-      console.log(`[Evidence Library] Returning ${evidenceItems.length} evidence items`);
-      res.json(evidenceItems);
+      console.log(`[Evidence Library] Retrieved ${evidenceItems.length} items from database`);
+      
+      // Transform database column names to match frontend interface
+      const transformedItems = evidenceItems.map(item => ({
+        id: item.id,
+        equipmentGroup: item.equipmentGroup,
+        equipmentType: item.equipmentType,
+        subtype: item.subtype,
+        componentFailureMode: item.componentFailureMode,
+        equipmentCode: item.equipmentCode,
+        failureCode: item.failureCode,
+        riskRanking: item.riskRanking,
+        requiredTrendDataEvidence: item.requiredTrendDataEvidence,
+        aiOrInvestigatorQuestions: item.aiOrInvestigatorQuestions,
+        attachmentsEvidenceRequired: item.attachmentsEvidenceRequired,
+        rootCauseLogic: item.rootCauseLogic,
+        // Optional enriched fields
+        confidenceLevel: item.confidenceLevel || null,
+        diagnosticValue: item.diagnosticValue || null,
+        industryRelevance: item.industryRelevance || null,
+        evidencePriority: item.evidencePriority || null,
+        timeToCollect: item.timeToCollect || null,
+        collectionCost: item.collectionCost || null,
+        analysisComplexity: item.analysisComplexity || null,
+        seasonalFactor: item.seasonalFactor || null,
+        relatedFailureModes: item.relatedFailureModes || null,
+        prerequisiteEvidence: item.prerequisiteEvidence || null,
+        followupActions: item.followupActions || null,
+        industryBenchmark: item.industryBenchmark || null,
+        primaryRootCause: item.primaryRootCause || null,
+        contributingFactor: item.contributingFactor || null,
+        latentCause: item.latentCause || null,
+        detectionGap: item.detectionGap || null,
+        faultSignaturePattern: item.faultSignaturePattern || null,
+        applicableToOtherEquipment: item.applicableToOtherEquipment || null,
+        evidenceGapFlag: item.evidenceGapFlag || null,
+      }));
+      
+      console.log(`[Evidence Library] Returning ${transformedItems.length} transformed evidence items`);
+      res.json(transformedItems);
     } catch (error) {
       console.error("[Evidence Library] Error fetching evidence library:", error);
-      res.status(500).json({ message: "Failed to fetch evidence library" });
+      res.status(500).json({ message: "Failed to fetch evidence library", error: error.message });
     }
   });
 
