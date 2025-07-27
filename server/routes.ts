@@ -3226,10 +3226,65 @@ JSON array only:`;
     }
   });
 
-  // Evidence Library API Routes - CRITICAL MISSING ROUTES
+  // Simple Evidence Library Test Route - DEBUGGING RESPONSE ISSUE
+  app.get("/api/evidence-library-test", (req, res) => {
+    console.log("[Test] Route hit - preparing JSON response");
+    
+    // Bypass any potential middleware interference
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'X-API-Response': 'direct'
+    });
+    
+    const responseData = JSON.stringify({ 
+      message: "Direct API response working", 
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      headers: req.headers.accept || 'none'
+    });
+    
+    console.log("[Test] Sending JSON response:", responseData);
+    res.end(responseData);
+  });
+
+  // Evidence Library API Routes - SIMPLIFIED TO DEBUG ISSUE
   app.get("/api/evidence-library", async (req, res) => {
+    console.log("[Evidence Library] Route hit - testing database access");
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
-      console.log("[Evidence Library] GET /api/evidence-library called");
+      console.log("[Evidence Library] About to call investigationStorage.getAllEvidenceLibrary()");
+      const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
+      console.log(`[Evidence Library] SUCCESS: Retrieved ${evidenceItems.length} items from database`);
+      
+      // Simple response first - test basic functionality
+      res.status(200).send(JSON.stringify({
+        success: true,
+        count: evidenceItems.length,
+        sampleData: evidenceItems.slice(0, 2).map(item => ({
+          id: item.id,
+          equipmentType: item.equipmentType,
+          componentFailureMode: item.componentFailureMode
+        }))
+      }));
+      
+    } catch (error) {
+      console.error("[Evidence Library] DATABASE ERROR:", error.message);
+      console.error("[Evidence Library] Error stack:", error.stack);
+      res.status(500).send(JSON.stringify({ 
+        success: false,
+        error: error.message,
+        stack: error.stack?.split('\n').slice(0, 5)
+      }));
+    }
+  });
+
+  // Full Evidence Library API Route - RESTORE AFTER DEBUGGING
+  app.get("/api/evidence-library-full", async (req, res) => {
+    try {
+      console.log("[Evidence Library] GET /api/evidence-library-full called");
       const evidenceItems = await investigationStorage.getAllEvidenceLibrary();
       console.log(`[Evidence Library] Retrieved ${evidenceItems.length} items from database`);
       
@@ -3272,8 +3327,13 @@ JSON array only:`;
       console.log(`[Evidence Library] Returning ${transformedItems.length} transformed evidence items`);
       res.json(transformedItems);
     } catch (error) {
-      console.error("[Evidence Library] Error fetching evidence library:", error);
-      res.status(500).json({ message: "Failed to fetch evidence library", error: error.message });
+      console.error("[Evidence Library] RUNTIME ERROR:", error);
+      console.error("[Evidence Library] Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Failed to fetch evidence library", 
+        error: error.message,
+        stack: error.stack 
+      });
     }
   });
 

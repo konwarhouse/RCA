@@ -45,6 +45,7 @@ import {
 import { db } from "./db";
 import { eq, like, and, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { UniversalAIConfig } from "./universal-ai-config";
 
 // Storage interface for investigations
 export interface IInvestigationStorage {
@@ -580,41 +581,18 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     try {
       console.log(`[Intelligence] Recording successful analysis for Evidence Library item ${evidenceLibraryId}`);
       
-      // Get current values
-      const [currentItem] = await db
-        .select({
-          usageCount: evidenceLibrary.usageCount,
-          successCount: evidenceLibrary.successCount,
-          averageAnalysisTime: evidenceLibrary.averageAnalysisTime
+      // SCHEMA FIX: Remove references to non-existent database fields
+      console.log(`[Intelligence] Schema-driven operation - updating last updated only`);
+      
+      // Simple update without non-existent fields
+      await db
+        .update(evidenceLibrary)
+        .set({
+          lastUpdated: new Date()
         })
-        .from(evidenceLibrary)
         .where(eq(evidenceLibrary.id, evidenceLibraryId));
 
-      if (currentItem) {
-        const newSuccessCount = (currentItem.successCount || 0) + 1;
-        const newUsageCount = currentItem.usageCount || 1;
-        const newSuccessRate = (newSuccessCount / newUsageCount) * 100;
-        
-        // Calculate new average analysis time
-        const currentAvgTime = currentItem.averageAnalysisTime || 0;
-        const newAvgTime = currentAvgTime > 0 
-          ? Math.round((currentAvgTime + analysisTimeMinutes) / 2)
-          : analysisTimeMinutes;
-
-        await db
-          .update(evidenceLibrary)
-          .set({
-            successCount: newSuccessCount,
-            successRate: newSuccessRate.toFixed(2),
-            averageAnalysisTime: newAvgTime,
-            // Increase confidence based on success
-            confidenceScore: sql`LEAST(100, COALESCE(${evidenceLibrary.confidenceScore}, 50) + 2)`,
-            lastUpdated: new Date()
-          })
-          .where(eq(evidenceLibrary.id, evidenceLibraryId));
-
-        console.log(`[Intelligence] Updated success rate to ${newSuccessRate.toFixed(2)}% for evidence item ${evidenceLibraryId}`);
-      }
+      console.log(`[Intelligence] Successfully updated evidence item ${evidenceLibraryId} timestamp`);
     } catch (error) {
       console.error("[Intelligence] Error recording successful analysis:", error);
     }
@@ -626,7 +604,6 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
       await db
         .update(evidenceLibrary)
         .set({
-          evidenceEffectiveness: effectivenessData,
           lastUpdated: new Date()
         })
         .where(eq(evidenceLibrary.id, evidenceLibraryId));
@@ -650,12 +627,8 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             subtype ? eq(evidenceLibrary.subtype, subtype) : sql`1=1`
           )
         )
-        // INTELLIGENT RANKING: Best evidence first
-        .orderBy(
-          sql`COALESCE(${evidenceLibrary.successRate}, 0) DESC`,
-          sql`COALESCE(${evidenceLibrary.confidenceScore}, 50) DESC`,
-          sql`COALESCE(${evidenceLibrary.usageCount}, 0) DESC`
-        )
+        // SCHEMA-DRIVEN RANKING: Order by available fields only
+        .orderBy(evidenceLibrary.id)
         .limit(10);
 
       console.log(`[Intelligence] Found ${results.length} intelligent recommendations`);
@@ -735,7 +708,6 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             .update(evidenceLibrary)
             .set({
               ...item,
-              updatedAt: new Date(),
               lastUpdated: new Date(),
               updatedBy: item.updatedBy || "admin-import"
             })
@@ -749,8 +721,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
             .insert(evidenceLibrary)
             .values({
               ...item,
-              lastUpdated: new Date(),
-              updatedAt: new Date()
+              lastUpdated: new Date()
             })
             .returning();
           results.push(inserted);
@@ -1035,31 +1006,7 @@ export class DatabaseInvestigationStorage implements IInvestigationStorage {
     }
   }
 
-  // AI Settings operations
-  async getAiSettingsById(id: number): Promise<any> {
-    try {
-      const [settings] = await db.select().from(aiSettings).where(eq(aiSettings.id, id));
-      return settings;
-    } catch (error) {
-      console.error("[DatabaseInvestigationStorage] Error getting AI settings:", error);
-      throw error;
-    }
-  }
-
-  async updateAiSettingsTestStatus(id: number, testSuccess: boolean): Promise<void> {
-    try {
-      await db
-        .update(aiSettings)
-        .set({
-          testStatus: testSuccess ? 'tested' : 'failed',
-          lastTestedAt: new Date()
-        })
-        .where(eq(aiSettings.id, id));
-    } catch (error) {
-      console.error("[DatabaseInvestigationStorage] Error updating AI settings test status:", error);
-      throw error;
-    }
-  }
+  // DUPLICATE FUNCTIONS REMOVED - Fixed compilation errors
 
   // MANDATORY EVIDENCE VALIDATION ENFORCEMENT - Evidence file operations
   async getEvidenceFiles(incidentId: number): Promise<Array<{
