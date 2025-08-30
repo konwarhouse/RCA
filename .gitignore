@@ -21,3 +21,10 @@ attached_assets/
 *.jpg
 *.jpeg
 *.gif
+
+.replit
+attached_assets/
+*.png
+*.jpg
+*.jpeg
+*.gif
