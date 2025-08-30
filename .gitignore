@@ -13,3 +13,11 @@ screenshot.png
 *.gif
 attached_assets/
 .replit
+
+# Ignore local stuff
+.replit
+attached_assets/
+*.png
+*.jpg
+*.jpeg
+*.gif
