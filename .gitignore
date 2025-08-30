@@ -1,0 +1,15 @@
+
+# Ignore screenshots
+screenshot.png
+
+.replit
+
+.replit
+
+# ignore screenshots & local assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+attached_assets/
+.replit
